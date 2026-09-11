@@ -275,6 +275,95 @@ public class SttDiarizationOrtCoreTests
             Assert.True(merged[i].Start >= merged[i - 1].End - 1e-9);
     }
 
+    // ═══════════ 自动模式保守定 K：轮廓系数判据 EstimateSpeakerCountBySilhouette ═══════════
+
+    [Fact]
+    public void EstimateSpeakerCountBySilhouette_TwoWellSeparatedBlobs_ReturnsTrueK()
+    {
+        // 2 个分离良好的球面簇；maxK 给 3（大于真值）迫使判据真正比较，仍应返回 2
+        var rng = new Random(42);
+        var embs = new List<float[]>();
+        for (int i = 0; i < 20; i++) embs.Add(WithNoise(Emb(1.0f), rng, 0.02));
+        for (int i = 0; i < 20; i++) embs.Add(WithNoise(Emb(3.7f), rng, 0.02));
+
+        var x = Pack(embs, 8);
+        var dist = DiarizationService.CondensedCosineDistance(x, embs.Count, 8);
+        var k = DiarizationService.EstimateSpeakerCountBySilhouette(dist, x, embs.Count, 8, 3);
+        Assert.Equal(2, k);
+    }
+
+    [Fact]
+    public void EstimateSpeakerCountBySilhouette_ThreeWellSeparatedBlobs_ReturnsTrueK()
+    {
+        // 3 个分离良好的球面簇；maxK 给 4（大于真值）迫使判据真正比较，仍应返回 3
+        var rng = new Random(7);
+        var embs = new List<float[]>();
+        foreach (var seed in new[] { 1.0f, 3.7f, 6.2f })
+            for (int i = 0; i < 12; i++) embs.Add(WithNoise(Emb(seed), rng, 0.02));
+
+        var x = Pack(embs, 8);
+        var dist = DiarizationService.CondensedCosineDistance(x, embs.Count, 8);
+        var k = DiarizationService.EstimateSpeakerCountBySilhouette(dist, x, embs.Count, 8, 4);
+        Assert.Equal(3, k);
+    }
+
+    [Fact]
+    public void EstimateSpeakerCountBySilhouette_SingleGhostWindow_DoesNotInflateCount()
+    {
+        // 复刻电力酒店实测几何：2 个松散主簇（簇内 ~0.4，簇间 ~0.7-0.85，按 campplus 真实声纹定标）
+        // + 1 个游离窗（距两主簇 ~0.81/~1.13，模拟那条只含 1 窗的幽灵簇）。
+        // 基线（无游离点）返回 2；混入游离点后返回值不得上升。
+        var rng = new Random(7);
+        var embs = new List<float[]>();
+        for (int i = 0; i < 60; i++) embs.Add(WithNoise(Emb(0.2f), rng, 0.30));
+        for (int i = 0; i < 59; i++) embs.Add(WithNoise(Emb(5.6f), rng, 0.30));
+
+        var xBase = Pack(embs, 8);
+        var distBase = DiarizationService.CondensedCosineDistance(xBase, embs.Count, 8);
+        var baseline = DiarizationService.EstimateSpeakerCountBySilhouette(distBase, xBase, embs.Count, 8, 3);
+        Assert.Equal(2, baseline);
+
+        embs.Add(Emb(11.4f)); // 游离窗：距主簇A ~0.80、主簇B ~1.13，均超出 0.65 切树阈值
+        var x = Pack(embs, 8);
+        var dist = DiarizationService.CondensedCosineDistance(x, embs.Count, 8);
+        var k = DiarizationService.EstimateSpeakerCountBySilhouette(dist, x, embs.Count, 8, 3);
+        Assert.True(k <= baseline, $"混入单个游离点后估计人数上升了: baseline={baseline}, withGhost={k}");
+        Assert.Equal(2, k);
+    }
+
+    [Fact]
+    public void EstimateSpeakerCountBySilhouette_DegenerateInputs_ReturnZero()
+    {
+        // n < 4 → 0（调用方 k>=2 守卫不满足，保持原标签）
+        var small = Pack(new List<float[]> { Emb(1.0f), Emb(3.7f), Emb(6.2f) }, 8);
+        var smallDist = DiarizationService.CondensedCosineDistance(small, 3, 8);
+        Assert.Equal(0, DiarizationService.EstimateSpeakerCountBySilhouette(smallDist, small, 3, 8, 3));
+
+        // maxK < 2 → 0（无搜索空间，保持原标签）
+        var rng = new Random(11);
+        var embs = new List<float[]>();
+        for (int i = 0; i < 20; i++) embs.Add(WithNoise(Emb(1.0f), rng, 0.02));
+        for (int i = 0; i < 20; i++) embs.Add(WithNoise(Emb(3.7f), rng, 0.02));
+        var x = Pack(embs, 8);
+        var dist = DiarizationService.CondensedCosineDistance(x, embs.Count, 8);
+        Assert.Equal(0, DiarizationService.EstimateSpeakerCountBySilhouette(dist, x, embs.Count, 8, 1));
+    }
+
+    [Fact]
+    public void CheckClusterExplosion_FuseThresholdBoundary_BehaviorUnchanged()
+    {
+        // 阈值 8 处行为与改动前一致：≤8 通过、9 报错（由上层抛出提示用户填人数）
+        Assert.Equal(8, DiarizationService.AutoSpeakerFuseThreshold);
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: DiarizationService.AutoSpeakerFuseThreshold));
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 0));
+        var message = DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: DiarizationService.AutoSpeakerFuseThreshold + 1);
+        Assert.NotNull(message);
+        Assert.Contains("说话人自动估计失败", message);
+        Assert.Contains("说话人数", message);
+        // 指定人数路径：信任输入，永不熔断
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: 4, distinctSpeakers: 54));
+    }
+
     // ── 辅助 ──
     private static float[] WithNoise(float[] v, Random rng, double sigma)
     {

@@ -46,6 +46,7 @@ public class DiarizationService
     private const double WindowStepSec = 1.0;       // 1.0s 步长（0.5s 实测 3060 窗/声纹 29s；1.0s 窗数减半，归属精度不受损——每窗仍 1.5s 音频）
     private const double MinWindowSec = 0.5;        // 窗尾最短 0.5s，否则丢弃
     internal const double ClusterThreshold = 0.65;  // 自动模式切树阈值（与旧管线 Threshold=0.65 一致）
+    internal const int AutoSpeakerFuseThreshold = 8; // 自动模式爆簇熔断线（CheckClusterExplosion 与保守降 K 共用，避免两处漂移）
 
     private static readonly int[][] PowersetMapping = BuildPowersetMapping();
 
@@ -211,7 +212,7 @@ public class DiarizationService
         if (numSpeakers.HasValue) return null;
 
         // 自动模式：0（空音频等）与 ≤8 均视为正常
-        if (distinctSpeakers <= 8) return null;
+        if (distinctSpeakers <= AutoSpeakerFuseThreshold) return null;
 
         return $"说话人自动估计失败（识别到 {distinctSpeakers} 个声纹簇，明显异常）。" +
                "请在创建任务时选择录音类型为多人会议并填写实际说话人数后重试。";
@@ -686,8 +687,21 @@ public class DiarizationService
         else
         {
             var dist = CondensedCosineDistance(x, n, dim);
+            // NNChainAverage 会原地改写 dist（Lance-Williams 更新）→ 先留一份原始点间距离，
+            // 供下方轮廓系数复用同一份矩阵（不重算，见 EstimateSpeakerCountBySilhouette 契约）
+            var distPristine = (float[])dist.Clone();
             var (heights, a, b) = NNChainAverage(dist, n);
             labels = CutTreeCdist(n, a, b, heights, ClusterThreshold);
+
+            // 保守降 K：切树未爆簇时，0.65 阈值会把单个游离窗切成假说话人（2 人录音实测被报成 3~5 人）。
+            // 仅当未爆簇时启用——爆簇说明结构复杂，维持原样交给上层熔断提示用户填人数。
+            var rawK = labels.Distinct().Count();
+            if (rawK is >= 2 and <= AutoSpeakerFuseThreshold)
+            {
+                var k = EstimateSpeakerCountBySilhouette(distPristine, x, n, dim, rawK);
+                if (k >= 2 && k < rawK)
+                    labels = SphericalKMeans(x, n, dim, k);
+            }
         }
 
         // 簇号压缩为连续 0..k-1（按点序首现）
@@ -912,6 +926,67 @@ public class DiarizationService
 
         // 簇号压缩（k-means 标签已 0..k-1，但可能有空簇 → 重排为实际出现的编号）
         return RemapByFirstAppearance(bestLabels!, n);
+    }
+
+    /// <summary>
+    /// 保守估计说话人数：在 K=2..maxK 上分别跑 SphericalKMeans，取平均轮廓系数最大的 K。
+    /// 距离用传入的压缩余弦距离矩阵（与切树同一份，下标规则与 CondensedCosineDistance 一致），
+    /// 不另算距离。轮廓系数（余弦距离版）：a(i)=同簇内其它点的平均距离，b(i)=最近邻簇的平均距离，
+    /// s(i)=(b-a)/max(a,b)；单点簇（无同簇伙伴）或 a、b 为 0 时 s(i) 记 0（不参与虚高）；取全体均值。
+    /// 平局取较小 K（升序扫描、严格大于才替换）。确定性：复用 SphericalKMeans 的固定种子，无新随机源。
+    /// 返回 0 表示无法判定（由调用方保持原标签）。
+    /// </summary>
+    internal static int EstimateSpeakerCountBySilhouette(
+        float[] condensedDist, float[] x, int n, int dim, int maxK)
+    {
+        // 退化保护：点太少 / K 无搜索空间 → 无法判定
+        if (n < 4 || maxK < 2) return 0;
+
+        var sums = new double[maxK];
+        var counts = new int[maxK];
+        int bestK = 0;
+        double bestScore = double.NegativeInfinity;
+
+        for (int k = 2; k <= maxK; k++)
+        {
+            var labels = SphericalKMeans(x, n, dim, k);
+            if (labels.Distinct().Count() < 2) return 0; // 某 K 分不出 2 个簇 → 无法判定
+
+            // 平均轮廓系数（SphericalKMeans 返回值已压缩为 0..c-1 连续编号）
+            int c = labels.Max() + 1;
+            double total = 0;
+            for (int i = 0; i < n; i++)
+            {
+                Array.Clear(sums, 0, c);
+                Array.Clear(counts, 0, c);
+                for (int j = 0; j < n; j++)
+                {
+                    if (j == i) continue;
+                    int lj = labels[j];
+                    sums[lj] += condensedDist[CondensedIdx(n, i, j)];
+                    counts[lj]++;
+                }
+
+                int li = labels[i];
+                if (counts[li] == 0) continue; // 单点簇 → s(i)=0
+                double a = sums[li] / counts[li];
+                double b = double.MaxValue;
+                bool hasNeighbor = false;
+                for (int cl = 0; cl < c; cl++)
+                {
+                    if (cl == li || counts[cl] == 0) continue;
+                    double mean = sums[cl] / counts[cl];
+                    if (mean < b) { b = mean; hasNeighbor = true; }
+                }
+                if (!hasNeighbor || a <= 0 || b <= 0) continue; // a 或 b 为 0 → s(i)=0
+                total += (b - a) / Math.Max(a, b);
+            }
+
+            double score = total / n;
+            if (score > bestScore) { bestScore = score; bestK = k; }
+        }
+
+        return bestK;
     }
 
     /// <summary>簇标签压缩：按点序首现顺序映射为连续 0..k-1。纯函数，便于单元测试。</summary>
