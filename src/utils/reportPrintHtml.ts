@@ -10,7 +10,7 @@
  *   （INK #1C1C1A / PAPER #F0EFEB / MUTED #8F8E88 / FAINT #C6C5BF / GRID #DEDDD6）。
  * 图表正本（本批新增）：glance-gallery.html 的 dot waffle 方阵
  *   （COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10，图例=色点+名称+特大百分比）与
- *   basics-gallery.html C1 tick rows 横条骨架（类目名左侧小字 + 发丝轨道 + 条尾数值），
+ *   basics-gallery.html C1 tick rows 横条骨架（类目名左侧小字 + 条尾数值），
  *   参数转写、代码自写；色板 = colorPresets palm.ser 正本转写（与预览同系统）。
  *
  * hex 只出现在本文件：打印产物是独立单文件 HTML（不进产品组件），浅色打印前提。
@@ -416,7 +416,7 @@ export function buildWaffleSvg(rows: ReportPrintWaffleRow[]): string {
 /**
  * 支出 TOP 横向条形（报告附图）：静态 SVG 字符串。
  * 版式参数转写自官方 basics-gallery C1 tick rows 骨架（类目名左侧小字宽字距 +
- * 发丝轨道 + 条尾等宽数值），条形为细条（10px，EditorialBars 同手感）。
+ * 条尾等宽数值），条形为细条（10px，EditorialBars 同手感）。
  * 条长严格正比（max 守卫：全量最大值为满条，0/负值条宽 0 但名称数值仍显）。
  * 色板 = palm.ser 正本（与预览同系统，逐条按序取色）；纯静态：无 <script>、无动画、无随机数。
  */
@@ -436,9 +436,6 @@ export function buildTopBarsSvg(rows: { name: string; value: number }[], unit: s
     const y = 12 + i * PITCH
     parts.push(
       `<text x="190" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="#6A6963">${escapeHtml(fitSvgText(r.name, 186, 11, 6))}</text>`,
-    )
-    parts.push(
-      `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${GRID}" stroke-width="1"/>`,
     )
     const w = max > 0 && r.value > 0 ? Math.round((r.value / max) * BARMAX * 100) / 100 : 0
     parts.push(

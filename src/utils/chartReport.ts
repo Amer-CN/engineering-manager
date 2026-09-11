@@ -10,7 +10,7 @@
  *   （日历地板发丝 + 发丝折线 + 逐日圆点（周末空心）+ 峰值 top-2 标数 + X 轴 3 锚点）；
  * - 方阵：官方 glance dot waffle 参数（COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10，同
  *   reportPrintHtml.buildWaffleSvg 转写口径），色板换 porcelain；
- * - 条形：官方 basics C1 tick rows 骨架（类目名左 + 发丝轨道 + 条尾数值，同
+ * - 条形：官方 basics C1 tick rows 骨架（类目名左 + 条尾数值，同
  *   reportPrintHtml.buildTopBarsSvg 参数），色板换 porcelain。
  *
  * 色板纪律：图形版统一 Porcelain 青瓷蓝（PRESETS.porcelain + PORCELAIN_INK，import 取色，
@@ -451,9 +451,6 @@ export function buildChartBarsSvg(rows: ChartNamedRow[]): string {
     const y = 12 + i * PITCH
     parts.push(
       `<text x="190" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="${PORCELAIN_INK.lab}">${escapeHtml(fitSvgText(r.name, 186, 11, 6))}</text>`,
-    )
-    parts.push(
-      `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${PORCELAIN_INK.grid}" stroke-width="1"/>`,
     )
     const w = max > 0 && r.value > 0 ? Math.round((r.value / max) * BARMAX * 100) / 100 : 0
     const color = rampColor('porcelain', rank.get(i) ?? 0, rows.length)
