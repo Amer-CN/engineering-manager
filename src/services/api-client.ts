@@ -105,6 +105,11 @@ async function post<T>(path: string, body?: unknown, signal?: AbortSignal): Prom
     const raw = await resp.json();
     return convertKeysToCamelCase(raw);
   } catch (err) {
+    // 用户主动取消（AbortController.abort()）不是故障：静默返回，不进 console.error
+    // （console.error 会被 crash 模块拦截进反馈传真，FX-001 实证），也不显示为错误。
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { success: false, error: 'aborted' };
+    }
     console.error(`[API] POST ${path} 失败:`, err);
     return { success: false, error: String(err) };
   }
