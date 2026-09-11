@@ -59,7 +59,7 @@ export const EditorialBars: React.FC<EditorialBarsProps> = ({
               /* 打印对齐：条形区 flex-1 占行内余宽，填充按 scaleX*75% 取宽——75% 为数值列
                  预留封顶系数（同打印 BARMAX=330/620 预留数值列），所有条同容器同系数 →
                  条长与数值严格成正比；数值 span 移入条形区、紧贴条尾（同打印 x+w+10）。 */
-              <div className="flex-1 min-w-0 flex items-center gap-2" style={{ flexWrap: 'nowrap' }}>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
                 <div
                   data-bar={i}
                   style={{
