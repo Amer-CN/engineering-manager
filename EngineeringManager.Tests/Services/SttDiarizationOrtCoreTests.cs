@@ -364,6 +364,71 @@ public class SttDiarizationOrtCoreTests
         Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: 4, distinctSpeakers: 54));
     }
 
+    // ═══════════ 自动模式爆簇降级：不再抛错，降为 ≤8 人并回传 warning ═══════════
+
+    // 12 个相互分离的声纹种子（python 实测两两余弦距离最小 0.7794 > 切树阈值 0.65，
+    // 自动模式切树必然爆出 12 簇 > AutoSpeakerFuseThreshold=8）
+    private static readonly float[] TwelveSeeds =
+    {
+        4.07f, 25.43f, 7.69f, 14.89f, 13.51f, 19.57f,
+        2.86f, 21.66f, 12.69f, 15.28f, 5.15f, 8.11f,
+    };
+
+    private static float[] PackTwelveBlobs(int perBlob)
+    {
+        var embs = new List<float[]>();
+        foreach (var seed in TwelveSeeds)
+            for (int i = 0; i < perBlob; i++) embs.Add(Emb(seed));
+        return Pack(embs, 8);
+    }
+
+    [Fact]
+    public void ClusterEmbeddings_AutoModeExplosion_DegradesWithWarning_NoThrow()
+    {
+        // 12 个分离良好的簇 → 切树爆出 12 簇 > 8：改动前原样返回让上层 CheckClusterExplosion 抛错，
+        // 现在必须降级为 ≤8 人并带回 warning 文案
+        var x = PackTwelveBlobs(perBlob: 5);
+
+        var labels = DiarizationService.ClusterEmbeddings(x, 8, numSpeakers: null, out var warning);
+
+        var k = labels.Distinct().Count();
+        Assert.InRange(k, 2, DiarizationService.AutoSpeakerFuseThreshold);
+        Assert.NotNull(warning);
+        Assert.Contains("自动估计", warning);
+        Assert.Contains("人工核对", warning);
+    }
+
+    [Fact]
+    public void ClusterEmbeddings_ExplicitSpeakerCount_UnaffectedByExplosionFallback()
+    {
+        // 同一份爆簇数据，指定人数 12：仍按 12 走，无 warning（指定人数路径完全不变）
+        var x = PackTwelveBlobs(perBlob: 5);
+
+        var labels = DiarizationService.ClusterEmbeddings(x, 8, numSpeakers: 12, out var warning);
+
+        Assert.Equal(12, labels.Distinct().Count());
+        Assert.Null(warning);
+        // 每个簇恰好由同一 blob 的 5 个窗组成
+        for (int b = 0; b < 12; b++)
+            Assert.Equal(labels[b * 5], labels[b * 5 + 4]);
+    }
+
+    [Fact]
+    public void ClusterEmbeddings_AutoModeNoExplosion_NoWarning()
+    {
+        // 2 个分离良好的簇：未爆簇路径（走上一轮的保守降 K），不得产生 warning
+        var rng = new Random(42);
+        var embs = new List<float[]>();
+        for (int i = 0; i < 20; i++) embs.Add(WithNoise(Emb(1.0f), rng, 0.02));
+        for (int i = 0; i < 20; i++) embs.Add(WithNoise(Emb(3.7f), rng, 0.02));
+        var x = Pack(embs, 8);
+
+        var labels = DiarizationService.ClusterEmbeddings(x, 8, numSpeakers: null, out var warning);
+
+        Assert.Equal(2, labels.Distinct().Count());
+        Assert.Null(warning);
+    }
+
     // ── 辅助 ──
     private static float[] WithNoise(float[] v, Random rng, double sigma)
     {

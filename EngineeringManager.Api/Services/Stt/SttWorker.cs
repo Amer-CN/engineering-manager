@@ -142,6 +142,8 @@ public class SttWorker : IHostedService, IDisposable
                 new { Dur = duration, Now = now(), job.Id });
 
             SttResult result;
+            // 分离管线的非致命提示（自动模式爆簇降级为保守估计人数）→ 成功写回时进 error 字段展示给用户
+            string? diarizationWarning = null;
 
             if (useMoss)
             {
@@ -162,7 +164,8 @@ public class SttWorker : IHostedService, IDisposable
                         diaSegs = await new DiarizationService().DiarizeAsync(
                             processedWav,
                             job.Num_Speakers,
-                            ct: default);
+                            ct: default,
+                            onWarning: w => diarizationWarning = w);
                         if (diaSegs.Count == 0)
                         {
                             Console.WriteLine("[SttWorker] MOSS 多人任务：说话人分离返回 0 段，保留 MOSS 原始标签继续转写");
@@ -212,7 +215,8 @@ public class SttWorker : IHostedService, IDisposable
                 var segments = await diarization.DiarizeAsync(
                     processedWav,
                     job.Num_Speakers,
-                    ct: default);
+                    ct: default,
+                    onWarning: w => diarizationWarning = w);
 
                 if (segments.Count == 0)
                     throw new Exception("说话人分离未检测到任何语音段");
@@ -288,11 +292,13 @@ public class SttWorker : IHostedService, IDisposable
             var resultJson = System.Text.Json.JsonSerializer.Serialize(
                 result.Segments.Select(s => new { speaker = s.Speaker, start = s.Start, end = s.End, text = s.Text }));
 
+            // diarizationWarning 非空=自动模式人数是估计值 → 写进 error 字段展示给用户（status 仍 completed，
+            // SttJobList 对 error 的渲染不区分状态）；无提示时为 null，等价于改动前的 error = NULL
             db.Execute(@"
                 UPDATE stt_jobs SET
                     status = 'completed', progress = 100,
                     result_text = @Text, result_json = @Json,
-                    elapsed_sec = @Elapsed, error = NULL,
+                    elapsed_sec = @Elapsed, error = @Err,
                     updated_at = @Now
                 WHERE id = @Id",
                 new
@@ -300,6 +306,7 @@ public class SttWorker : IHostedService, IDisposable
                     Text = result.Text,
                     Json = resultJson,
                     Elapsed = result.ElapsedSec,
+                    Err = diarizationWarning,
                     Now = now(),
                     job.Id,
                 });

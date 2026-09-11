@@ -224,11 +224,13 @@ public class DiarizationService
     /// <param name="wavPath">16kHz mono WAV 文件路径</param>
     /// <param name="numSpeakers">预期说话人数（null=自动）</param>
     /// <param name="ct">取消令牌</param>
+    /// <param name="onWarning">非致命提示回传（如自动模式爆簇降级为保守估计人数）；null=不关心提示</param>
     /// <returns>合并后的说话人分段列表</returns>
     public Task<List<SttSegment>> DiarizeAsync(
         string wavPath,
         int? numSpeakers = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        Action<string>? onWarning = null)
     {
         if (!SttModelManager.IsDiarizationModelAvailable())
             throw new InvalidOperationException("说话人分离模型未就绪，请先调用 SttModelManager.EnsureDiarizationModelsAsync()");
@@ -268,7 +270,9 @@ public class DiarizationService
         Console.WriteLine($"[DiarizationService] 声纹完成: {winOwner.Count} 窗, 耗时 {embSw:F1}s");
 
         // 5. 聚类（自动=平均链式+阈值切树；指定人数=球形 k-means）
-        var windowLabels = ClusterEmbeddings(winEmb, dim, numSpeakers);
+        var windowLabels = ClusterEmbeddings(winEmb, dim, numSpeakers, out var clusterWarning);
+        if (clusterWarning != null)
+            onWarning?.Invoke(clusterWarning);
         var cluSw = totalSw.Elapsed.TotalSeconds - segSw - embSw;
         Console.WriteLine($"[DiarizationService] 聚类完成: 耗时 {cluSw:F1}s");
 
@@ -661,9 +665,13 @@ public class DiarizationService
     // 阶段 4：聚类（自动=NN-chain 平均链式+阈值切树；指定人数=球形 k-means）
     // ═══════════════════════════════════════════════════════════
 
-    /// <summary>返回每个窗口的簇标签（0 基）</summary>
-    private static int[] ClusterEmbeddings(float[] embs, int dim, int? numSpeakers)
+    /// <summary>
+    /// 返回每个窗口的簇标签（0 基）。internal 供单测直接验证爆簇降级语义。
+    /// </summary>
+    /// <param name="warning">非空=自动模式爆簇已降级为保守估计人数（上层应转告用户）</param>
+    internal static int[] ClusterEmbeddings(float[] embs, int dim, int? numSpeakers, out string? warning)
     {
+        warning = null;
         int n = embs.Length / dim;
         if (n == 0) return Array.Empty<int>();
 
@@ -694,13 +702,23 @@ public class DiarizationService
             labels = CutTreeCdist(n, a, b, heights, ClusterThreshold);
 
             // 保守降 K：切树未爆簇时，0.65 阈值会把单个游离窗切成假说话人（2 人录音实测被报成 3~5 人）。
-            // 仅当未爆簇时启用——爆簇说明结构复杂，维持原样交给上层熔断提示用户填人数。
+            // 仅当未爆簇时启用——爆簇走下方降级分支（不再让上层硬失败）。
             var rawK = labels.Distinct().Count();
             if (rawK is >= 2 and <= AutoSpeakerFuseThreshold)
             {
                 var k = EstimateSpeakerCountBySilhouette(distPristine, x, n, dim, rawK);
                 if (k >= 2 && k < rawK)
                     labels = SphericalKMeans(x, n, dim, k);
+            }
+            else if (rawK > AutoSpeakerFuseThreshold)
+            {
+                // 爆簇：不再让上层硬失败。按保守估计降到 ≤8 人，保证转写能出结果。
+                var k = EstimateSpeakerCountBySilhouette(distPristine, x, n, dim, AutoSpeakerFuseThreshold);
+                if (k < 2) k = 2;                        // 退化兜底：估计不出也至少给 2 人，绝不再抛
+                labels = SphericalKMeans(x, n, dim, k);
+                warning =
+                    $"说话人人数为自动估计值（保守估计 {k} 人；原始检测到 {rawK} 个声纹簇，属异常多簇）。" +
+                    "转写结果正常，但说话人划分可能不完整——建议在编辑器中人工核对与调整，或重新创建任务时填写实际人数。";
             }
         }
 
