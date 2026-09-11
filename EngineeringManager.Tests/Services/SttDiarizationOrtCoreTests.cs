@@ -275,6 +275,76 @@ public class SttDiarizationOrtCoreTests
             Assert.True(merged[i].Start >= merged[i - 1].End - 1e-9);
     }
 
+    // ═══════════ 指定人数尊重输入：ApplyRareSpeakerMerge 门卫 ═══════════
+
+    /// <summary>
+    /// 含 1 个低频说话人的段列表：说话人 1 仅 3s（占比 3.4% &lt; 5%，且 &lt; 15s）——
+    /// 按 MergeRareSpeakers 15s/5% 规则本会被吞并（复刻 9 人会议 4.8%/3.6% 被吃场景）。
+    /// </summary>
+    private static List<SttSegment> RareSpeakerSegments() => new()
+    {
+        new() { Speaker = 0, Start = 0, End = 50, Text = "主导说话人第一段" },
+        new() { Speaker = 1, Start = 50.5, End = 53.5, Text = "低频说话人唯一一段" },
+        new() { Speaker = 0, Start = 54, End = 90, Text = "主导说话人第二段" },
+    };
+
+    [Fact]
+    public void ApplyRareSpeakerMerge_ExplicitSpeakerCount_KeepsRareSpeaker()
+    {
+        // 用户已明确填人数（如 9 人会议填 9）→ 尊重输入不吞并，段列表与输入等价
+        var raw = RareSpeakerSegments();
+
+        var result = DiarizationService.ApplyRareSpeakerMerge(raw, numSpeakers: 9);
+
+        Assert.Equal(raw.Count, result.Count);
+        // 说话人数不变（低频说话人 1 仍在）
+        Assert.Equal(2, result.Select(s => s.Speaker).Distinct().Count());
+        for (int i = 0; i < raw.Count; i++)
+        {
+            Assert.Equal(raw[i].Text, result[i].Text);
+            Assert.Equal(raw[i].Start, result[i].Start);
+            Assert.Equal(raw[i].End, result[i].End);
+            Assert.Equal(raw[i].Speaker, result[i].Speaker);
+        }
+    }
+
+    [Fact]
+    public void ApplyRareSpeakerMerge_AutoMode_StillSwallowsRareSpeaker()
+    {
+        // 同一段列表，自动模式（numSpeakers: null）：低频说话人仍被吞并（自动模式行为不变）
+        var raw = RareSpeakerSegments();
+
+        var result = DiarizationService.ApplyRareSpeakerMerge(raw, numSpeakers: null);
+
+        var speakers = result.Select(s => s.Speaker).Distinct().ToList();
+        Assert.DoesNotContain(1, speakers); // 低频说话人消失
+        Assert.Single(speakers);           // 并入主导说话人后只剩 1 人
+        Assert.Equal(0, speakers[0]);       // 并入的是主导说话人 0
+    }
+
+    [Fact]
+    public void ApplyRareSpeakerMerge_ExplicitSpeakerCount_NoRareSpeakers_NoSideEffects()
+    {
+        // 指定人数且输入没有低频说话人（两说话人 50s/40s，占比 55.6%/44.4% 均 ≥ 5% 且 ≥ 15s）
+        // → 输出与输入逐段相等（无副作用）
+        var raw = new List<SttSegment>
+        {
+            new() { Speaker = 0, Start = 0, End = 50, Text = "甲" },
+            new() { Speaker = 1, Start = 60, End = 100, Text = "乙" },
+        };
+
+        var result = DiarizationService.ApplyRareSpeakerMerge(raw, numSpeakers: 9);
+
+        Assert.Equal(raw.Count, result.Count);
+        for (int i = 0; i < raw.Count; i++)
+        {
+            Assert.Equal(raw[i].Text, result[i].Text);
+            Assert.Equal(raw[i].Start, result[i].Start);
+            Assert.Equal(raw[i].End, result[i].End);
+            Assert.Equal(raw[i].Speaker, result[i].Speaker);
+        }
+    }
+
     // ═══════════ 自动模式保守定 K：轮廓系数判据 EstimateSpeakerCountBySilhouette ═══════════
 
     [Fact]

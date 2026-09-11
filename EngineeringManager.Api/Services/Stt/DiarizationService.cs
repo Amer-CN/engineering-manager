@@ -291,8 +291,8 @@ public class DiarizationService
         // 7. 互斥区间段合并
         var merged = MergeSegments(segments);
 
-        // 8. 合并低频说话人（把只出现很少的说话人合并到主导说话人）
-        merged = MergeRareSpeakers(merged);
+        // 8. 合并低频说话人（仅自动模式；指定人数时尊重用户输入，见 ApplyRareSpeakerMerge 注释）
+        merged = ApplyRareSpeakerMerge(merged, numSpeakers);
 
         Console.WriteLine($"[DiarizationService] 合并后段数: {merged.Count}, 说话人数: {merged.Select(s => s.Speaker).Distinct().Count()}, 总耗时 {totalSw.Elapsed.TotalSeconds:F1}s");
 
@@ -1175,6 +1175,15 @@ public class DiarizationService
         }
         return result;
     }
+
+    /// <summary>
+    /// 是否执行低频说话人吞并：仅自动模式（numSpeakers 为 null）执行——自动模式的聚类
+    /// 可能残留尘埃簇，需要 15s/5% 清理；指定人数时用户已明确说了几个人，吞并会吃掉
+    /// 安静的真人（实测 9 人会议填 9 被吞成 7，两个说话人占比 4.8%/3.6% 低于 5%），
+    /// 此时尊重输入不吞并，可疑的少量说话人留给用户在编辑器里处理。
+    /// </summary>
+    internal static List<SttSegment> ApplyRareSpeakerMerge(List<SttSegment> segments, int? numSpeakers)
+        => numSpeakers is null ? MergeRareSpeakers(segments) : segments;
 
     /// <summary>
     /// 合并低频说话人：把说话时间占比 &lt; 5% 或总时长 &lt; 15s 的说话人合并到时间上最相邻的主导说话人。
