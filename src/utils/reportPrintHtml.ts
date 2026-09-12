@@ -1,12 +1,12 @@
 /**
  * reportPrintHtml.ts — 报告中心整页印刷品化模板（打印/预览用单文件 HTML）
  *
- * 版式正本：vendor/lieflat-charts/templates/reports/report-04.zh.html（官方模板，只读）
+ * 版式正本：~/.zcode/skills/lieflat-charts/templates/reports/report-04.zh.html（官方模板，只读。全局 skill：~/.zcode/skills/lieflat-charts/，源 gh:larashero3-dotcom/lieflat-charts）
  *   学其版式参数转写：左侧书脊竖排大标题（writing-mode:vertical-rl）+ 底部竖排小字、
  *   顶部页眉（左产品名 | 右数据说明）+ 发丝横线、小节 = 右对齐小节名（宽字距）+
  *   结论句标题 + 内容、节间细线分隔、大写来源行（SECTION · 来源 · 日期）、
  *   「值得记住的数字」大数字块（特大等宽数字 + 双行小注）、双行页脚。
- * 色值正本：vendor/lieflat-charts/mono-tokens.js 的 MONO 墨阶
+ * 色值正本：~/.zcode/skills/lieflat-charts/mono-tokens.js 的 MONO 墨阶
  *   （INK #1C1C1A / PAPER #F0EFEB / MUTED #8F8E88 / FAINT #C6C5BF / GRID #DEDDD6）。
  * 图表正本（本批新增）：glance-gallery.html 的 dot waffle 方阵
  *   （COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10，图例=色点+名称+特大百分比）与

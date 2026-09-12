@@ -1,6 +1,6 @@
 /**
  * R05 影响力故事——工作汇报叙事风格
- * 版式正本：vendor/lieflat-charts/templates/reports/report-05.zh.html
+ * 版式正本：~/.zcode/skills/lieflat-charts/templates/reports/report-05.zh.html
  * 打印版心 max-width:794px 单栏文档流 + Mono 墨阶 + 标题关键词反色高亮 + 叙事故事线
  * （原 760px 窄版心，2026-09-07 改打印安全版式）
  */

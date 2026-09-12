@@ -6,7 +6,7 @@
  * 生成器产出（ChartReportView 预览与 buildChartReportPrintHtml 打印同源，观感一致）。
  *
  * 版式/参数正本（只读）：
- * - 折线：vendor/lieflat-charts/templates/basics-gallery.html B2「hairline line」
+ * - 折线：~/.zcode/skills/lieflat-charts/templates/basics-gallery.html B2「hairline line」
  *   （日历地板发丝 + 发丝折线 + 逐日圆点（周末空心）+ 峰值 top-2 标数 + X 轴 3 锚点）；
  * - 方阵：官方 glance dot waffle 参数（COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10，同
  *   reportPrintHtml.buildWaffleSvg 转写口径），色板换 porcelain；

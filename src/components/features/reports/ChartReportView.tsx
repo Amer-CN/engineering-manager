@@ -1,7 +1,7 @@
 /**
  * ChartReportView — 图形版报告预览（R04 版式 React 转写）
  *
- * 版式正本：vendor/lieflat-charts/templates/reports/report-04.zh.html（只读）：
+ * 版式正本：~/.zcode/skills/lieflat-charts/templates/reports/report-04.zh.html（只读）：
  * 米纸底整页 + 左书脊竖排大标题（writing-mode:vertical-rl）+ 每节 = 右对齐小节名
  * （宽字距）+ 结论句标题 + 要点 + 一图（方阵/条形/折线由 AI 数据块类型决定）+
  * 「值得记住的数字」细线分栏大数字 + 页脚来源行（大写格式）。

@@ -1,6 +1,6 @@
 /**
  * R01 调研一页纸——对外举证正式凭证风格
- * 版式正本：vendor/lieflat-charts/templates/report-01.zh.html（主栏 + 彩色右栏）
+ * 版式正本：~/.zcode/skills/lieflat-charts/templates/reports/report-01.zh.html（主栏 + 彩色右栏）
  * 打印版双栏：正文文档流 + 每页固定右侧彩栏——position:fixed 在 Chromium 打印下
  * 逐页重复（100vh=每页内容高），规避双栏 grid 跨页碎片化塌架（2026-09-07 两轮迭代定案）
  * 色值转写自 color-presets.js PORCELAIN 正本（参数层事实，代码自写）

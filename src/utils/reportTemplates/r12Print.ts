@@ -1,6 +1,6 @@
 /**
  * R12 周报速览——Glance 系三秒快读 + Palm 色系 + 手写静态 SVG 双图
- * 版式正本：vendor/lieflat-charts/templates/reports/report-12.zh.html
+ * 版式正本：~/.zcode/skills/lieflat-charts/templates/reports/report-12.zh.html
  * 打印版心 max-width 794px 单栏文档流 + 顶部速览条两数 + 两张图区（原双列改上下排）+ 三栏页脚
  * （原版心 1080 双列图区跨打印分页塌架，2026-09-07 改打印安全版式）
  * 图表：图A 象形点阵（手写静态 SVG，100 点方阵）+ 图B 粗柱（手写静态 SVG）
