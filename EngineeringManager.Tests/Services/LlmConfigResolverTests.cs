@@ -183,9 +183,10 @@ public class LlmConfigResolverLoadRegressionTests : IDisposable
         await resolver.SaveMultiConfigAsync(InMemory("旧服务商"));
         await resolver.SaveMultiConfigAsync(InMemory("新服务商"));
 
-        var bak = File.ReadAllText(Path.Combine(_isolatedDataPath, "llm-config.dpapi.json.bak"));
-        Assert.Contains("旧服务商", bak);
-        var current = File.ReadAllText(Path.Combine(_isolatedDataPath, "llm-config.dpapi.json"));
-        Assert.Contains("新服务商", current);
+        // 落盘 JSON 默认编码器把非 ASCII 转义为 \uXXXX，故断言语义（解析后取 Name）而非原始子串
+        var bak = JsonDocument.Parse(File.ReadAllText(Path.Combine(_isolatedDataPath, "llm-config.dpapi.json.bak")));
+        Assert.Equal("旧服务商", bak.RootElement.GetProperty("Providers")[0].GetProperty("Name").GetString());
+        var current = JsonDocument.Parse(File.ReadAllText(Path.Combine(_isolatedDataPath, "llm-config.dpapi.json")));
+        Assert.Equal("新服务商", current.RootElement.GetProperty("Providers")[0].GetProperty("Name").GetString());
     }
 }
