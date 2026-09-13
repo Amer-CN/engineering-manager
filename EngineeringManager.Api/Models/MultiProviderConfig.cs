@@ -10,6 +10,9 @@ public record ProviderModelEntry
     public string Id { get; init; } = "";
     public List<string> Input { get; init; } = new() { "text" };
     public List<string> Output { get; init; } = new() { "text" };
+
+    /// <summary>上下文长度（tokens 数；null = 未标注，旧数据自动兼容）</summary>
+    public long? ContextWindow { get; init; }
 }
 
 /// <summary>
@@ -25,6 +28,14 @@ public record ProviderEntry
     public string ApiKey { get; init; } = "";
     public List<ProviderModelEntry> Models { get; init; } = new();
     public string ActiveModelId { get; init; } = "";
+
+    /// <summary>
+    /// 接口协议：chat = OpenAI Chat Completions（POST {BaseUrl}/chat/completions，缺省）
+    /// | responses = OpenAI Responses（POST {BaseUrl}/responses）
+    /// | anthropic = Anthropic Messages（POST {BaseUrl}/v1/messages）
+    /// 未知值按 chat 回退（调用侧 fail-safe）
+    /// </summary>
+    public string Protocol { get; init; } = "chat";
 }
 
 /// <summary>

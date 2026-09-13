@@ -24,5 +24,7 @@ public record ModelRouteInfo(
     double Temperature = 0.7,
     int MaxTokens = 4096,
     /** HTTP 代理地址（null/空 = 直连） */
-    string? ProxyUrl = null
+    string? ProxyUrl = null,
+    /** 接口协议：chat | responses | anthropic（未知值调用侧按 chat 回退） */
+    string Protocol = "chat"
 );

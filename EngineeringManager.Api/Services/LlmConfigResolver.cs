@@ -19,6 +19,9 @@ internal class PersistedProviderEntry
     public string ApiKeyEnc { get; set; } = "";
     public List<ProviderModelEntry> Models { get; set; } = new();
     public string ActiveModelId { get; set; } = "";
+
+    /// <summary>接口协议：chat（缺省）| responses | anthropic；旧条目无此字段时反序列化落缺省 "chat"</summary>
+    public string Protocol { get; set; } = "chat";
 }
 
 /// <summary>
@@ -82,7 +85,7 @@ public class LlmConfigResolver
     // 运行时重组。环境变量 AGNES_BUILTIN_API_KEY / appsettings Agnes:ApiKey 可覆盖
     // （高级用户换自己的通道，留空 = 用出厂 key）。
     private const string BuiltInBaseUrl = "https://apihub.agnes-ai.com/v1";
-    private const string BuiltInModel = "agnes-2.5-flash";
+    private const string BuiltInModel = "agnes-3.0-flash";
     // 分片与掩码（Base64）：enc = key XOR mask，A/B 为 enc 前后两段
     private const string KeyPartA = "NgYOBjkBAhl7Ti9MOCA2EnlLMDhiIGlfMRhYIRJg";
     private const string KeyPartB = "JiwDRHwDIXEODmtyMWhUIVUTbwkB";
@@ -196,6 +199,7 @@ public class LlmConfigResolver
                 MaxTokens = multi.MaxTokens,
                 AvailableModels = new List<string> { builtinModel },
                 ProxyUrl = multi.ProxyUrl,
+                Protocol = "chat",
             };
         }
 
@@ -219,6 +223,7 @@ public class LlmConfigResolver
             AvailableModels = active.Models.Select(m => m.Id).ToList(),
             ModelCapabilities = caps,
             ProxyUrl = multi.ProxyUrl,
+            Protocol = string.IsNullOrEmpty(active.Protocol) ? "chat" : active.Protocol,
         };
     }
 
@@ -257,10 +262,13 @@ public class LlmConfigResolver
                     ApiKeyEnc = legacy.ApiKeyEnc ?? "",
                     Models = models,
                     ActiveModelId = currentModel,
+                    Protocol = "chat",
                 },
             },
-            Temperature = legacy.Temperature,
-            MaxTokens = legacy.MaxTokens,
+            // 旧结构没有温度/MaxTokens 字段，迁移时零值补推荐默认（0.7/4096），
+            // 否则设置页回显 0.0 且用户不点保存就会把 0 再次写死
+            Temperature = legacy.Temperature > 0 ? legacy.Temperature : 0.7,
+            MaxTokens = legacy.MaxTokens > 0 ? legacy.MaxTokens : 4096,
         };
     }
 
@@ -302,6 +310,21 @@ public class LlmConfigResolver
     }
 
     /// <summary>
+    /// 当前生效服务商的接口协议（chat/responses/anthropic）。
+    /// 激活判定与 ExpandMulti 一致：UseBuiltIn 或无匹配条目 → 内置 Agnes → "chat"；
+    /// 条目 Protocol 为空视为 "chat"（未知值的回退在调用侧处理）。
+    /// </summary>
+    public string GetActiveProtocol()
+    {
+        lock (_lock)
+        {
+            if (_multi.UseBuiltIn) return "chat";
+            var active = _multi.Providers.FirstOrDefault(p => p.Id == _multi.ActiveProviderId);
+            return string.IsNullOrEmpty(active?.Protocol) ? "chat" : active.Protocol;
+        }
+    }
+
+    /// <summary>
     /// 重新加载配置（从持久化文件 + 环境变量重新解析）
     /// </summary>
     public Task ReloadConfigAsync()
@@ -322,8 +345,10 @@ public class LlmConfigResolver
     /// </summary>
     public async Task SaveMultiConfigAsync(MultiProviderConfig newMulti)
     {
-        // key 合并：空 key 的 provider 沿用内存里同 id 的旧 key
+        // key 合并：空 key 的 provider 沿用内存里同 id 的旧 key；
+        // 无旧条目（新建）又没填 key → 拒绝整单落盘（空壳服务商防线）
         var merged = new List<ProviderEntry>();
+        var missingKey = new List<string>();
         lock (_lock)
         {
             foreach (var p in newMulti.Providers)
@@ -334,9 +359,17 @@ public class LlmConfigResolver
                     continue;
                 }
                 var old = _multi.Providers.FirstOrDefault(o => o.Id == p.Id);
-                merged.Add(old == null ? p : p with { ApiKey = old.ApiKey });
+                if (old == null)
+                {
+                    missingKey.Add(p.Name);
+                    continue;
+                }
+                merged.Add(p with { ApiKey = old.ApiKey });
             }
         }
+        if (missingKey.Count > 0)
+            throw new InvalidOperationException(
+                $"新建服务商 {string.Join("、", missingKey)} 未填写 API Key，已拒绝保存");
         var effective = NormalizeMulti(newMulti with { Providers = merged });
 
         var dataPath = ApiConfig.ResolveDataPath();
@@ -358,10 +391,15 @@ public class LlmConfigResolver
                 ApiKeyEnc = EncryptApiKey(p.ApiKey),
                 Models = p.Models,
                 ActiveModelId = p.ActiveModelId,
+                Protocol = p.Protocol,
             }).ToList(),
         };
 
         Directory.CreateDirectory(dataPath);
+        // 单代备份：覆盖前保留上一版——llm-config 是服务商数据的唯一载体，曾因加载缺陷
+        // 被整份清空且无从恢复（2026-09-07），此后同类事故至少可回滚一步。
+        if (File.Exists(filePath))
+            File.Copy(filePath, filePath + ".bak", overwrite: true);
         var json = JsonSerializer.Serialize(persisted, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(filePath, json);
 
@@ -389,6 +427,7 @@ public class LlmConfigResolver
             UseBuiltIn = persisted.UseBuiltIn,
             Temperature = persisted.Temperature,
             MaxTokens = persisted.MaxTokens,
+            ProxyUrl = persisted.ProxyUrl,
             Providers = persisted.Providers.Select(p => new ProviderEntry
             {
                 Id = p.Id,
@@ -397,15 +436,20 @@ public class LlmConfigResolver
                 ApiKey = DecryptApiKey(p.ApiKeyEnc),
                 Models = p.Models,
                 ActiveModelId = p.ActiveModelId,
+                // 旧条目（无 Protocol 字段）缺省迁移为 "chat"
+                Protocol = string.IsNullOrEmpty(p.Protocol) ? "chat" : p.Protocol,
             }).ToList(),
         };
     }
 
     private MultiProviderConfig ResolveMulti()
     {
-        // 1. 用户配置（DPAPI 加密文件；useBuiltIn=false 且有可用 provider 时生效）
+        // 1. 用户配置（DPAPI 加密文件；有自定义服务商即完整加载）
+        //    不得按 UseBuiltIn 弃用持久化配置：否则切内置后 reload/重启会让内存 providers
+        //    清空，前端整态自动保存把空列表写回磁盘（2026-09-07 服务商整体丢失事故根因）。
+        //    内置模式只影响 ExpandMulti 的展开生效方，加载必须忠实于文件。
         var persisted = LoadPersistedMulti();
-        if (persisted != null && !persisted.UseBuiltIn && persisted.Providers.Count > 0)
+        if (persisted != null && persisted.Providers.Count > 0)
         {
             _logger.LogInformation("[LlmConfigResolver] 使用用户多服务商配置: Providers={Count}, Active={Active}",
                 persisted.Providers.Count, persisted.ActiveProviderId);

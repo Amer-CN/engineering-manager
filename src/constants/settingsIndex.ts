@@ -75,6 +75,7 @@ export const SETTINGS_INDEX: SettingItem[] = [
   // ── 通知与偏好 ──
   { id: 'default-start-page', label: '默认起始页', keywords: ['起始页', '首页', '默认页面', '启动', 'home'], category: 'preferences' },
   { id: 'toast-duration', label: '提示停留时长', keywords: ['提示', 'toast', '通知', '时长', '消息', 'notification'], category: 'preferences' },
+  { id: 'agent-retention-days', label: '对话删除保留天数', keywords: ['删除', '清理', '保留', 'retention', '对话', '清空'], category: 'preferences'},
 
   // ── 关于与帮助 ──
   { id: 'app-version', label: '版本与更新', keywords: ['版本', '更新', '升级', '检查更新', 'version', 'update', '更新日志', 'changelog', '变更历史'], category: 'about' },

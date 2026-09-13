@@ -1,17 +1,23 @@
 /**
  * WritingCheckPanel — 交稿体检面板（写作中心 R6）
  *
- * 四项检查（逻辑在 runWritingCheck 纯函数里，不依赖 DOM，可单测）：
+ * 四项本地检查（逻辑在 runWritingCheck 纯函数里，不依赖 DOM，可单测）：
  *   1. [[...]] Protected Span 残留标记（导出前应清零）
  *   2. 标题层级跳号（如 H1 直接降到 H3，跳过 H2）
  *   3. 字数统计（textContent 去空白字符数）
  *   4. 空洞套话检测（黑名单：高度重视/积极推进/切实抓好/认真部署/迅速行动/全面落实）
+ *
+ * 第 5 项（v0.12 新增，走后端 API，纯统计无 LLM）：
+ *   5. 量化风格体检 — 按文体对照 style-params.md 参考区间（中位数 + p25-p75），
+ *      判定哲学：单项区间外 = hint（不理会），同向 ≥3 项 / 硬冲突 = warn；
+ *      无参数文种仅做标点纪律与元评论检测。
  */
 
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { styleCheckWriting, type WritingStyleCheckItem, type WritingStyleCheckResponse } from "@/services/writing-client";
 
 /** 单项检查结果 */
 export interface CheckResult {
@@ -154,13 +160,48 @@ interface WritingCheckPanelProps {
   editor: Editor;
   open: boolean;
   onClose: () => void;
+  /** 文体代码（量化体检的文种映射用）；未传时后端按无参数文种降级（仅标点纪律） */
+  docType?: string | null;
 }
 
-const WritingCheckPanel: React.FC<WritingCheckPanelProps> = ({ editor, open, onClose }) => {
+/** 体检单项 verdict 展示（ok 区间内 / hint 单项区间外 / warn 硬冲突或同向偏离） */
+function styleVerdictMark(v: WritingStyleCheckItem["verdict"]): { mark: string; color: string } {
+  if (v === "ok") return { mark: "✓", color: "var(--success)" };
+  if (v === "warn") return { mark: "⚠", color: "var(--warning)" };
+  return { mark: "△", color: "var(--muted)" };
+}
+
+const WritingCheckPanel: React.FC<WritingCheckPanelProps> = ({ editor, open, onClose, docType }) => {
   const results = useMemo<CheckResult[]>(
     () => (open ? runWritingCheck(editor.getJSON()) : []),
     [open, editor],
   );
+
+  // ── 第 5 项：量化风格体检（面板打开即随前四项刷新节奏触发，可手动重跑） ──
+  const [styleReport, setStyleReport] = useState<WritingStyleCheckResponse | null>(null);
+  const [styleBusy, setStyleBusy] = useState(false);
+  const [styleError, setStyleError] = useState<string | null>(null);
+
+  const runStyleCheck = useCallback(async () => {
+    setStyleBusy(true);
+    setStyleError(null);
+    try {
+      const res = await styleCheckWriting({ docType: docType ?? "", content: editor.getText() });
+      if (res.success && res.data) setStyleReport(res.data);
+      else setStyleError(res.error || "体检失败，请稍后重试");
+    } catch {
+      setStyleError("体检请求失败");
+    } finally {
+      setStyleBusy(false);
+    }
+  }, [editor, docType]);
+
+  useEffect(() => {
+    if (!open) return;
+    setStyleReport(null);
+    setStyleError(null);
+    void runStyleCheck();
+  }, [open, runStyleCheck]);
 
   // Esc 关闭（模式同 WritingExportMenu：document keydown）
   useEffect(() => {
@@ -174,6 +215,7 @@ const WritingCheckPanel: React.FC<WritingCheckPanelProps> = ({ editor, open, onC
 
   if (!open) return null;
   const warnCount = results.filter((r) => !r.ok).length;
+  const hardCount = styleReport?.hardWarnings.length ?? 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -213,10 +255,83 @@ const WritingCheckPanel: React.FC<WritingCheckPanelProps> = ({ editor, open, onC
               )}
             </div>
           ))}
+
+          {/* 第 5 项：量化风格体检（后端纯统计，对照 style-params.md 参考区间） */}
+          <div className="rounded-lg border p-3" style={{ borderColor: "var(--border)" }} data-testid="styleparams-check">
+            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--fg)" }}>
+              <Icon name="FileCheck" size={15} />
+              <span className="font-medium">量化风格体检</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>
+                {styleBusy ? "检测中…" : styleReport ? styleReport.genre : styleError ? "不可用" : ""}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={() => void runStyleCheck()}
+                disabled={styleBusy}
+              >
+                {styleBusy ? "体检中" : "运行体检"}
+              </Button>
+            </div>
+
+            {styleError && (
+              <div className="mt-2 text-xs" style={{ color: "var(--warning)" }}>
+                · {styleError}
+              </div>
+            )}
+
+            {styleReport && (
+              <>
+                <div className="mt-2">
+                  {styleReport.items.map((item) => {
+                    const { mark, color } = styleVerdictMark(item.verdict);
+                    const range =
+                      item.low != null && item.high != null
+                        ? `参考 ${item.low}-${item.high}（中位 ${item.median}）`
+                        : "无参考区间";
+                    return (
+                      <div key={item.id} className="flex items-center gap-2 py-0.5 text-xs" style={{ color: "var(--fg)" }}>
+                        <span style={{ color }}>{mark}</span>
+                        <span>{item.label}</span>
+                        <span style={{ color: "var(--muted)" }}>{range}</span>
+                        <span className="ml-auto font-medium">
+                          {item.actual}
+                          {item.unit}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {styleReport.hardWarnings.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {styleReport.hardWarnings.map((w, i) => (
+                      <li key={i} className="text-xs" style={{ color: "var(--warning)" }}>
+                        ⚠ {w}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {styleReport.notes.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {styleReport.notes.map((n, i) => (
+                      <li key={i} className="text-xs" style={{ color: "var(--muted)" }}>
+                        · {n}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         <div className="px-4 py-3 border-t text-xs" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-          {warnCount === 0 ? "四项检查全部通过，可以交稿" : `共 ${warnCount} 项提醒`}
+          {warnCount === 0 && hardCount === 0
+            ? "四项检查全部通过，可以交稿"
+            : `共 ${warnCount + hardCount} 项提醒`}
         </div>
       </div>
     </div>

@@ -18,15 +18,17 @@ interface WritingPreviewModalProps {
   open: boolean;
   onClose: () => void;
   markdown: string;
+  /** 050 双写：编辑器 getHTML() 快照；非空经白名单清洗直接渲染（样式保留），空则回退 markdown 路径 */
+  html?: string;
   title: string;
 }
 
-const WritingPreviewModal: React.FC<WritingPreviewModalProps> = ({ open, onClose, markdown, title }) => {
+const WritingPreviewModal: React.FC<WritingPreviewModalProps> = ({ open, onClose, markdown, html, title }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const html = useMemo(
-    () => (open ? buildPrintPreviewHtml(markdown, title.trim() || "未命名文档") : ""),
-    [open, markdown, title],
+  const docHtml = useMemo(
+    () => (open ? buildPrintPreviewHtml(markdown, title.trim() || "未命名文档", html) : ""),
+    [open, markdown, html, title],
   );
 
   const handlePrint = () => {
@@ -39,7 +41,7 @@ const WritingPreviewModal: React.FC<WritingPreviewModalProps> = ({ open, onClose
       // WebView2 某些版本对跨 frame print 受限时，退回新窗口打印
       const w = window.open("", "_blank");
       if (w) {
-        w.document.write(html);
+        w.document.write(docHtml);
         w.document.close();
         window.setTimeout(() => w.print(), 300);
       }
@@ -83,7 +85,7 @@ const WritingPreviewModal: React.FC<WritingPreviewModalProps> = ({ open, onClose
           <iframe
             ref={iframeRef}
             title="文档打印预览"
-            srcDoc={html}
+            srcDoc={docHtml}
             className="block mx-auto bg-white"
             style={{ width: "794px", maxWidth: "100%", minHeight: "70vh", border: "none", boxShadow: "0 1px 6px rgba(0,0,0,.18)" }}
           />

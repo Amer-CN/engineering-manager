@@ -216,7 +216,12 @@ function installGlobalHandlers(): void {
       }
       return response
     } catch (err) {
-      if (!reporting && !isOwnEndpoint(url)) {
+      // 用户取消（AbortError）与受控超时（AbortSignal.timeout → TimeoutError）都是
+      // 调用方已处理的正常流：跳过上报与错误面包屑，但**必须原样抛出**——调用方依赖
+      // reject 走自己的 catch（companyQuery 5s 超时、api-adapter 2s 探测均 try/catch
+      // 优雅降级），吞掉会让 await fetch 得到 undefined、下一行 resp.ok 抛 TypeError。
+      const isHandled = err instanceof DOMException && (err.name === 'AbortError' || err.name === 'TimeoutError')
+      if (!isHandled && !reporting && !isOwnEndpoint(url)) {
         addBreadcrumb('api', `fetch failed ${url}`)
         void reportCrash({
           kind: 'fetch',

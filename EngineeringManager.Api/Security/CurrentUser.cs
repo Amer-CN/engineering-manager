@@ -71,7 +71,7 @@ public static class CurrentUser
 
     /// <summary>PII 列全集(以 DB 列名为准)</summary>
     public static readonly string[] AllPiiColumns =
-        { "id_card", "phone", "bank_account", "address", "id_card_address", "current_address" };
+        { "id_card", "phone", "bank_account", "wage_bank_account", "address", "id_card_address", "current_address" };
 
     public enum PiiRole { Admin, Accountant, Manager, Worker, None }
 

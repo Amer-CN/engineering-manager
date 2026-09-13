@@ -71,6 +71,17 @@ export const FIELD_LABELS: Record<string, string> = {
   // runSafeQuery 动态列常见字段（下划线原样，驼峰拼法由 fieldLabel 双拼写互查覆盖）
   created_by: '创建人', created_at: '创建时间', updated_by: '更新人', updated_at: '更新时间',
   invoice_kind: '发票类型', invoice_code: '发票代码', received_amount: '已收金额',
+  // ── 审计缺口 A/B 字段补齐（工具结果真实列名；驼峰拼法由 fieldLabel 双拼写互查覆盖）──
+  description: '项目描述', project_manager_id: '项目经理ID',
+  email: '邮箱', gender: '性别', ethnicity: '民族', birth_date: '出生日期',
+  base_salary: '底薪', entry_date: '入职日期', department_id: '部门ID', position: '岗位',
+  seller_id: '销方ID', buyer_id: '购方ID', contract_id: '合同ID', settlement_id: '结算ID',
+  price_amount: '不含税金额', tax_rate: '税率', tax_amount: '税额', remarks: '备注',
+  partner_id: '合作方ID', settlement_date: '结算日期',
+  batch_id: '批次ID', voucher_no: '凭证号', channel: '收付渠道', summary: '摘要', notes: '备注',
+  code: '编码', specifications: '规格', purchase_price: '采购价', sale_price: '售价',
+  current_stock: '当前库存', min_stock: '最低库存', max_stock: '最高库存', supplier_id: '供应商ID',
+  tax_number: '税号', credit_code: '统一社会信用代码',
 }
 
 export function fieldLabel(key: string): string {
@@ -91,6 +102,23 @@ const STATUS_LABELS: Record<string, string> = {
   labor: '劳务分包', material: '材料供应', equipment: '设备租赁',
   // 发票状态（真源 invoiceConfig.ts statusConfigMap）
   issued: '已开具', partially_paid: '部分收款', cancelled: '已作废', red_flushed: '已红冲',
+  // 发票方向/种类（真源 invoiceConfig.ts labelIn/labelOut 与 kindConfig）
+  invoice_in: '进项发票', invoice_out: '销项发票',
+  electronic_special: '电专', paper_special: '纸专',
+  // 成本台账分类（真源 costLedgerColors.ts CATEGORY_CONFIG 全量；
+  // custom_* 用户自建分类不在此映射，原样显示；
+  // labor/material/equipment 与合作方分类共用键，保留原合作方标签）
+  public_relations: '公关招待费', intermediary_fee: '居间中介费', other_business: '其他业务费',
+  subcontract: '专业分包款', temp_facility: '临建及办公费', manager_salary: '管理人员薪酬',
+  travel_misc: '差旅及杂项', bid_guarantee: '投标及保函费', consult_testing: '咨询检测费',
+  doc_agency: '资料代理费', other_public: '其他对公服务费', capital_cost: '资金成本',
+  guarantee_fee: '保函及规费', irregular_invoice: '非常规发票成本', fine_other: '罚款及其他',
+  shareholder_investment: '股东投资', financing: '融资款', income_invest_ph: '投资款-占位',
+  advance_recovery: '垫资回收', income_return_ph: '项目回款-占位',
+  income_refund_ph: '退款-占位', income_other_ph: '其他收入-占位',
+  // 合作方分类（真源 PartnerCategory 类型定义注释）
+  owner: '建设单位', general_contract: '总承包', professional: '专业分包',
+  design: '设计单位', supervisor: '监理单位', survey: '地勘单位',
   // 项目状态
   planning: '规划中', in_progress: '进行中', archived: '已归档',
   // 结算状态
@@ -117,13 +145,17 @@ export function statusTone(
 }
 
 /** 金额型字段（加 ¥ 与千分位；导出供 DataTable 表尾求和判断） */
-export const MONEY_KEYS = /(amount|total|totalincome|totalexpense|nettotal|budget|wage)/i
+export const MONEY_KEYS = /(amount|total|totalincome|totalexpense|nettotal|budget|wage|salary|price)/i
 
 /** 格式化标量值 */
 export function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'boolean') return value ? '是' : '否'
   if (typeof value === 'number') {
+    // 比率型字段（tax_rate）：0-1 小数按百分比显示（0.09 → 9%）
+    if (/rate/i.test(key) && value >= 0 && value <= 1) {
+      return (value * 100).toFixed(0) + '%'
+    }
     if (MONEY_KEYS.test(key)) {
       return '¥' + value.toLocaleString('zh-CN', {
         minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -134,11 +166,14 @@ export function formatValue(key: string, value: unknown): string {
   const s = String(value)
   if (
     (key === 'status' || key === 'type' || key === 'direction' ||
-      key === 'category' || key === 'member_type' || key === 'worker_type') &&
+      key === 'category' || key === 'member_type' || key === 'worker_type' ||
+      key === 'invoice_kind') &&
     STATUS_LABELS[s]
   ) {
     return STATUS_LABELS[s]
   }
+  // ISO 时间戳截取日期部分（'2026-05-14T17:32' / '2026-07-29 20:57:04' → '2026-05-14'）
+  if (/^\d{4}-\d{2}-\d{2}(T| )/.test(s)) return s.slice(0, 10)
   return s
 }
 

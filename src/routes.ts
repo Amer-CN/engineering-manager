@@ -196,10 +196,10 @@ export const routes: RouteMeta[] = [
   },
   {
     id: 'writing',
-    label: '写作中心',
+    label: '文秘助手',
     icon: 'PenLine',
     shortcut: 'G X',
-    description: '公文起草与文档写作',
+    description: '公文起草 · 总结汇报',
   },
   {
     id: 'reports',

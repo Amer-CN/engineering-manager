@@ -2,48 +2,115 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { EASE_OUT } from '@/constants/animations'
 import { Icon } from '@/components/ui/Icon'
-import { parseMarkup, tokenizeInline } from '@/utils/templateMarkup'
+import { parseMarkup, type MarkupLine } from '@/utils/templateMarkup'
 import {
   parseReportMarkdown,
   buildReportPrintHtml,
   buildChartReportPrintHtml,
   type ReportPrintCharts,
 } from '@/utils/reportPrintHtml'
-import { parseChartReport } from '@/utils/chartReport'
-import { ReportCharts, fetchReportChartsData } from './ReportCharts'
+import { parseChartReport, type ChartReportData } from '@/utils/chartReport'
+import { buildTemplatePrintHtml, type ReportTemplateId, type TemplateReportData } from '@/utils/reportTemplates'
+import { PRESETS } from '@/components/ui/charts/colorPresets'
+import { fetchReportChartsData } from './ReportCharts'
 import ChartReportView from './ChartReportView'
-
+import ReportTextPreview from './ReportTextPreview'
+import R01EvidenceView from './tpl/R01EvidenceView'; import R05WorkView from './tpl/R05WorkView'; import R12WeeklyView from './tpl/R12WeeklyView'
 interface ReportResultPanelProps {
   markdown: string
   onUpdateMarkdown: (md: string) => void
-  /** 报告形式（Modal 生成时快照透传）：chart=图形版预览/打印走 R04 整页链路；缺省 text */
+  /** 报告形式（Modal 生成时快照透传）：chart=图形版预览/打印走模板链路；缺省 text */
   format?: 'text' | 'chart'
+  /** 报告模板（Modal 生成时快照透传，由 purpose 映射）；缺省 'r04' */
+  templateId?: string
 }
-
-/** 表格单元格行内标记渲染（与段落分支同规则：**粗体** / *斜体*） */
-const renderCellInline = (text: string) =>
-  tokenizeInline(text).map((t, j) =>
-    t.type === 'bold' ? (
-      <strong key={j} style={{ color: 'var(--fg)' }}>{t.content}</strong>
-    ) : t.type === 'italic' ? (
-      <em key={j}>{t.content}</em>
-    ) : (
-      <span key={j}>{t.content}</span>
-    )
-  )
-
+/** 文本预览块（parsedBlocks memo 产出 → ReportTextPreview 消费） */
+export type ReportPreviewBlock =
+  | { kind: 'line'; line: MarkupLine }
+  | { kind: 'list'; type: 'ul' | 'ol'; items: MarkupLine[] }
+/**
+ * 图形版模板数据装配（预览 tplData 与打印 collectTplCharts 共用同一口径）：
+ * waffle/topBars/trend 来自各节 chart 块，bigNumbers 来自顶层「值得记住的数字」节；
+ * 全空时返回 undefined（组件侧以 ?? [] 兜底）。
+ */
+const collectTplCharts = (d: ChartReportData) => {
+  let waffle: { title: string; rows: { name: string; pct: number; color: string }[] } | undefined
+  let topBars: { title: string; unit: string; rows: { name: string; value: number }[] } | undefined
+  let trend: { title: string; unit: string; points: { x: string; y: number }[] } | undefined
+  for (const s of d.sections) {
+    const c = s.chart
+    if (!c) continue
+    if (c.kind === 'waffle' && c.rows && !waffle) {
+      const total = c.rows.reduce((a, r) => a + r.value, 0)
+      waffle = { title: c.title ?? '', rows: c.rows.map((r) => ({ name: r.name, pct: total > 0 ? Math.round((r.value / total) * 100) : 0, color: PRESETS.porcelain.hero })) }
+    } else if (c.kind === 'bars' && c.rows && !topBars) {
+      topBars = { title: c.title ?? '', unit: '¥', rows: c.rows.map((r) => ({ name: r.name, value: r.value })) }
+    } else if (c.kind === 'trend' && c.points && !trend) {
+      trend = { title: c.label ?? '', unit: '¥', points: c.points.map((pt) => ({ x: pt.x, y: pt.y })) }
+    }
+  }
+  const bigNumbers = d.bigNumbers.map((b) => ({ value: b.value, label: b.label, sub: '' }))
+  if (!waffle && !topBars && !trend && bigNumbers.length === 0) return undefined
+  return { waffle, topBars, trend, bigNumbers }
+}
 /**
  * 报告结果面板 — 预览/编辑切换 + 复制/打印工具栏
  * 文本版（缺省）：markdown 段落流预览 + 打印附图链路（零改动）；
  * 图形版（format=chart）：预览渲染 ChartReportView（R04 整页），打印同版式静态 HTML。
  */
-const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdateMarkdown, format }) => {
+const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdateMarkdown, format, templateId }) => {
+  // templateId 由 Modal 快照透传（purpose→templateId 已在 ReportGeneratorModal 映射完成），
+  // 此处只做白名单直通，不再二次映射（getTemplateId(purpose) 会把 'r01'/'r05'/'r12' 误落回 'r04'）
+  const tpl: ReportTemplateId = templateId === 'r01' || templateId === 'r05' || templateId === 'r12' ? templateId : 'r04'
   const [isEditing, setIsEditing] = useState(false)
   const [copied, setCopied] = useState(false)
   const isChart = format === 'chart'
+  // 图形版数据桥：parseChartReport(AI 数据段) → TemplateReportData（三新模板共用；与打印 collectTplCharts 同口径）。
+  // 文本格式不消费 tplData：跳过 parseChartReport（白算且每次渲染打 chart 数据块缺失警告）
+  const tplData = useMemo<TemplateReportData>(() => {
+    if (!isChart) {
+      return {
+        title: '运营报告',
+        period: '',
+        meta: {
+          product: '工程管家',
+          generatedBy: 'AI 生成',
+          dataSource: '本地数据台账',
+          date: '',
+        },
+        sections: [],
+      }
+    }
+    const data = parseChartReport(markdown)
+    return {
+      title: data.title || '运营报告',
+      period: data.period || '',
+      meta: {
+        product: '工程管家',
+        generatedBy: 'AI 生成',
+        dataSource: '本地数据台账',
+        date: new Date().toISOString().slice(0, 10),
+      },
+      sections: data.sections.map((sec) => ({ name: null, heading: sec.headline, lines: [...sec.bullets, ...sec.lines] })),
+      charts: collectTplCharts(data),
+    }
+  }, [markdown, isChart])
 
-  const parsedLines = useMemo(() => parseMarkup(markdown), [markdown])
-
+  // 文本分支渲染单元：blockquote 引用行按弱化元信息行识别；连续同类型列表行合并为
+  // list 块（镜像打印链 renderLines 的 closeList 口径：类型切换或非列表行时闭合）
+  const parsedBlocks = useMemo(() => {
+    const blocks: ReportPreviewBlock[] = []
+    for (const line of parseMarkup(markdown, { blockquote: true })) {
+      const last = blocks[blocks.length - 1]
+      if (line.listType === 'ul' || line.listType === 'ol') {
+        if (last?.kind === 'list' && last.type === line.listType) last.items.push(line)
+        else blocks.push({ kind: 'list', type: line.listType, items: [line] })
+      } else {
+        blocks.push({ kind: 'line', line })
+      }
+    }
+    return blocks
+  }, [markdown])
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(markdown)
@@ -68,9 +135,32 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
     const pad = (n: number) => String(n).padStart(2, '0')
     const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 
-    // 图形版：数据完全来自 AI 数据段（不拉本地附图数据），解析后走 R04 同款整页打印
+    // 图形版：数据完全来自 AI 数据段（不拉本地附图数据），解析后走模板打印
+    // 装配口径与预览 tplData 统一：collectTplCharts（waffle/topBars/trend 来自各节 chart 块，bigNumbers 来自顶层大数）
     if (isChart) {
       const data = parseChartReport(markdown)
+      if (tpl !== 'r04') {
+        // 新模板（r01/r05/r12）：走 reportTemplates 专属生成器
+        const tplData: TemplateReportData = {
+          title: data.title || '运营报告',
+          period: data.period || '',
+          meta: {
+            product: '工程管家',
+            generatedBy: 'AI 生成',
+            dataSource: '本地数据台账',
+            date: today,
+          },
+          sections: data.sections.map((s) => ({ name: null, heading: s.headline, lines: [...s.bullets, ...s.lines] })),
+          charts: collectTplCharts(data),
+        }
+        const tplHtml = buildTemplatePrintHtml(tpl, tplData)
+        if (win) {
+          win.document.write(tplHtml)
+          win.document.close()
+          win.print()
+        }
+        return
+      }
       const html = buildChartReportPrintHtml(data, {
         productName: '工程管家',
         dataNote: 'AI 生成 · 图形版',
@@ -86,9 +176,9 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
       return
     }
 
-    // markdown → 结构（##/### 分节；#/#### 井号处理；表格块；首段引言；无 ## 兜底单节），
+    // markdown → 结构（##/### 分节；#/#### 井号处理；> 引用行；表格块；首段引言；无 ## 兜底单节），
     // 不改写 AI 内容
-    const { title, sections } = parseReportMarkdown(markdown)
+    const { title, period, sections } = parseReportMarkdown(markdown)
     // 附图数据：与预览 ReportCharts 同口径拉取（发票状态计数 / 支出分类 TOP）；
     // 失败则跳过图表区，打印页正文照常
     let charts: ReportPrintCharts | undefined
@@ -116,7 +206,7 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
     }
     const html = buildReportPrintHtml(
       title ?? '运营报告',
-      `AI 生成 · ${now.getFullYear()}`,
+      period ?? `AI 生成 · ${now.getFullYear()}`, // 书脊底部小字：解析出的真实期间，无则回退
       sections,
       {
         productName: '工程管家',
@@ -132,7 +222,7 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
       win.document.close()
       win.print()
     }
-  }, [markdown, isChart])
+  }, [markdown, isChart, tpl])
 
   return (
     <motion.div
@@ -214,108 +304,16 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
               color: 'var(--fg)',
             }}
           />
+        ) : isChart && tpl === 'r01' ? (
+          <R01EvidenceView data={tplData} />
+        ) : isChart && tpl === 'r05' ? (
+          <R05WorkView data={tplData} />
+        ) : isChart && tpl === 'r12' ? (
+          <R12WeeklyView data={tplData} />
         ) : isChart ? (
           <ChartReportView markdown={markdown} />
         ) : (
-          <>
-            <div className="prose prose-sm max-w-none text-xs" style={{ color: 'var(--fg)' }}>
-            {parsedLines.map((line, i) => {
-              // 表格行：React 版细线表（表头小写字距 · 发丝行线 · 无竖线无色块，与打印链同观感）
-              if (line.table) {
-                return (
-                  <table key={i} className="my-2.5 w-full border-collapse">
-                    <thead>
-                      <tr>
-                        {line.table.headers.map((h, j) => (
-                          <th
-                            key={j}
-                            className="text-caption font-semibold uppercase tracking-wider text-left"
-                            style={{
-                              color: 'var(--muted)',
-                              borderBottom: '1px solid var(--fg)',
-                              padding: '6px 10px 5px',
-                            }}
-                          >
-                            {renderCellInline(h)}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {line.table.rows.map((row, r) => (
-                        <tr key={r}>
-                          {row.map((cell, c) => (
-                            <td
-                              key={c}
-                              className="text-micro"
-                              style={{
-                                color: 'var(--fg-2)',
-                                borderBottom: '1px solid var(--border)',
-                                padding: '6px 10px',
-                              }}
-                            >
-                              {renderCellInline(cell)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )
-              }
-              if (line.heading) {
-                return (
-                  <h3
-                    key={i}
-                    className="text-sm font-bold mt-4 mb-2"
-                    style={{ color: 'var(--fg)' }}
-                  >
-                    {line.tokens.map((t, j) =>
-                      t.type === 'bold' ? (
-                        <strong key={j}>{t.content}</strong>
-                      ) : t.type === 'italic' ? (
-                        <em key={j}>{t.content}</em>
-                      ) : (
-                        <span key={j}>{t.content}</span>
-                      )
-                    )}
-                  </h3>
-                )
-              }
-              if (line.listType === 'ul') {
-                return (
-                  <li key={i} className="ml-4 list-disc" style={{ color: 'var(--fg-2)' }}>
-                    {line.listContent}
-                  </li>
-                )
-              }
-              if (line.listType === 'ol') {
-                return (
-                  <li key={i} className="ml-4 list-decimal" style={{ color: 'var(--fg-2)' }}>
-                    {line.listContent}
-                  </li>
-                )
-              }
-              return (
-                <p key={i} className="mb-1" style={{ color: 'var(--fg-2)' }}>
-                  {line.tokens.map((t, j) =>
-                    t.type === 'bold' ? (
-                      <strong key={j} style={{ color: 'var(--fg)' }}>
-                        {t.content}
-                      </strong>
-                    ) : t.type === 'italic' ? (
-                      <em key={j}>{t.content}</em>
-                    ) : (
-                      <span key={j}>{t.content}</span>
-                    )
-                  )}
-                </p>
-              )
-            })}
-            </div>
-            {/* 数据图表：仅预览态展示真实数据快照（编辑态/打印/复制不涉及） */}
-            <ReportCharts />
-          </>
+          <ReportTextPreview blocks={parsedBlocks} />
         )}
       </div>
     </motion.div>

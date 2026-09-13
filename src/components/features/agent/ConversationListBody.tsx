@@ -1,5 +1,5 @@
 /**
- * ConversationListBody — 对话历史列表主体（加载/错误/空态 + 置顶/日期档/归档/删除四组渲染）
+ * ConversationListBody — 对话历史列表主体（加载/错误/空态 + 置顶/日期档两组渲染）
  * 从 ConversationHistory.tsx 抽出（CI 行数门禁拆分）。
  */
 
@@ -8,27 +8,20 @@ import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { AgentConversation } from '@/types/agent'
 import type { ConversationGroups } from './conversationGrouping'
-import { CollapsibleSection } from './ConversationHistoryItem'
-import type { ItemVariant } from './ConversationHistoryItem'
 
 interface ConversationListBodyProps {
   groups: ConversationGroups
   loading: boolean
   loadError: boolean
   searchQuery: string
-  archivedOpen: boolean
-  deletedOpen: boolean
-  onToggleArchived: () => void
-  onToggleDeleted: () => void
   onRetry: () => void
-  renderItem: (conv: AgentConversation, variant: ItemVariant) => React.ReactNode
+  renderItem: (conv: AgentConversation) => React.ReactNode
 }
 
 const ConversationListBody: React.FC<ConversationListBodyProps> = ({
-  groups, loading, loadError, searchQuery,
-  archivedOpen, deletedOpen, onToggleArchived, onToggleDeleted, onRetry, renderItem,
+  groups, loading, loadError, searchQuery, onRetry, renderItem,
 }) => {
-  const { pinnedItems, groupedOngoing, archivedItems, deletedItems, isAllEmpty } = groups
+  const { pinnedItems, groupedOngoing, isAllEmpty } = groups
 
   if (loading) {
     return (
@@ -70,7 +63,7 @@ const ConversationListBody: React.FC<ConversationListBodyProps> = ({
         <div className="mb-4">
           <p className="text-xs font-medium text-[color:var(--muted)] px-2 py-1 mb-1">置顶</p>
           <div className="flex flex-col gap-1">
-            {pinnedItems.map(conv => renderItem(conv, 'active'))}
+            {pinnedItems.map(conv => renderItem(conv))}
           </div>
         </div>
       )}
@@ -80,26 +73,10 @@ const ConversationListBody: React.FC<ConversationListBodyProps> = ({
         <div key={group.key} className="mb-4">
           <p className="text-xs font-medium text-[color:var(--muted)] px-2 py-1 mb-1">{group.label}</p>
           <div className="flex flex-col gap-1">
-            {group.items.map(conv => renderItem(conv, 'active'))}
+            {group.items.map(conv => renderItem(conv))}
           </div>
         </div>
       ))}
-
-      {/* 已归档（可折叠） */}
-      {archivedItems.length > 0 && (
-        <CollapsibleSection
-          label="已归档" count={archivedItems.length}
-          isOpen={archivedOpen} onToggle={onToggleArchived}
-          items={archivedItems} variant="archived" renderItem={renderItem} />
-      )}
-
-      {/* 最近删除（可折叠，可恢复） */}
-      {deletedItems.length > 0 && (
-        <CollapsibleSection
-          label="最近删除" count={deletedItems.length}
-          isOpen={deletedOpen} onToggle={onToggleDeleted}
-          items={deletedItems} variant="deleted" renderItem={renderItem} />
-      )}
     </>
   )
 }

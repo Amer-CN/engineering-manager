@@ -1,7 +1,7 @@
 /**
  * conversationGrouping — 对话历史的分组纯逻辑
  * 从 ConversationHistory.tsx 抽出（CI 行数门禁拆分）：日期分档（今天/昨天/近 7 天/更早）、
- * 置顶/进行中/已归档/最近删除四组数据准备。
+ * 置顶/进行中 两组数据准备。
  */
 
 import type { AgentConversation } from '@/types/agent'
@@ -13,8 +13,6 @@ export const GROUP_LABELS: Record<GroupKey, string> = {
 }
 
 export const GROUP_ORDER: GroupKey[] = ['today', 'yesterday', 'week', 'earlier']
-
-export const isArchived = (c: AgentConversation): boolean => !!c.archivedAt
 
 /** 按更新时间归入四档 */
 export function getGroupKey(iso: string): GroupKey {
@@ -31,24 +29,21 @@ export function getGroupKey(iso: string): GroupKey {
 export interface ConversationGroups {
   pinnedItems: AgentConversation[]
   groupedOngoing: { key: GroupKey; label: string; items: AgentConversation[] }[]
-  archivedItems: AgentConversation[]
-  deletedItems: AgentConversation[]
   isAllEmpty: boolean
 }
 
-/** 由会话列表 + 置顶集合 + 搜索词准备四组数据 */
+/** 由会话列表 + 置顶集合 + 搜索词准备两组数据（置顶 / 进行中按日期分档） */
 export function buildConversationGroups(
   conversations: AgentConversation[],
-  deletedConversations: AgentConversation[],
   pinnedSet: Set<number>,
   matchesQuery: (c: AgentConversation) => boolean,
 ): ConversationGroups {
   const pinnedItems = conversations.filter(
-    c => !isArchived(c) && pinnedSet.has(c.id) && matchesQuery(c),
+    c => pinnedSet.has(c.id) && matchesQuery(c),
   )
 
   const ongoing = conversations.filter(
-    c => !isArchived(c) && !pinnedSet.has(c.id) && matchesQuery(c),
+    c => !pinnedSet.has(c.id) && matchesQuery(c),
   )
   const map = new Map<GroupKey, AgentConversation[]>()
   for (const conv of ongoing) {
@@ -60,12 +55,9 @@ export function buildConversationGroups(
     key: k, label: GROUP_LABELS[k], items: map.get(k)!,
   }))
 
-  const archivedItems = conversations.filter(c => isArchived(c) && matchesQuery(c))
-  const deletedItems = deletedConversations.filter(matchesQuery)
-
   const ongoingCount = pinnedItems.length + groupedOngoing.reduce((n, g) => n + g.items.length, 0)
   return {
-    pinnedItems, groupedOngoing, archivedItems, deletedItems,
-    isAllEmpty: ongoingCount === 0 && archivedItems.length === 0 && deletedItems.length === 0,
+    pinnedItems, groupedOngoing,
+    isAllEmpty: ongoingCount === 0,
   }
 }

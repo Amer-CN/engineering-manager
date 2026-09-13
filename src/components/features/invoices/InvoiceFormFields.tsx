@@ -19,12 +19,13 @@ interface InvoiceFormFieldsProps {
   handleUntaxedAmountChange: (amount: number) => void
   handleTaxAmountChange: (amount: number) => void
   duplicateInvoice: { id: number; invoiceNo: string } | null
+  invoiceNoWarning: string | null
 }
 
 export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
   formData, setFormData, partners, projects, contracts,
   handleInvoiceNoChange, handleTaxRateChange, handleTaxedAmountChange,
-  handleUntaxedAmountChange, handleTaxAmountChange, duplicateInvoice
+  handleUntaxedAmountChange, handleTaxAmountChange, duplicateInvoice, invoiceNoWarning
 }) => {
   return (
     <div className="space-y-4">
@@ -75,6 +76,11 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
                 </span>
               </div>
             </motion.div>
+          )}
+          {invoiceNoWarning && (
+            <p className="text-caption mt-1" style={{ color: 'var(--warning)' }}>
+              {invoiceNoWarning}
+            </p>
           )}
         </div>
         <div>

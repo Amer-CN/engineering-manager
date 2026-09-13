@@ -259,10 +259,10 @@ describe('TranscriptEditor — 多人模式 onIngest payload', () => {
     expect(correctedSegments[1].text).toBe('原文第二段')
   })
 
-  it('多人模式 → 过滤 speaker=0 的 segment', async () => {
+  it('0 基数据（sherpa 指定人数管线）→ speaker 0 是真人，全程可见并入库存档', async () => {
     const onIngest = vi.fn()
     const segments = [
-      { speaker: 0, start: 0, end: 2, text: '簇0不应出现' },
+      { speaker: 0, start: 0, end: 2, text: '说话人0文本' },
       { speaker: 1, start: 2, end: 5, text: '说话人1文本' },
       { speaker: 2, start: 5, end: 10, text: '说话人2文本' },
     ]
@@ -272,9 +272,8 @@ describe('TranscriptEditor — 多人模式 onIngest payload', () => {
       <TranscriptEditor job={job} masked={false} onIngest={onIngest} />
     )
 
-    // speaker=0 不应在 UI 中显示
-    expect(screen.queryByText('说话人0')).not.toBeInTheDocument()
-    // 编辑段徽标与归属下拉 option 均渲染「说话人N」→ 用 getAllByText 断言存在
+    // 三位说话人（含 0 号）都应在 UI 中显示
+    expect(screen.getAllByText('说话人0').length).toBeGreaterThan(0)
     expect(screen.getAllByText('说话人1').length).toBeGreaterThan(0)
     expect(screen.getAllByText('说话人2').length).toBeGreaterThan(0)
 
@@ -287,10 +286,37 @@ describe('TranscriptEditor — 多人模式 onIngest payload', () => {
 
     const [correctedText, correctedSegments] = onIngest.mock.calls[0]
 
-    // speaker=0 被过滤掉
+    // speaker=0 完整保留
+    expect(correctedSegments).toHaveLength(3)
+    expect(correctedSegments[0].speaker).toBe(0)
+    expect(correctedSegments[1].speaker).toBe(1)
+    expect(correctedSegments[2].speaker).toBe(2)
+    expect(correctedText).toBe('【说话人0】说话人0文本\n【说话人1】说话人1文本\n【说话人2】说话人2文本')
+  })
+
+  it('1 基历史数据（无 0 号）→ 行为不变，全量显示', async () => {
+    const onIngest = vi.fn()
+    const segments = [
+      { speaker: 1, start: 0, end: 5, text: '说话人1文本' },
+      { speaker: 2, start: 5, end: 10, text: '说话人2文本' },
+    ]
+    const job = makeMultiSpeakerJob(segments)
+
+    render(
+      <TranscriptEditor job={job} masked={false} onIngest={onIngest} />
+    )
+
+    expect(screen.getAllByText('说话人1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('说话人2').length).toBeGreaterThan(0)
+
+    act(() => { fireEvent.click(screen.getByText('存入知识库')) })
+    await waitFor(() => { expect(screen.getByText('确认入库')).toBeInTheDocument() })
+    act(() => { fireEvent.click(screen.getByText('确认入库')) })
+
+    await waitFor(() => { expect(onIngest).toHaveBeenCalledTimes(1) })
+
+    const [correctedText, correctedSegments] = onIngest.mock.calls[0]
     expect(correctedSegments).toHaveLength(2)
-    expect(correctedSegments[0].speaker).toBe(1)
-    expect(correctedSegments[1].speaker).toBe(2)
     expect(correctedText).toBe('【说话人1】说话人1文本\n【说话人2】说话人2文本')
   })
 })

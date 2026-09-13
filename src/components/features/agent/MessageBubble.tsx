@@ -10,9 +10,12 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types/agent'
+import { resolveAgentApproval } from '@/services/agent-client'
+import { useToastStore } from '@/store/toastStore'
 import MessageActions from './MessageActions'
 import RichToolResult from './RichToolResult'
 import MarkdownRenderer from './MarkdownRenderer'
+import ApprovalCard, { type ApprovalOption } from './ApprovalCard'
 import ThinkingTrace from './ThinkingTrace'
 import Mascot, { type MascotState } from './Mascot'
 import { useMascotAppearance } from '@/hooks/useMascotAppearance'
@@ -83,6 +86,50 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
   const isSending = 'sending' in message && (message as { sending?: boolean }).sending === true
 
+  /** 行动确认卡数据（assistant 消息挂点；契约见 src/types/agent.ts ApprovalRequest） */
+  const approval = !isUser ? ((message as AgentMessage).approval ?? null) : null
+  /** 错误提示：agent 模块既有 toast 通道（CodeBlockCard / ConversationHistory 同款） */
+  const showToast = useToastStore((s) => s.showToast)
+  /** 本地已决态（消息级 state）：点选先立即显示已决，后端回传失败时回滚 */
+  const [localResolution, setLocalResolution] = useState<{ option: ApprovalOption; at?: string } | null>(null)
+  /** 已决态来源：本地刚点选 > 消息自带 resolution（历史恢复回放）；都没有 → 保持可交互（回放语义由后端定） */
+  let resolvedApproval: { option: ApprovalOption; at?: string } | null = null
+  if (localResolution) {
+    resolvedApproval = localResolution
+  } else if (approval?.resolution) {
+    const { resolution } = approval
+    const resolvedOption = approval.options.find((o) => o.key === resolution.optionKey)
+    if (resolvedOption) resolvedApproval = { option: resolvedOption, at: resolution.resolvedAt }
+  }
+  const handleApprovalResolve = (requestId: string, option: ApprovalOption) => {
+    // conversationId 由消息携带（流式 done / 非流式响应 / 历史装配时挂上）
+    const conversationId = (message as AgentMessage & { conversationId?: number }).conversationId
+    // 立即显示已决态（不等后端，交互不卡顿）
+    setLocalResolution({ option, at: new Date().toISOString() })
+    if (!conversationId) {
+      setLocalResolution(null)
+      showToast('确认失败：缺少会话信息，无法回传', 'error')
+      return
+    }
+    // 按 ApprovalResolution 协议回传后端（requestId + option.key + resolvedAt）；
+    // 失败时回滚本地已决态并走既有错误提示
+    resolveAgentApproval(conversationId, {
+      requestId,
+      optionKey: option.key,
+      resolvedAt: new Date().toISOString(),
+    })
+      .then((result) => {
+        if (!result.success) {
+          setLocalResolution(null)
+          showToast(`确认失败：${result.error ?? '未知错误'}`, 'error')
+        }
+      })
+      .catch((err: unknown) => {
+        setLocalResolution(null)
+        showToast(`确认失败：${err instanceof Error ? err.message : '未知错误'}`, 'error')
+      })
+  }
+
   /** 空的「发送中」助手占位：仍渲染完整消息行（live 头像照常，thinking/searching 动画全程可见），
       但气泡主体/兜底文案/底部行均不渲染（不留空气泡）；AgentStreamTail 指示条由 Dashboard 另行渲染，互不替代 */
   const emptySending = !isUser && isSending && !content && toolResults.length === 0
@@ -149,6 +196,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           >
             {isUser ? displayBody : <MarkdownRenderer content={displayBody} streaming={isSending} />}
           </div>
+        )}
+
+        {/* 行动确认卡（建议 → 用户确认 → 执行；正文之后、工具结果之前） */}
+        {!isUser && approval && approval.options.length > 0 && (
+          <ApprovalCard
+            requestId={approval.requestId}
+            title={approval.title}
+            body={approval.body ? <MarkdownRenderer content={approval.body} /> : undefined}
+            options={approval.options}
+            onResolve={handleApprovalResolve}
+            resolved={resolvedApproval}
+          />
         )}
 
         {/* ThinkingTrace：思考过程折叠块（reasoning 模型流式聚合；流式中自动展开 + shimmer「思考中」） */}

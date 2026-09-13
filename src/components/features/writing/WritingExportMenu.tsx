@@ -4,9 +4,10 @@
  * 「导出」按钮点开下拉，7 项（含分隔线）：
  *   ① Markdown（.md）        — contentMd 原文下载（text/markdown）
  *   ② 纯文本（.txt）         — stripMarkdownSyntax(contentMd) 下载（text/plain）
- *   ③ 网页 HTML（.html）     — buildPrintPreviewHtml(contentMd, title) 下载（text/html）
+ *   ③ 网页 HTML（.html）     — buildPrintPreviewHtml(contentMd, title, editor.getHTML()) 下载（text/html），
+ *                              050 双写：HTML 非空经白名单清洗透传样式，空则回退 markdown 路径
  *   ─────────────
- *   ⑤ Word 普通版式（.docx） — 现有 docxExport 公文样式链路
+ *   ⑤ Word 普通版式（.docx） — 现有 docxExport 公文样式链路（050 双写：HTML 非空走样式保留映射）
  *   ⑥ Word 红头文件（.docx） — 现有红头表单链路（GB/T 9704 模板，保留表单）
  *   ⑦ PDF                   — onOpenPreview() 打开打印预览，用户在预览里打印/另存 PDF
  *
@@ -102,7 +103,7 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, on
     if (!editor || busy) return;
     setMenuOpen(false);
     setBusy(true);
-    void exportMarkdownAsDocx(editor.getMarkdown(), title)
+    void exportMarkdownAsDocx(editor.getMarkdown(), title, editor.getHTML())
       .catch(() => {
         showToast("导出失败", "error");
       })
@@ -151,7 +152,7 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, on
       } else if (ext === "txt") {
         downloadTextFile(`${title}.txt`, stripMarkdownSyntax(md), "text/plain");
       } else {
-        downloadTextFile(`${title}.html`, buildPrintPreviewHtml(md, title), "text/html");
+        downloadTextFile(`${title}.html`, buildPrintPreviewHtml(md, title, editor.getHTML()), "text/html");
       }
     } catch {
       showToast("导出失败", "error");

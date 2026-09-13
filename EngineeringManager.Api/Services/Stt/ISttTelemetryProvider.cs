@@ -95,8 +95,8 @@ public class LogFileIncrementalReader
             }
             catch
             {
-                // 删除也失败 — fail closed
-                Console.Error.WriteLine($"[SttEngine] 日志文件准备失败（重命名/删除均失败），fail closed: {logFilePath}");
+                // 删除也失败 — fail closed（文件被残留 transcribe 进程锁定）
+                Console.Error.WriteLine($"[SttEngine] 日志文件被占用，疑似残留转写进程锁定，fail closed: {logFilePath}");
                 return false;
             }
         }

@@ -125,3 +125,76 @@ export function insertSegmentAfter(segments: SttSegment[], index: number): SttSe
   next.splice(index + 1, 0, fresh)
   return next
 }
+
+/** 阅读态段落：连续同说话人分段合并后的可读单元（纯内存形态，不落库）。
+ *  segStartIdx = 首个成员分段在 flat（normalize 后）数组中的下标，供高亮 ref 定位。 */
+export interface SttParagraph {
+  speaker: number
+  start: number
+  end: number
+  segStartIdx: number
+  segs: SttSegment[]
+}
+
+/** 换行大块拆伪分段：text 含 \n 的段（如 job 22 单段 1268 行整块）按行拆开，每行一条
+ *  伪分段，时间按字符占比从源段 [start,end] 推算（cutTimeByProportion 同公式，字符数
+ *  不含换行符，末行吃到源段 end），speaker 继承源段；空行不产段。text 无换行的段原样
+ *  保留（同引用）。纯内存变换，不落库、不 PATCH。 */
+export function normalizeSegments(segments: SttSegment[]): SttSegment[] {
+  const out: SttSegment[] = []
+  for (const seg of segments) {
+    if (!seg.text.includes('\n')) { out.push(seg); continue }
+    const lines = seg.text.split('\n')
+    const total = lines.reduce((n, l) => n + l.length, 0)
+    let head = 0
+    for (const line of lines) {
+      if (line.trim() !== '') {
+        out.push({
+          speaker: seg.speaker,
+          start: cutTimeByProportion(seg.start, seg.end, head, total),
+          end: cutTimeByProportion(seg.start, seg.end, head + line.length, total),
+          text: line,
+        })
+      }
+      head += line.length
+    }
+  }
+  return out
+}
+
+// 段落断段阈值：硬断字符 / 软断字符 / 硬断时长(s) / 间隔断段(s)
+const PARA_CHAR_HARD = 120
+const PARA_CHAR_SOFT = 60
+const PARA_DUR_HARD = 120
+const PARA_GAP_BREAK = 3
+
+/** 连续同说话人分段合并成段落（阅读态用）。下一段加入前按序判定断段：
+ *  ① 说话人变化（必断）；② 累计字符 ≥120（硬）；③ 段落时长 ≥120s（硬）；
+ *  ④ 下一段 start − 本段 end 间隔 >3s（两者时间均有限）；⑤ 累计字符 ≥60 且
+ *  段末文本以句终标点（。？！?）结尾（软）。 */
+export function groupIntoParagraphs(segments: SttSegment[]): SttParagraph[] {
+  const out: SttParagraph[] = []
+  let cur: SttParagraph | null = null
+  let chars = 0
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i]
+    const last = cur ? cur.segs[cur.segs.length - 1] : null
+    if (
+      cur && last &&
+      (s.speaker !== cur.speaker ||
+        chars >= PARA_CHAR_HARD ||
+        cur.end - cur.start >= PARA_DUR_HARD ||
+        (Number.isFinite(s.start) && Number.isFinite(cur.end) && s.start - cur.end > PARA_GAP_BREAK) ||
+        (chars >= PARA_CHAR_SOFT && /[。？！?]$/.test(last.text)))
+    ) cur = null
+    if (!cur) {
+      cur = { speaker: s.speaker, start: s.start, end: s.end, segStartIdx: i, segs: [] }
+      out.push(cur)
+      chars = 0
+    }
+    cur.segs.push(s)
+    chars += s.text.length
+    cur.end = s.end
+  }
+  return out
+}

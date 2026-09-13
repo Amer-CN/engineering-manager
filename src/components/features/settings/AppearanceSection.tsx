@@ -9,6 +9,55 @@ import { isSfxEnabled, setSfxEnabled } from '@/lib/sfx'
  * v0.76.0 累计待办 #7: Settings 剩余拆分 — 外观主题卡片
  * 包含: 主题切换 (White/Sandstone/Graphite) + 表格行悬停强度 + 界面字号 + 导出字体
  */
+/**
+ * 主题迷你预览色板：字面量取自 index.css 各 [data-theme] 块的真实 token。
+ * 预览展示的是"目标主题"的颜色，var(--*) 会跟随当前主题渲染，所以必须写死。
+ */
+interface ThemeSwatchColors {
+  bg: string
+  panel: string
+  panel2: string
+  border: string
+  borderStrong: string
+  fg2: string
+  accent: string
+}
+
+const THEME_SWATCH: Record<ThemeScheme, ThemeSwatchColors> = {
+  white: { bg: 'oklch(98.6% 0.009 85)', panel: 'oklch(99.4% 0.006 85)', panel2: 'oklch(96% 0.012 83)', border: 'oklch(90% 0.012 82)', borderStrong: 'oklch(83% 0.014 80)', fg2: 'oklch(41% 0.012 72)', accent: 'oklch(28% 0.02 74)' },
+  sandstone: { bg: 'oklch(98.8% 0 0)', panel: 'oklch(99.6% 0 0)', panel2: 'oklch(97.4% 0 0)', border: 'oklch(90% 0 0)', borderStrong: 'oklch(82% 0 0)', fg2: 'oklch(42% 0 0)', accent: 'oklch(30% 0 0)' },
+  graphite: { bg: 'oklch(20.5% 0.003 75)', panel: 'oklch(24% 0.004 75)', panel2: 'oklch(27.5% 0.004 75)', border: 'oklch(32% 0.004 75)', borderStrong: 'oklch(40% 0.005 75)', fg2: 'oklch(72% 0.004 80)', accent: 'oklch(92% 0.004 80)' },
+}
+
+/** 迷你应用窗口：标题栏 + 侧栏（选中项 = 主题 accent）+ 内容骨架 + 主按钮 */
+function ThemeSwatch({ p }: { p: ThemeSwatchColors }) {
+  return (
+    <div aria-hidden className="h-14 mb-2.5 rounded-lg overflow-hidden flex flex-col border"
+      style={{ background: p.bg, borderColor: p.border }}>
+      <div className="h-[10px] shrink-0 flex items-center justify-between px-1.5 border-b"
+        style={{ background: p.panel, borderColor: p.border }}>
+        <span className="w-[3px] h-[3px] rounded-full" style={{ background: p.borderStrong }} />
+        <span className="w-2 h-[2px] rounded-full" style={{ background: p.borderStrong }} />
+      </div>
+      <div className="flex-1 flex min-h-0">
+        <div className="w-7 shrink-0 border-r p-1 flex flex-col gap-[3px]"
+          style={{ background: p.panel2, borderColor: p.border }}>
+          <span className="h-[4px] rounded-full" style={{ background: p.accent }} />
+          <span className="h-[3px] w-4/5 rounded-full" style={{ background: p.borderStrong }} />
+          <span className="h-[3px] w-3/5 rounded-full" style={{ background: p.borderStrong }} />
+        </div>
+        <div className="flex-1 min-w-0 p-1.5 flex flex-col gap-[3px]">
+          <span className="h-[4px] w-1/2 rounded-full" style={{ background: p.fg2 }} />
+          <span className="h-[3px] rounded-full" style={{ background: p.border }} />
+          <span className="h-[3px] w-5/6 rounded-full" style={{ background: p.border }} />
+          <span className="flex-1" />
+          <span className="h-2 w-5 rounded-[3px] self-end" style={{ background: p.accent }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function AppearanceSection() {
   const { scheme, setScheme } = useTheme()
   const rh = useRowHoverOpacity()
@@ -26,15 +75,13 @@ export function AppearanceSection() {
         <p className="text-sm text-[color:var(--fg-2)] mb-3">选择一个主题</p>
         <div className="grid grid-cols-3 gap-3 mb-5">
           {([
-            { id: 'white' as ThemeScheme, name: 'White', desc: '白色 · 明亮', icon: '☀️', style: 'from-white via-slate-50 to-slate-100 border-[color:var(--border)]' },
-            { id: 'sandstone' as ThemeScheme, name: 'Sandstone', desc: '暖灰 · 琥珀', icon: '🏜️', style: 'from-warning-50 via-orange-50 to-stone-100 border-warning-200' },
-            { id: 'graphite' as ThemeScheme, name: 'Graphite', desc: '深灰 · 暗夜', icon: '🌙', style: 'from-slate-700 via-slate-800 to-slate-900 border-[color:var(--border-strong)]' },
+            { id: 'white' as ThemeScheme, name: 'White', desc: '白色 · 明亮' },
+            { id: 'sandstone' as ThemeScheme, name: 'Sandstone', desc: '暖灰 · 琥珀' },
+            { id: 'graphite' as ThemeScheme, name: 'Graphite', desc: '深灰 · 暗夜' },
           ]).map(s => (
             <button key={s.id} onClick={() => setScheme(s.id)}
               className={`p-3 rounded-xl border-2 transition-[border-color,background-color,box-shadow] text-left ${scheme === s.id ? 'border-[color:var(--accent)] shadow-md ring-2 ring-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'}`}>
-              <div className={`h-10 rounded-lg mb-2 flex items-center justify-center bg-gradient-to-br ${s.style}`}>
-                <span className="text-lg">{s.icon}</span>
-              </div>
+              <ThemeSwatch p={THEME_SWATCH[s.id]} />
               <div className="text-sm font-semibold text-[color:var(--fg)]">{s.name}</div>
               <div className="text-micro text-[color:var(--muted)]">{s.desc}</div>
             </button>

@@ -36,6 +36,8 @@ export interface WritingDoc {
   sourceType: string
   sourceRef: string | null
   contentMd: string
+  /** 样式载体（editor.getHTML() 双写）；空串/缺失 = 无样式，前端回退 markdown 渲染 */
+  contentHtml?: string
   folderId: number | null
   createdBy: string
   createdAt: string
@@ -109,8 +111,8 @@ export function createWritingDoc(body: {
   return apiClient.post<{ id: number; createdAt: string }>('/api/writing/documents', body)
 }
 
-/** 保存编辑 */
-export function updateWritingDoc(id: number, body: { title?: string; contentMd?: string; projectId?: number }): Promise<{
+/** 保存编辑（contentHtml 可选：编辑器双写传 getHTML()，老调用不传不影响） */
+export function updateWritingDoc(id: number, body: { title?: string; contentMd?: string; contentHtml?: string; projectId?: number }): Promise<{
   success: boolean
   data?: unknown
   error?: string
@@ -132,6 +134,7 @@ export interface WritingVersion {
   id: number
   title: string
   contentMd: string
+  contentHtml?: string
   createdBy: string
   createdAt: string
 }
@@ -159,8 +162,8 @@ export function fetchWritingVersions(
 export function restoreWritingVersion(
   docId: number,
   versionId: number,
-): Promise<{ success: boolean; data?: { title: string; contentMd: string }; error?: string }> {
-  return apiClient.post<{ title: string; contentMd: string }>(
+): Promise<{ success: boolean; data?: { title: string; contentMd: string; contentHtml?: string }; error?: string }> {
+  return apiClient.post<{ title: string; contentMd: string; contentHtml?: string }>(
     `/api/writing/documents/${docId}/versions/${versionId}/restore`,
     {},
   )
@@ -206,6 +209,44 @@ export function writingAssist(body: {
   protectedSpans?: string[]
 }): Promise<{ success: boolean; data?: { text: string }; error?: string }> {
   return apiClient.post<{ text: string }>('/api/writing/assist', body)
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 量化风格体检（第 5 项检查，后端 WritingStyleCheckService）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 体检请求（content 后端截断 10 万字符） */
+export interface WritingStyleCheckRequest {
+  docType: string
+  content: string
+}
+
+/** 单项体检结果：verdict ok=区间内 / hint=单项区间外（不理会）/ warn=硬冲突或同向偏离 */
+export interface WritingStyleCheckItem {
+  id: string
+  label: string
+  actual: number
+  unit: string
+  median: number | null
+  low: number | null
+  high: number | null
+  verdict: 'ok' | 'hint' | 'warn'
+}
+
+/** 体检报告（无参数文种 hasParams=false，仅标点纪律与元评论检测） */
+export interface WritingStyleCheckResponse {
+  genre: string
+  hasParams: boolean
+  items: WritingStyleCheckItem[]
+  hardWarnings: string[]
+  notes: string[]
+}
+
+/** 量化风格体检：未知/无参数文体降级为标点纪律 */
+export function styleCheckWriting(
+  req: WritingStyleCheckRequest,
+): Promise<{ success: boolean; data?: WritingStyleCheckResponse; error?: string }> {
+  return apiClient.post<WritingStyleCheckResponse>('/api/writing/style-check', req)
 }
 
 // 同源相对路径，与 api-client.ts 同源定义一致（API_BASE 未从那边导出，此处同样声明）

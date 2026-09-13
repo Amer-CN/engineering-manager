@@ -23,7 +23,7 @@ public record LlmProviderConfig
     [JsonIgnore]
     public string ApiKey { get; init; } = "";
 
-    public string Model { get; init; } = "agnes-2.5-flash";
+    public string Model { get; init; } = "agnes-3.0-flash";
     public bool UseBuiltIn { get; init; } = true;
     public double Temperature { get; init; } = 0.7;
     public int MaxTokens { get; init; } = 4096;
@@ -36,4 +36,10 @@ public record LlmProviderConfig
 
     /// <summary>HTTP 代理地址（null/空 = 直连），随当前生效配置展开</summary>
     public string? ProxyUrl { get; init; }
+
+    /// <summary>
+    /// 接口协议：chat = OpenAI Chat Completions（缺省）| responses = OpenAI Responses
+    /// | anthropic = Anthropic Messages。未知值调用侧按 chat 回退
+    /// </summary>
+    public string Protocol { get; init; } = "chat";
 }

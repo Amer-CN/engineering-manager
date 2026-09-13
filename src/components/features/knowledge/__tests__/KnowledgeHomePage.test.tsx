@@ -253,7 +253,7 @@ describe('MaskContext integration — KnowledgeDocumentDrawer', () => {
       React.createElement(KnowledgeDocumentDrawer, {
         doc: {
           id: 1, title: '通话记录', sourceType: 'call',
-          fullText: '联系电话 [已脱敏]',
+          fullText: '联系电话 13812345678',
           chunks: [], chunkCount: 0, createdAt: '2026-07-01',
         },
         loading: false, masked: true, onClose: () => {},
@@ -269,14 +269,14 @@ describe('MaskContext integration — KnowledgeDocumentDrawer', () => {
       React.createElement(KnowledgeDocumentDrawer, {
         doc: {
           id: 1, title: '通话记录', sourceType: 'call',
-          fullText: '联系电话 [已脱敏]',
+          fullText: '联系电话 13812345678',
           chunks: [], chunkCount: 0, createdAt: '2026-07-01',
         },
         loading: false, masked: false, onClose: () => {},
       })
     )
 
-    await waitFor(() => { expect(screen.getByText(/[已脱敏]/)).toBeInTheDocument() })
+    await waitFor(() => { expect(screen.getByText(/13812345678/)).toBeInTheDocument() })
   })
 
   it('masks PII in chunk text when masked=true', async () => {

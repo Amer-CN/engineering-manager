@@ -6,7 +6,7 @@ namespace EngineeringManager.Api.Services.Stt;
 /// <summary>
 /// STT 模型管理器：检测本地模型是否存在、缺失时按镜像下载
 /// ASR 模型直接复用项目根目录 asr-engine/（已跑通的 1.7B GGUF）
-/// 说话人分离模型：sherpa-onnx-pyannote-segmentation-3-5 + 3dspeaker_speech_ember
+/// 说话人分离模型：sherpa-onnx-pyannote-segmentation-3-0 + 3dspeaker_speech_ember
 /// M2: 文本嵌入模型 bge-small-zh-v1.5 ONNX
 /// </summary>
 public class SttModelManager

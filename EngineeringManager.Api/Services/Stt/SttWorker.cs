@@ -119,8 +119,10 @@ public class SttWorker : IHostedService, IDisposable
             if (!SttEngineSelector.CanUseLocalStt())
                 throw new InvalidOperationException($"本地转写不可用: {SttEngineSelector.GetUnavailableReason()}");
 
+            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；其余走 Qwen3 两段式管线
+            var useMoss = string.Equals(job.Engine, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase);
             var engine = new LlamaCppGgufEngine();
-            if (!await engine.IsAvailableAsync())
+            if (!useMoss && !await engine.IsAvailableAsync())
                 throw new InvalidOperationException("ASR 模型文件缺失，请检查 asr-engine/model/ 目录");
 
             // 1. 音频预处理
@@ -140,9 +142,69 @@ public class SttWorker : IHostedService, IDisposable
                 new { Dur = duration, Now = now(), job.Id });
 
             SttResult result;
+            // 分离管线的非致命提示（自动模式爆簇降级为保守估计人数）→ 成功写回时进 error 字段展示给用户
+            string? diarizationWarning = null;
 
+            if (useMoss)
+            {
+                // ═══ MOSS：文本与时间戳由 MOSS 一步产出；多人任务的说话人改由现役分离管线提供 ═══
+                // MOSS 块内 [S01] 编号跨块不可信（#28 实测 63 块首段编号全同），多人任务先用
+                // DiarizationService 分离定说话人（与 Qwen 多人分支同款、用 job.Num_Speakers），
+                // 转写完成后按时间重叠回填。先分离后转写：分离失败能尽早暴露，不必先花 25 分钟转写。
+                // 单人任务（Is_Multi_Speaker != 1）不跑分离：MOSS 仍会给出块内假说话人，
+                // 由下方统一归为说话人 1（与 Qwen 单人分支口径一致）。
+                List<SttSegment>? diaSegs = null;
+                if (job.Is_Multi_Speaker == 1)
+                {
+                    UpdateProgress(db, job.Id, 10, "加载说话人分离模型...");
+                    try
+                    {
+                        await SttModelManager.EnsureDiarizationModelsAsync();
+                        UpdateProgress(db, job.Id, 15, "说话人分离...");
+                        diaSegs = await new DiarizationService().DiarizeAsync(
+                            processedWav,
+                            job.Num_Speakers,
+                            ct: default,
+                            onWarning: w => diarizationWarning = w);
+                        if (diaSegs.Count == 0)
+                        {
+                            Console.WriteLine("[SttWorker] MOSS 多人任务：说话人分离返回 0 段，保留 MOSS 原始标签继续转写");
+                            diaSegs = null;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // fail-soft：转写文本是主交付物，不因说话人分离失败丢掉整条任务；
+                        // 但绝不静默吞掉——日志必须含异常信息
+                        diaSegs = null;
+                        Console.WriteLine($"[SttWorker] MOSS 多人任务：说话人分离失败（{ex.GetType().Name}: {ex.Message}），保留 MOSS 原始标签继续转写");
+                    }
+                }
+
+                UpdateProgress(db, job.Id, 15, "MOSS 转写中...");
+                var mossEngine = new MossTranscribeEngine();
+                var progressRelay = new Progress<int>(p =>
+                    UpdateProgress(db, job.Id, Math.Max(15, Math.Min(90, 15 + p * 75 / 100)), null));
+                result = await mossEngine.TranscribeAsync(processedWav, job.Hotwords, progressRelay, ct: default);
+                result.DurationSec = duration;
+
+                // 分离段非空 → 按时间重叠回填说话人（纯函数，只改 Speaker，文本与时间戳不动）
+                if (diaSegs is { Count: > 0 })
+                    SpeakerOverlapMapper.AssignByOverlap(result.Segments, diaSegs);
+                else if (job.Is_Multi_Speaker != 1)
+                {
+                    // 单人任务：MOSS 仍会按块内顺序给出 S01/S02… 的假说话人（#28 实测一块内可分出 4 个），
+                    // 用户已声明单人，一律归为说话人 1 —— 与 Qwen 单人分支的 Speaker = 1 口径一致。
+                    foreach (var seg in result.Segments) seg.Speaker = 1;
+                }
+
+                // 说话人归一化：回填/原始编号 → 全局连续 1 基（按首次出现顺序）——现有逻辑保持不变
+                SpeakerLabelNormalizer.Normalize(result.Segments);
+                result.Text = string.Join("\n",
+                    result.Segments.Select(s => $"【说话人{s.Speaker}】{s.Text}"));
+            }
             // 2. 判断是否多人录音
-            if (job.Is_Multi_Speaker == 1)
+            else if (job.Is_Multi_Speaker == 1)
             {
                 // 多人：先分离 → 逐段转写 → 拼回
                 UpdateProgress(db, job.Id, 10, "加载说话人分离模型...");
@@ -153,7 +215,8 @@ public class SttWorker : IHostedService, IDisposable
                 var segments = await diarization.DiarizeAsync(
                     processedWav,
                     job.Num_Speakers,
-                    ct: default);
+                    ct: default,
+                    onWarning: w => diarizationWarning = w);
 
                 if (segments.Count == 0)
                     throw new Exception("说话人分离未检测到任何语音段");
@@ -229,11 +292,13 @@ public class SttWorker : IHostedService, IDisposable
             var resultJson = System.Text.Json.JsonSerializer.Serialize(
                 result.Segments.Select(s => new { speaker = s.Speaker, start = s.Start, end = s.End, text = s.Text }));
 
+            // diarizationWarning 非空=自动模式人数是估计值 → 写进 error 字段展示给用户（status 仍 completed，
+            // SttJobList 对 error 的渲染不区分状态）；无提示时为 null，等价于改动前的 error = NULL
             db.Execute(@"
                 UPDATE stt_jobs SET
                     status = 'completed', progress = 100,
                     result_text = @Text, result_json = @Json,
-                    elapsed_sec = @Elapsed, error = NULL,
+                    elapsed_sec = @Elapsed, error = @Err,
                     updated_at = @Now
                 WHERE id = @Id",
                 new
@@ -241,6 +306,7 @@ public class SttWorker : IHostedService, IDisposable
                     Text = result.Text,
                     Json = resultJson,
                     Elapsed = result.ElapsedSec,
+                    Err = diarizationWarning,
                     Now = now(),
                     job.Id,
                 });

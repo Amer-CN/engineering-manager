@@ -1,7 +1,7 @@
 /**
  * AI 设置拆分件 — 添加服务商表单 + 添加/编辑模型弹窗（行数门禁，主文件 ≤400 行）
  * 交互对齐成熟 Agent（Cherry Studio / ZCode）：服务商表单内可「获取模型列表」勾选启用；
- * 模型以弹窗添加/编辑（模型 ID + 输入/输出类型）。
+ * 模型以弹窗添加/编辑（模型 ID + 输入/输出类型 + 上下文长度）。
  */
 
 import { useState } from 'react'
@@ -11,7 +11,10 @@ import { Drawer } from '../../ui/Drawer'
 import { useToastStore } from '@/store/toastStore'
 import { testLlmProviderConnection } from '@/services/agent-client'
 import type { ProviderModelEntry } from '@/types/agent'
-import { CapabilityEditor, ModelMultiSelect } from './aiProviderSettingsParts'
+import { CapabilityEditor, ModelMultiSelect, PROTOCOL_LABELS } from './aiProviderSettingsParts'
+
+/** 更换密钥弹窗已移入 aiProviderSettingsParts（主文件行数门禁 ≤400）；此处重导出保持调用方兼容 */
+export { KeyReplaceDialog } from './aiProviderSettingsParts'
 
 const INPUT_CLS = 'w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed'
 
@@ -23,7 +26,7 @@ export function ProviderAddForm({
   /** 当前已保存的全局代理（获取列表/测试连接时随请求携带） */
   currentProxy?: string
   onCancel: () => void
-  onSaved: (entry: { id: string; name: string; baseUrl: string; models: ProviderModelEntry[]; activeModelId: string }, apiKey: string) => void
+  onSaved: (entry: { id: string; name: string; baseUrl: string; models: ProviderModelEntry[]; activeModelId: string; protocol: 'chat' | 'responses' | 'anthropic' }, apiKey: string) => void
 }) {
   const showToast = useToastStore(s => s.showToast)
   const [name, setName] = useState('')
@@ -32,6 +35,8 @@ export function ProviderAddForm({
   const [fetched, setFetched] = useState<string[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState<null | 'testing' | 'fetching'>(null)
+  // 协议为供应商级（一个供应商一个协议）：新增时即可选定，免得保存后还要进子页补改
+  const [protocol, setProtocol] = useState<'chat' | 'responses' | 'anthropic'>('chat')
 
   /** 获取模型列表（OpenAI 兼容 /models 端点），默认全选 */
   const handleFetch = async () => {
@@ -96,6 +101,7 @@ export function ProviderAddForm({
         baseUrl: baseUrl.trim(),
         models,
         activeModelId: models[0]?.id ?? '',
+        protocol,
       },
       apiKey.trim(),
     )
@@ -120,6 +126,19 @@ export function ProviderAddForm({
           <label className="label">Base URL</label>
           <input type="text" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} disabled={disabled}
             placeholder="https://api.openai.com/v1" className={INPUT_CLS} />
+        </div>
+      </div>
+
+      {/* 接口协议三选一：样式对齐子页 ProviderSettingsForm（供应商级，新增即选定） */}
+      <div>
+        <label className="label">接口协议</label>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(['chat', 'responses', 'anthropic'] as const).map(v => (
+            <button key={v} type="button" disabled={disabled} onClick={() => setProtocol(v)}
+              className={`px-2 py-0.5 rounded-lg text-caption font-medium border transition-colors disabled:opacity-50 ${protocol === v ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)]'}`}>
+              {PROTOCOL_LABELS[v]}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -164,7 +183,34 @@ export function ProviderAddForm({
   )
 }
 
-/** 添加/编辑模型弹窗 — 对齐 ZCode「编辑模型配置」（模型 ID + 输入/输出类型） */
+/**
+ * 上下文长度输入解析（ZCode 式简写）：纯数字 tokens（256000）|
+ * 数字+K/k（200K → 200000）| 数字+M/m（1M → 1000000、1.5m → 1500000）。
+ * 留空视为「未标注」，由调用方先行 trim 判空；非上述格式返回 null（调用方弹警告）。
+ */
+function parseContextInput(raw: string): number | null {
+  const m = /^(\d+(?:\.\d+)?)([KkMm])?$/.exec(raw.trim())
+  if (!m) return null
+  const value = parseFloat(m[1])
+  if (!Number.isFinite(value)) return null
+  if (!m[2]) return Math.round(value)
+  return Math.round(value * (m[2].toLowerCase() === 'm' ? 1_000_000 : 1_000))
+}
+
+/** 上下文长度回显格式化：1000000 → 1M、1500000 → 1.5M、200000 → 200K、<1000 原样 */
+function formatContextWindow(tokens: number): string {
+  if (tokens >= 1_000_000) {
+    const v = tokens / 1_000_000
+    return `${Number.isInteger(v) ? v : parseFloat(v.toFixed(1))}M`
+  }
+  if (tokens >= 1000) {
+    const v = tokens / 1000
+    return `${Number.isInteger(v) ? v : parseFloat(v.toFixed(1))}K`
+  }
+  return String(tokens)
+}
+
+/** 添加/编辑模型弹窗 — 对齐 ZCode「编辑模型配置」（模型 ID + 输入/输出类型 + 上下文长度） */
 export function ModelEditDialog({
   isOpen, title, initial, existingIds, onCancel, onSave,
 }: {
@@ -184,6 +230,8 @@ export function ModelEditDialog({
     input: initial?.input ?? ['text'],
     output: initial?.output ?? ['text'],
   })
+  // 回显用简写文本（200000 → 200K）；未标注（null/缺失）显示空
+  const [ctx, setCtx] = useState(initial?.contextWindow != null ? formatContextWindow(initial.contextWindow) : '')
 
   const handleSave = () => {
     const modelId = id.trim()
@@ -192,7 +240,16 @@ export function ModelEditDialog({
       showToast(`模型「${modelId}」已存在`, 'warning')
       return
     }
-    onSave({ id: modelId, input: caps.input, output: caps.output })
+    // 留空 = 未标注（存 null）；非法格式拦在弹窗内，不关闭
+    const raw = ctx.trim()
+    let contextWindow: number | null = null
+    if (raw) {
+      const parsed = parseContextInput(raw)
+      if (parsed == null) { showToast('上下文长度格式无效', 'warning'); return }
+      contextWindow = parsed
+    }
+    // 展开原条目兜底保留未编辑字段，再覆盖弹窗内的最新值
+    onSave({ ...(initial ?? {}), id: modelId, input: caps.input, output: caps.output, contextWindow })
   }
 
   return (
@@ -201,6 +258,7 @@ export function ModelEditDialog({
       onClose={onCancel}
       icon="Cpu"
       title={title}
+      width={360}   // 小表单配窄抽屉：内容只有模型 ID + 能力 + 上下文长度三行，480px 默认宽留白过多
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={onCancel}>取消</Button>
@@ -208,7 +266,7 @@ export function ModelEditDialog({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="px-6 py-5 space-y-4">
         <div>
           <label className="label">模型 ID</label>
           <input
@@ -224,6 +282,19 @@ export function ModelEditDialog({
         <p className="text-xs text-muted-foreground">
           文本输入/输出为恒选；图片、视频用于标注多模态模型。
         </p>
+        <div>
+          <label className="label">上下文长度</label>
+          <input
+            type="text"
+            value={ctx}
+            onChange={e => setCtx(e.target.value)}
+            placeholder="如 200K / 1M / 256000"
+            className={INPUT_CLS}
+          />
+          <p className="text-xs text-muted-foreground mt-1.5">
+            支持 K/M 简写（200K = 200000，1M = 1000000）；留空 = 未标注。
+          </p>
+        </div>
       </div>
     </Drawer>
   )

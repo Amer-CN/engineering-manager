@@ -30,7 +30,7 @@ describe('useMaskedFn', () => {
   it('默认 masked=true (MaskProvider 默认值) -> 返回脱敏值', () => {
     const { result } = renderHook(() => useMaskedFn(), { wrapper })
     expect(result.current('idCard', '11010519491231002X')).toBe('1101**********002X')
-    expect(result.current('phone', '[已脱敏]')).toBe('138****8000')
+    expect(result.current('phone', '13800138000')).toBe('138****8000')
     expect(result.current('bankAccount', '6225880137660000')).toBe('6225********0000')
     expect(result.current('email', 'alice@example.com')).toBe('a***@example.com')
   })
@@ -48,7 +48,7 @@ describe('useMaskedFn', () => {
     )
 
     // 默认脱敏
-    expect(result.current('phone', '[已脱敏]')).toBe('138****8000')
+    expect(result.current('phone', '13800138000')).toBe('138****8000')
 
     // 切到 unmasked
     act(() => {
@@ -64,7 +64,7 @@ describe('useMaskedFn', () => {
     act(() => {
       setMaskedRef!(true)
     })
-    expect(result.current('phone', '[已脱敏]')).toBe('138****8000')
+    expect(result.current('phone', '13800138000')).toBe('138****8000')
   })
 
   it('空字符串 / null / undefined 在 masked 状态下返回空字符串', () => {
@@ -97,7 +97,7 @@ describe('useMaskedFn', () => {
   it('4 种 type 枚举全覆盖 (masked=true 路径)', () => {
     const { result } = renderHook(() => useMaskedFn(), { wrapper })
     expect(result.current('idCard', '11010519491231002X')).toBe('1101**********002X')
-    expect(result.current('phone', '[已脱敏]')).toBe('138****8000')
+    expect(result.current('phone', '13800138000')).toBe('138****8000')
     expect(result.current('bankAccount', '6225880137660000')).toBe('6225********0000')
     expect(result.current('email', 'alice@example.com')).toBe('a***@example.com')
   })

@@ -6,11 +6,11 @@
  * 生成器产出（ChartReportView 预览与 buildChartReportPrintHtml 打印同源，观感一致）。
  *
  * 版式/参数正本（只读）：
- * - 折线：vendor/lieflat-charts/templates/basics-gallery.html B2「hairline line」
+ * - 折线：~/.zcode/skills/lieflat-charts/templates/basics-gallery.html B2「hairline line」
  *   （日历地板发丝 + 发丝折线 + 逐日圆点（周末空心）+ 峰值 top-2 标数 + X 轴 3 锚点）；
  * - 方阵：官方 glance dot waffle 参数（COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10，同
  *   reportPrintHtml.buildWaffleSvg 转写口径），色板换 porcelain；
- * - 条形：官方 basics C1 tick rows 骨架（类目名左 + 发丝轨道 + 条尾数值，同
+ * - 条形：官方 basics C1 tick rows 骨架（类目名左 + 条尾数值，同
  *   reportPrintHtml.buildTopBarsSvg 参数），色板换 porcelain。
  *
  * 色板纪律：图形版统一 Porcelain 青瓷蓝（PRESETS.porcelain + PORCELAIN_INK，import 取色，
@@ -108,7 +108,7 @@ function parseChartBlock(kind: string, jsonText: string): ChartBlock | null {
         typeof q.weekend === 'boolean' ? { x: q.x, y: q.y, weekend: q.weekend } : { x: q.x, y: q.y },
       )
     }
-    return { kind, points, label: typeof o.label === 'string' ? o.label : undefined }
+    return { kind, points, label: typeof o.label === 'string' ? stripEmphasis(o.label) : undefined }
   }
   if (!Array.isArray(o.rows) || o.rows.length === 0) return null
   const rows: ChartNamedRow[] = []
@@ -116,10 +116,13 @@ function parseChartBlock(kind: string, jsonText: string): ChartBlock | null {
     if (!r || typeof r !== 'object' || Array.isArray(r)) return null
     const q = r as Record<string, unknown>
     if (typeof q.name !== 'string' || !isFiniteNum(q.value)) return null
-    rows.push({ name: q.name, value: q.value })
+    rows.push({ name: stripEmphasis(q.name), value: q.value })
   }
-  return { kind: kind as 'waffle' | 'bars', rows, title: typeof o.title === 'string' ? o.title : undefined }
+  return { kind: kind as 'waffle' | 'bars', rows, title: typeof o.title === 'string' ? stripEmphasis(o.title) : undefined }
 }
+
+/** 剥离 AI 输出的 Markdown 加粗标记（**）：模板以自有字重渲染，星号露出即泄漏（2026-09-08 实测 R12 大数字卡） */
+const stripEmphasis = (s: string): string => s.replace(/\*\*/g, '')
 
 /**
  * 图形版 markdown → ChartReportData。
@@ -160,8 +163,11 @@ export function parseChartReport(markdown: string): ChartReportData {
       cur = { headline: '', bullets: [], lines: [] }
       sections.push(cur)
     }
-    if (fenceKind.startsWith('chart-')) {
-      const blk = parseChartBlock(fenceKind.slice('chart-'.length), fenceLines.join('\n'))
+    // AI 不稳定：提示词教的是 chart-bars（连字符），实测会输出 chart:bars / chart_bars，
+    // 归一化后再判型，否则整块按普通文本漏进正文（2026-09-07 实测 leak）
+    const norm = fenceKind.trim().toLowerCase().replace(/[:_]/g, '-')
+    if (norm.startsWith('chart-')) {
+      const blk = parseChartBlock(norm.slice('chart-'.length), fenceLines.join('\n'))
       if (blk) {
         cur.chart = blk
       } else {
@@ -197,12 +203,12 @@ export function parseChartReport(markdown: string): ChartReportData {
     }
     const h1 = HEAD1_RE.exec(line)
     if (h1) {
-      if (!title) title = h1[1].trim()
+      if (!title) title = stripEmphasis(h1[1].trim())
       continue // 非首个 # 行按普通内容落下（维持解析宽容性）
     }
     const h2 = HEAD2_RE.exec(line)
     if (h2) {
-      const name = h2[1].trim()
+      const name = stripEmphasis(h2[1].trim())
       if (name === NUMBERS_HEADING) {
         flushFence() // 保险：节边界前清空未闭合块
         inNumbers = true
@@ -216,14 +222,14 @@ export function parseChartReport(markdown: string): ChartReportData {
     }
     const qp = QUOTE_PERIOD_RE.exec(line)
     if (qp && !period) {
-      period = qp[1].trim()
+      period = stripEmphasis(qp[1].trim())
       continue
     }
     if (inNumbers) {
       const m = UL_RE.exec(line)
       if (m) {
         const [v, ...rest] = m[1].split(BIG_SEP)
-        bigNumbers.push({ value: v.trim(), label: rest.join(BIG_SEP).trim() })
+        bigNumbers.push({ value: stripEmphasis(v.trim()), label: stripEmphasis(rest.join(BIG_SEP).trim()) })
       }
       continue // 数字节非 list 行属 AI 偏离格式，不渲染
     }
@@ -233,9 +239,9 @@ export function parseChartReport(markdown: string): ChartReportData {
     }
     const m = UL_RE.exec(line)
     if (m) {
-      cur.bullets.push(m[1].trim())
+      cur.bullets.push(stripEmphasis(m[1].trim()))
     } else {
-      cur.lines.push(line)
+      cur.lines.push(stripEmphasis(line))
     }
   }
   flushFence() // 未闭合 fence 按已收内容处理
@@ -317,7 +323,7 @@ export function buildTrendSvg(points: ChartTrendPoint[]): string {
     }
     if (big) {
       parts.push(
-        `<text x="${cx}" y="${r2(cy - 11)}" font-size="9.5" font-weight="800" fill="${HERO}" text-anchor="middle">${fmtThousands(p.y)}</text>`,
+        `<text x="${cx}" y="${r2(cy - 11)}" font-size="11" font-weight="800" fill="${HERO}" text-anchor="middle">${fmtThousands(p.y)}</text>`,
       )
     }
   })
@@ -326,12 +332,25 @@ export function buildTrendSvg(points: ChartTrendPoint[]): string {
     const anchors = [...new Set(N >= 3 ? [0, Math.floor((N - 1) / 2), N - 1] : N === 2 ? [0, 1] : [0])]
     for (const d of anchors) {
       parts.push(
-        `<text x="${r2(xAt(d))}" y="${BASE + 18}" font-size="7.5" font-weight="600" fill="${PORCELAIN_INK.mut}" text-anchor="middle" letter-spacing=".1em">${escapeHtml(points[d].x)}</text>`,
+        `<text x="${r2(xAt(d))}" y="${BASE + 18}" font-size="10" font-weight="600" fill="${PORCELAIN_INK.mut}" text-anchor="middle" letter-spacing=".1em">${escapeHtml(points[d].x)}</text>`,
       )
     }
   }
   parts.push('</svg>')
   return parts.join('')
+}
+
+/**
+ * SVG text 无自动换行，超出 viewBox 的部分被画布硬裁（2026-09-08 压力实测：
+ * 30 字符类目名在图例与条形图两侧丢字）。按字符宽度估算（CJK 全角 = cjk 单位，
+ * 其余 = ascii 单位），超宽截断补 …。仅用于画布内单行标签。
+ */
+function fitSvgText(name: string, maxUnits: number, cjk: number, ascii: number): string {
+  const width = (s: string) => [...s].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e7f ? cjk : ascii), 0)
+  if (width(name) <= maxUnits) return name
+  let s = name
+  while (s.length > 1 && width(s) + ascii > maxUnits) s = s.slice(0, -1)
+  return s + '…'
 }
 
 /**
@@ -388,7 +407,7 @@ export function buildChartWaffleSvg(rows: ChartNamedRow[]): string {
     const y = 32 + g * PITCH
     parts.push(`<circle cx="246" cy="${y}" r="5" fill="${r.color}"/>`)
     parts.push(
-      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${PORCELAIN_INK.lab}">${escapeHtml(r.name)}</text>`,
+      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${PORCELAIN_INK.lab}">${escapeHtml(fitSvgText(r.name, 116, 10, 5.5))}</text>`,
     )
     parts.push(
       `<text x="258" y="${y + 22}" font-size="30" font-weight="800" fill="${HERO}">${r.pct}%</text>`,
@@ -397,7 +416,7 @@ export function buildChartWaffleSvg(rows: ChartNamedRow[]): string {
 
   if (overflow) {
     parts.push(
-      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="7" font-weight="600" letter-spacing=".12em" fill="${PORCELAIN_INK.faint}">占比四舍五入</text>`,
+      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="11" font-weight="600" letter-spacing=".12em" fill="${PORCELAIN_INK.faint}">占比四舍五入</text>`,
     )
   }
   parts.push('</svg>')
@@ -406,13 +425,14 @@ export function buildChartWaffleSvg(rows: ChartNamedRow[]): string {
 
 /**
  * 横向条形（basics C1 tick rows 骨架，参数同 reportPrintHtml.buildTopBarsSvg：
- * X0=126 / BARMAX=380 / PITCH=36 / BH=10，viewBox 620）。
+ * X0=198 / BARMAX=330 / 标签区 190 / PITCH=36 / BH=10，viewBox 620）。
+ * 标签区 190 = 118 旧值在 11px 字号下容不下真实类目名（压力实测左侧丢字）后加宽。
  * 色板 porcelain 且明度=数值（值越大色越深，按值排名取 rampColor）；
  * 条长严格正比（max 守卫：0/负值条宽 0 但名称数值仍显）。纯静态、name 全转义。
  */
 export function buildChartBarsSvg(rows: ChartNamedRow[]): string {
-  const X0 = 126
-  const BARMAX = 380
+  const X0 = 198
+  const BARMAX = 330
   const PITCH = 36
   const BH = 10
   const max = rows.length > 0 ? Math.max(...rows.map((r) => r.value)) : 0
@@ -430,16 +450,13 @@ export function buildChartBarsSvg(rows: ChartNamedRow[]): string {
   rows.forEach((r, i) => {
     const y = 12 + i * PITCH
     parts.push(
-      `<text x="118" y="${y + 9}" text-anchor="end" font-size="10" font-weight="600" letter-spacing=".06em" fill="${PORCELAIN_INK.lab}">${escapeHtml(r.name)}</text>`,
-    )
-    parts.push(
-      `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${PORCELAIN_INK.grid}" stroke-width="1"/>`,
+      `<text x="190" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="${PORCELAIN_INK.lab}">${escapeHtml(fitSvgText(r.name, 186, 11, 6))}</text>`,
     )
     const w = max > 0 && r.value > 0 ? Math.round((r.value / max) * BARMAX * 100) / 100 : 0
     const color = rampColor('porcelain', rank.get(i) ?? 0, rows.length)
     parts.push(`<rect x="${X0}" y="${y}" width="${w}" height="${BH}" rx="2" fill="${color}"/>`)
     parts.push(
-      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="11" font-weight="700" fill="${HERO}">${fmtThousands(r.value)}</text>`,
+      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="12" font-weight="700" fill="${HERO}">${fmtThousands(r.value)}</text>`,
     )
   })
   parts.push('</svg>')
