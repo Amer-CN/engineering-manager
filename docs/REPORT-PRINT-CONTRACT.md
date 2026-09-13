@@ -125,11 +125,13 @@ spineFs = max(24, min(56, floor(900 / 标题字符数)))   /* 900 = 页高预算
 ## 10. 验证方法（改动后必做）
 
 1. **结构体检**：四模板 × 三场景（完整/空/注入）生成打印 HTML，断言零 `<script>`、
-   无 `${`/undefined/NaN 泄漏、div 配平、@page 正确、注入被转义；
+   无 `${`/undefined/NaN 泄漏、div 配平、@page 正确、注入被转义
+   —— `npx tsx scripts/report-print-audit.mts`（仓库根执行，零问题即通过）；
 2. **打印分页核验**（截图模式看不出分页）：HTML 复制到**纯英文路径**（CJK 路径
    print-to-pdf 会静默失败）→ Edge 无头 `--print-to-pdf` → **PyMuPDF 提取每段文字的实际
    pt 字号**，断言无 <7.5pt → 逐页渲染 PNG **肉眼验收**（提取不感知视觉裁切/叠印，必须看图）；
-3. **压力数据**：长类目名、6 行以上、超大金额、走势图——固定构图问题只在极端数据下暴露；
+3. **压力数据**：长类目名、6 行以上、超大金额、走势图——固定构图问题只在极端数据下暴露
+   —— `npx tsx scripts/report-print-stress.mts`；
 4. **预览核验**：无头截图前注意两个环境假象：framer-motion 组件 SSR 停在 `opacity:0`、
    审计页 CSS 必须用**绝对路径**（相对路径会解析到 `.work/dist/` 导致整页无样式，
    把布局问题误判成组件缺陷）。
@@ -138,8 +140,12 @@ spineFs = max(24, min(56, floor(900 / 标题字符数)))   /* 900 = 页高预算
 
 - 已有守卫：`src/__tests__/utils/reportTemplates.conformance.test.ts`（打印 HTML 一致性，5 用例）。
   **新增模板或改版式，先加用例再动手。**
-- **已知缺口**：第 10 节的体检脚本目前放在 gitignore 的 `.work/audit/` 下，**不随仓库分发**，
-  新克隆无法复现。建议后续把 `gen.ts` / `stress.ts` 提升进 `scripts/` 或转为测试用例。
+- **缺口已消除**（2026-09-13）：第 10 节的体检脚本原先放在 gitignore 的 `.work/audit/` 下，
+  不随仓库分发、新克隆无法复现；现两个脚本已提升进 `scripts/`：
+  `scripts/report-print-audit.mts`（结构体检，对应第 10 节第 1 条）与
+  `scripts/report-print-stress.mts`（压力场景，对应第 10 节第 3 条）。
+  在仓库根执行 `npx tsx scripts/report-print-audit.mts` / `npx tsx scripts/report-print-stress.mts`
+  即可复现，无需 `.work/audit/` 下的私有脚本。
 - 许可提醒：lieflat-charts 为 **PolyForm Noncommercial**。本契约生效后，项目只借用其
   图表视觉语言，不再整页搬其版式，暴露面收窄；若将来要商业化交付，需先替换为可商用方案
   或取得授权。
