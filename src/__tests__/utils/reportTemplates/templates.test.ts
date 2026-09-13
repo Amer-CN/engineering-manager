@@ -46,7 +46,8 @@ describe('getTemplateId 映射', () => {
 describe('R01 对外举证', () => {
   it('含侧栏轨道结构与衬线标题', () => {
     const html = buildR01PrintHtml(SAMPLE)
-    expect(html).toContain('grid-template-columns:1fr 300px')
+    // 侧栏改打印安全版式：position:fixed 右栏逐页重复（原 grid 1fr 300px 跨页碎片化塌架，2026-09-07 定案）
+    expect(html).toContain('.rail{position:fixed;top:0;right:0;width:52mm')
     expect(html).toContain('Source Serif 4')
     expect(html).toContain('口径说明')
   })
@@ -62,9 +63,10 @@ describe('R01 对外举证', () => {
 })
 
 describe('R05 工作汇报', () => {
-  it('含窄版心 760 + 反色高亮 + tick 条带', () => {
+  it('含窄版心 794 + 反色高亮 + tick 条带', () => {
     const html = buildR05PrintHtml(SAMPLE)
-    expect(html).toContain('760px')
+    // 760px 窄版心 → 打印安全版式 max-width:794px（2026-09-07 改版）
+    expect(html).toContain('max-width:794px')
     expect(html).toContain('box-decoration-break')
     expect(html).toContain('TICK STRIP')
   })
@@ -125,7 +127,7 @@ describe('buildTemplatePrintHtml 分发', () => {
   })
   it('r05 → R05 版式', () => {
     const html = buildTemplatePrintHtml('r05', SAMPLE)
-    expect(html).toContain('760px')
+    expect(html).toContain('max-width:794px')
     expect(html).toContain('TICK STRIP')
   })
   it('r12 → R12 版式', () => {
@@ -140,14 +142,14 @@ describe('buildTemplatePrintHtml 分发', () => {
 })
 
 describe('R12 打印结构（P0 修复项）', () => {
-  it('JSON 数据块位于主脚本之前（先声明后读取）', () => {
+  it('零脚本架构：产物无任何 <script> 块，图卡为构建期静态内联 SVG（原「JSON 先于主脚本」意图）', () => {
     const html = buildR12PrintHtml(SAMPLE)
-    const jsonPos = html.indexOf('id="r12adata"')
-    const mainScriptPos = html.indexOf('(function(){')
-    expect(jsonPos).toBeGreaterThan(-1)
-    expect(mainScriptPos).toBeGreaterThan(jsonPos)
+    // 旧架构在打印窗口内联脚本现场渲染（字体样式表阻塞脚本导致图卡丢失 P0）；新架构零脚本
+    expect(html.indexOf('<script')).toBe(-1)
+    // 等价保证：waffle 点位在构建期直接内联为 SVG circle（SAMPLE 70+30 恰满 100 点）
+    expect((html.match(/<circle /g) ?? []).length).toBe(100)
   })
-  it('JSON 不被 esc 实体转义：`<` 走 \\u003c 方案，JSON.parse 可原样还原（</script> 注入面闭合）', () => {
+  it('注入面闭合：数据名经 XML 转义输出且无内联脚本（原「< 走 \\u003c 方案」意图）', () => {
     const html = buildR12PrintHtml({
       ...SAMPLE,
       charts: {
@@ -156,22 +158,19 @@ describe('R12 打印结构（P0 修复项）', () => {
         topBars: { title: 't', unit: '¥', rows: [{ name: 'A</script><b>', value: 1 }] },
       },
     })
+    // 零 <script>：不存在可被 </script> 提前闭合的脚本块；注入名只以转义实体出现
+    expect(html.indexOf('<script')).toBe(-1)
     expect(html).not.toContain('A</script><b>')
-    expect(html).toContain('\\u003c')
-    const m = html.match(/id="r12bdata">(.*?)<\/script>/)
-    expect(m).not.toBeNull()
-    const parsed = JSON.parse(m![1])
-    expect(parsed[0].name).toBe('A</script><b>')
+    expect(html).toContain('A&lt;/script&gt;&lt;b&gt;')
+    // 点位分配仍按 pct 正确（60+40 满 100）
+    expect((html.match(/<circle /g) ?? []).length).toBe(100)
   })
-  it('r12adata 数据形状含 pct 字段（waffleRows 累计封顶 100，与 r05Print 同口径）', () => {
+  it('数据形状按 pct 消费（累计封顶 100，与 r05Print 同口径）', () => {
     const html = buildR12PrintHtml(SAMPLE)
-    expect(html).toContain('function waffleRows(')
-    expect(html).toContain('100-cum')
-    const m = html.match(/id="r12adata">(.*?)<\/script>/)
-    expect(m).not.toBeNull()
-    const parsed = JSON.parse(m![1]) as { name: string; pct: number }[]
-    expect(parsed[0].pct).toBe(70)
-    expect(parsed[0].value).toBeUndefined()
+    // 行为断言：pct 70/30 直接决定点位分配（若形状为 value 则点数为 0）
+    expect((html.match(/<circle [^>]*fill="#43593B"/g) ?? []).length).toBe(70)
+    expect((html.match(/<circle [^>]*fill="#D4A017"/g) ?? []).length).toBe(30)
+    expect(html).toContain('一线 70%')
   })
 })
 
@@ -183,22 +182,20 @@ describe('R12 周报速览', () => {
     expect(html).not.toContain('cdn.jsdelivr')
     expect(html).not.toContain('unpkg.com')
   })
-  it('方阵恒 100 点（含补足点）——静态 SVG + JS 数据双断言', () => {
+  it('方阵恒 100 点（含补足点）——静态 SVG 直接口数', () => {
     const html = buildR12PrintHtml(SAMPLE)
-    // waffleRows 为 JS 动态渲染：数据 JSON 内嵌且分段函数存在
-    expect(html).toContain('id="r12adata"')
     expect(html).toContain('PICTORIAL ROWS')
     // SAMPLE: waffle rows pct 70+30=100 → 恰好 100 点无需补足
     expect(SAMPLE.charts!.waffle!.rows.reduce((s, r) => s + r.pct, 0)).toBe(100)
-    // JS 分段算法存在（assigned/补足逻辑）+ 渲染目标存在
-    expect(html).toContain('r12a')
-    expect(html).toContain('for(;x<100;x++)')
+    // 构建期直接内联 100 个 circle（零脚本，无补足段）
+    expect((html.match(/<circle /g) ?? []).length).toBe(100)
+    expect(html).not.toContain('opacity=".5"') // 无 faint 补足点
   })
   it('转义与空 charts', () => {
     const bad = buildR12PrintHtml({ ...SAMPLE, charts: { topBars: { title: 't', unit: '¥', rows: [{ name: '"><img', value: 1 }] } } })
     expect(bad).not.toContain('"><img')
   })
-  it('累计封顶：pct 溢出 80+80 首段按 80 显示（与 waffleRows 100-cum 同口径）', () => {
+  it('累计封顶：pct 溢出 80+80 首段按 80 显示、第二段压到余量 20（与 r05Print 100-cum 同口径）', () => {
     const html = buildR12PrintHtml({
       ...SAMPLE,
       charts: {
@@ -207,7 +204,10 @@ describe('R12 周报速览', () => {
       },
     })
     expect(html).toContain('A 80%')
-    expect(html).toContain('100-cum')
+    // 首段 80 点（未被压）、次段 20 点（封顶后余量）、合计恒 100，无第 3 段溢出
+    expect((html.match(/<circle [^>]*fill="#43593B"/g) ?? []).length).toBe(80)
+    expect((html.match(/<circle [^>]*fill="#D4A017"/g) ?? []).length).toBe(20)
+    expect((html.match(/<circle /g) ?? []).length).toBe(100)
   })
   it('图卡标题取 charts.title，空 title 回退构成速览/排行速览', () => {
     const html = buildR12PrintHtml({

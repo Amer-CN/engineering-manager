@@ -6,6 +6,15 @@ import R05WorkView from '@/components/features/reports/tpl/R05WorkView'
 import R12WeeklyView from '@/components/features/reports/tpl/R12WeeklyView'
 import type { TemplateReportData } from '@/utils/reportTemplates/types'
 
+// jsdom 无 ResizeObserver：R01EvidenceView 的窄容器等比缩放适配（zoom-to-fit）依赖它做布局观察，
+// 实现未做 typeof 守卫（FolderCarousel 有守卫），测试侧补最小桩即可挂载；不影响断言内容。
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+;(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub
+
 const META: TemplateReportData['meta'] = {
   product: '工程管家',
   generatedBy: 'AI 生成',
