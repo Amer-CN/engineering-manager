@@ -158,6 +158,7 @@ function renderTable(t: ReportPrintTable): string {
  * - "- "/"* " 开头行 = 列表项、"1. " 编号行 = 有序列表项（保留记号原样，渲染时并入
  *   <ul>/<ol>；编号行属列表，不提升为结论句）；
  * - 行首 | 的连续行块 = 表格（渲染时整块转细线表；孤行不成表）；
+ * - ```chart-* 围栏块（AI 夹带的图表数据）整块剥除：开栏行识别、内容与闭栏行均不进 lines；
  * - 节名「值得记住的数字」：lines 中匹配「- 值｜标签｜小注」的行解析为该节
  *   bigNumbers（大数字块；小注缺省 ''，全 trim）并从 lines 移除；不匹配行保持普通行；
  * - 每节「列表/表格出现之前的首个散文行」提为结论句 heading（纯列表/表格节无 claim，内容不丢）；
@@ -172,16 +173,29 @@ export function parseReportMarkdown(markdown: string): {
   const QUOTE_RE = /^> /
   const PERIOD_RE = /^期间：(.*)$/
   const BIG_NUMBER_RE = /^- (.+?)｜(.+?)(?:｜(.*))?$/
+  const FENCE_OPEN_CHART_RE = /^```(chart-[\w-]+)/
+  const FENCE_CLOSE_RE = /^```/
 
   const lines = (markdown || '').split('\n')
   let title: string | null = null
   let period: string | null = null
   const raw: { name: string | null; lines: string[] }[] = []
   let current: { name: string | null; lines: string[] } | null = null
+  let fenceKind: string | null = null // 非 null = 正在剥除的 chart 围栏块
 
   for (const rawLine of lines) {
     const line = rawLine.trim()
     if (!line) continue // 空行剔除
+    if (fenceKind !== null) {
+      // 围栏块内：闭栏行结束剥除，其余内容整体丢弃（fence 不进 lines）
+      if (FENCE_CLOSE_RE.test(line)) fenceKind = null
+      continue
+    }
+    const fenceOpen = FENCE_OPEN_CHART_RE.exec(line)
+    if (fenceOpen) {
+      fenceKind = fenceOpen[1] // ```chart-* 开栏：整块剥除
+      continue
+    }
     if (QUOTE_RE.test(line)) {
       const quoted = line.replace(QUOTE_RE, '').trim()
       const pm = PERIOD_RE.exec(quoted)
