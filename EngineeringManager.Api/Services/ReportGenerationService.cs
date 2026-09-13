@@ -108,21 +108,22 @@ public class ReportGenerationService
             if (isWorkPurpose)
             {
                 // 工作汇报：第一人称措辞；额外注入当前用户 displayName；
-                // format=chart 时叠加图形版 chart-* 数据块规则（否则图形版无图可渲染）
+                // format=chart 走专用图形版提示词 BuildWorkChartSystemPrompt（一体成型，不与文本版结构拼贴）
                 var workDisplayName = await db.ExecuteScalarAsync<string?>(
                     "SELECT COALESCE(NULLIF([display_name], ''), [username]) FROM [users] WHERE [id]=@UserId",
                     new { UserId = userId });
-                systemPrompt = BuildWorkReportSystemPrompt();
-                if (string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase))
-                    systemPrompt += ChartBlocksAppendix;
+                systemPrompt = string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase)
+                    ? BuildWorkChartSystemPrompt(periodLabel)
+                    : BuildWorkReportSystemPrompt();
                 userPrompt = BuildWorkUserPrompt(request, workDisplayName, auditData, kpiData, periodLabel);
             }
             else if (isEvidencePurpose)
             {
-                // 对外举证：中立正式措辞；数据与 general 同源（审计汇总 + KPI）
-                systemPrompt = BuildEvidenceSystemPrompt();
-                if (string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase))
-                    systemPrompt += ChartBlocksAppendix;
+                // 对外举证：中立正式措辞；数据与 general 同源（审计汇总 + KPI）；
+                // format=chart 走专用图形版提示词 BuildEvidenceChartSystemPrompt（一体成型，不与文本版结构拼贴）
+                systemPrompt = string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase)
+                    ? BuildEvidenceChartSystemPrompt(periodLabel)
+                    : BuildEvidenceSystemPrompt();
                 userPrompt = BuildEvidenceUserPrompt(request, auditData, kpiData, periodLabel);
             }
             else if (isWageTheme)
@@ -554,19 +555,26 @@ public class ReportGenerationService
     }
 
     /// <summary>
-    /// work/evidence + format=chart 的图形版附加规则：在用途措辞之上叠加 chart-* 数据块契约
-    /// （与 BuildChartSystemPrompt 同款三图型语法，前端 chartReport.parseChartReport 解析；
-    /// 无此附加规则图形版无图可渲染，只会降级纯文本）。
+    /// 工作汇报（purpose=work）图形版 systemPrompt：结构规则沿 BuildChartSystemPrompt
+    /// （# 标题 + &gt; 期间 + 节末 chart 块 + 值得记住的数字），措辞沿用 BuildWorkReportSystemPrompt
+    /// （第一人称「我」、操作记录翻译成工作成果、禁止编造美化）。
     /// </summary>
-    private const string ChartBlocksAppendix =
-        "\n\n本次为图形版（format=chart），请在保持上述结构与措辞约束的前提下，叠加以下图形版输出规则：\n" +
-        "1. 首行 `# 标题`，次行 `> 期间：{起}~{止}`；各节标题用 `## `；\n" +
-        "2. 在有数据形状的节末尾放一个图表数据块（三选一，按数据形状选）：\n" +
-        "```chart-trend\n{\"label\":\"...\",\"points\":[{\"x\":\"9/1\",\"y\":18},...]}\n```（时间序列 ≥5 点）\n" +
-        "```chart-waffle\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":33},...]}\n```（占比 ≤6 类，value 为百分比）\n" +
-        "```chart-bars\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":12345},...]}\n```（类目比较 ≤8 条，金额单位元）\n" +
-        "3. 结尾 `## 值得记住的数字` 节：3-4 行 `- {数字}｜{一行说明}`。\n" +
-        "x 用短日期、y/value 用真实数字（金额单位元、计数不带单位），禁止编造数据。";
+    private static string BuildWorkChartSystemPrompt(string periodLabel)
+    {
+        return string.Join('\n',
+            $"你是工程管家助手，为当前用户生成第一人称工作汇报{periodLabel}（图形版）" +
+            "（用于员工向领导交代自己的工作）。用「我」的口吻叙述，把每条操作记录翻译成具体工作成果。" +
+            "输出 Markdown，结构规则：",
+            "1. 首行 `# 标题`，次行 `> 期间：{起}~{止}`；",
+            "2. 3-4 个小节，节名取「本周工作概览 / 主要工作明细 / 关键数据小结 / 下周计划」，每节：`## 节名` → 2-4 行 `- 要点`（每项说明做了什么、用了什么数据）；",
+            "3. 有数据形状的节末尾放一个图表数据块（三选一，按数据形状选；无数据形状的节不放图表数据块，如「下周计划」）：",
+            "```chart-trend\n{\"label\":\"...\",\"points\":[{\"x\":\"9/1\",\"y\":18},...]}\n```（时间序列 ≥5 点）",
+            "```chart-waffle\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":33},...]}\n```（占比 ≤6 类，value 为百分比）",
+            "```chart-bars\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":12345},...]}\n```（类目比较 ≤8 条，金额单位元）",
+            "4. 结尾 `## 值得记住的数字` 节：3-4 行 `- {数字}｜{一行说明}`；",
+            "每个数字必须来自给定数据，绝对禁止编造、推测、美化；x 用短日期、y/value 用真实数字（金额单位元、计数不带单位），禁止编造数据。语气务实朴素。"
+        );
+    }
 
     /// <summary>
     /// 工作汇报（purpose=work）systemPrompt：第一人称工作汇报措辞。
@@ -590,6 +598,29 @@ public class ReportGenerationService
             "②每项数据标注来源模块与统计口径；③金额精确到分；" +
             "④结构：报告说明（取数范围与统计口径）/合同情况/收支情况/工资发放情况/附注（统计时间与数据来源）。" +
             "禁止包含操作行为分析或主观评价。";
+    }
+
+    /// <summary>
+    /// 对外举证（purpose=evidence）图形版 systemPrompt：结构规则沿 BuildChartSystemPrompt
+    /// （# 标题 + &gt; 期间 + 节末 chart 块 + 值得记住的数字），措辞沿用 BuildEvidenceSystemPrompt
+    /// 的红线（零修辞零推测零形容词、每项数据标注来源模块与统计口径、金额精确到分、禁止操作行为分析）。
+    /// </summary>
+    private static string BuildEvidenceChartSystemPrompt(string periodLabel)
+    {
+        return string.Join('\n',
+            $"你是工程管家报告助手，生成对外举证用途的正式凭证报告{periodLabel}（对外举证 · 图形版）" +
+            "（可用于结算争议、银行授信、资质申报等场景）。" +
+            "措辞红线：①只陈述数据事实，零修辞、零推测、零形容词；②每项数据标注来源模块与统计口径；" +
+            "③金额精确到分；④禁止包含操作行为分析或主观评价。输出 Markdown，结构规则：",
+            "1. 首行 `# 标题`，次行 `> 期间：{起}~{止}`；",
+            "2. 3-4 个小节，节名从「报告说明 / 合同情况 / 收支情况 / 工资发放情况 / 附注」中取，每节：`## 中立事实性节名`（禁止任何判断性标题）→ 2-4 行 `- 要点`（只陈述数据事实，标注来源与口径）；",
+            "3. 每节末尾放一个图表数据块（三选一，按数据形状选）：",
+            "```chart-trend\n{\"label\":\"...\",\"points\":[{\"x\":\"9/1\",\"y\":18},...]}\n```（时间序列 ≥5 点）",
+            "```chart-waffle\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":33},...]}\n```（占比 ≤6 类，value 为百分比）",
+            "```chart-bars\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":12345},...]}\n```（类目比较 ≤8 条，金额单位元）",
+            "4. 结尾 `## 值得记住的数字` 节：3-4 行 `- {数字}｜{一行说明}`；",
+            "x 用短日期、y/value 用真实数字（金额精确到分、单位元），禁止编造数据。"
+        );
     }
 
     /// <summary>
