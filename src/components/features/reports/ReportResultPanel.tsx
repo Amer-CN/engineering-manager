@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { EASE_OUT } from '@/constants/animations'
 import { Icon } from '@/components/ui/Icon'
-import { parseMarkup, tokenizeInline, type MarkupLine } from '@/utils/templateMarkup'
+import { parseMarkup, type MarkupLine } from '@/utils/templateMarkup'
 import {
   parseReportMarkdown,
   buildReportPrintHtml,
@@ -12,8 +12,9 @@ import {
 import { parseChartReport, type ChartReportData } from '@/utils/chartReport'
 import { buildTemplatePrintHtml, type ReportTemplateId, type TemplateReportData } from '@/utils/reportTemplates'
 import { PRESETS } from '@/components/ui/charts/colorPresets'
-import { ReportCharts, fetchReportChartsData } from './ReportCharts'
+import { fetchReportChartsData } from './ReportCharts'
 import ChartReportView from './ChartReportView'
+import ReportTextPreview from './ReportTextPreview'
 import R01EvidenceView from './tpl/R01EvidenceView'; import R05WorkView from './tpl/R05WorkView'; import R12WeeklyView from './tpl/R12WeeklyView'
 interface ReportResultPanelProps {
   markdown: string
@@ -23,17 +24,10 @@ interface ReportResultPanelProps {
   /** 报告模板（Modal 生成时快照透传，由 purpose 映射）；缺省 'r04' */
   templateId?: string
 }
-/** 表格单元格行内标记渲染（与段落分支同规则：**粗体** / *斜体*） */
-const renderCellInline = (text: string) =>
-  tokenizeInline(text).map((t, j) =>
-    t.type === 'bold' ? (
-      <strong key={j} style={{ color: 'var(--fg)' }}>{t.content}</strong>
-    ) : t.type === 'italic' ? (
-      <em key={j}>{t.content}</em>
-    ) : (
-      <span key={j}>{t.content}</span>
-    )
-  )
+/** 文本预览块（parsedBlocks memo 产出 → ReportTextPreview 消费） */
+export type ReportPreviewBlock =
+  | { kind: 'line'; line: MarkupLine }
+  | { kind: 'list'; type: 'ul' | 'ol'; items: MarkupLine[] }
 /**
  * 图形版模板数据装配（预览 tplData 与打印 collectTplCharts 共用同一口径）：
  * waffle/topBars/trend 来自各节 chart 块，bigNumbers 来自顶层「值得记住的数字」节；
@@ -105,10 +99,7 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
   // 文本分支渲染单元：blockquote 引用行按弱化元信息行识别；连续同类型列表行合并为
   // list 块（镜像打印链 renderLines 的 closeList 口径：类型切换或非列表行时闭合）
   const parsedBlocks = useMemo(() => {
-    const blocks: (
-      | { kind: 'line'; line: MarkupLine }
-      | { kind: 'list'; type: 'ul' | 'ol'; items: MarkupLine[] }
-    )[] = []
+    const blocks: ReportPreviewBlock[] = []
     for (const line of parseMarkup(markdown, { blockquote: true })) {
       const last = blocks[blocks.length - 1]
       if (line.listType === 'ul' || line.listType === 'ol') {
@@ -322,147 +313,7 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
         ) : isChart ? (
           <ChartReportView markdown={markdown} />
         ) : (
-          <>
-            <div className="prose prose-sm max-w-none text-xs" style={{ color: 'var(--fg)' }}>
-            {parsedBlocks.map((block, i) => {
-              // 连续同类型列表块：<ul>/<ol> 包裹；行内标记经 tokenizeInline（bold/italic/text 三态，与段落分支同规则）
-              if (block.kind === 'list') {
-                return (
-                  <block.type
-                    key={i}
-                    className={block.type === 'ul' ? 'list-disc ml-4 my-1' : 'list-decimal ml-4 my-1'}
-                  >
-                    {block.items.map((item, j) => (
-                      <li key={j} style={{ color: 'var(--fg-2)' }}>
-                        {tokenizeInline(item.listContent ?? '').map((t, k) =>
-                          t.type === 'bold' ? (
-                            <strong key={k} style={{ color: 'var(--fg)' }}>{t.content}</strong>
-                          ) : t.type === 'italic' ? (
-                            <em key={k}>{t.content}</em>
-                          ) : (
-                            <span key={k}>{t.content}</span>
-                          )
-                        )}
-                      </li>
-                    ))}
-                  </block.type>
-                )
-              }
-              const line = block.line
-              // 表格行：React 版细线表（表头小写字距 · 发丝行线 · 无竖线无色块，与打印链同观感）
-              if (line.table) {
-                return (
-                  <table key={i} className="my-2.5 w-full border-collapse">
-                    <thead>
-                      <tr>
-                        {line.table.headers.map((h, j) => (
-                          <th
-                            key={j}
-                            className="text-caption font-semibold uppercase tracking-wider text-left"
-                            style={{
-                              color: 'var(--muted)',
-                              borderBottom: '1px solid var(--fg)',
-                              padding: '6px 10px 5px',
-                            }}
-                          >
-                            {renderCellInline(h)}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {line.table.rows.map((row, r) => (
-                        <tr key={r}>
-                          {row.map((cell, c) => (
-                            <td
-                              key={c}
-                              className="text-micro"
-                              style={{
-                                color: 'var(--fg-2)',
-                                borderBottom: '1px solid var(--border)',
-                                padding: '6px 10px',
-                              }}
-                            >
-                              {renderCellInline(cell)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )
-              }
-              // 引用行（"> " 已剥前缀）：弱化元信息行，不占结论句位
-              if (line.quote) {
-                return (
-                  <p key={i} className="mb-1 text-xs" style={{ color: 'var(--muted)' }}>
-                    {line.tokens.map((t, j) =>
-                      t.type === 'bold' ? (
-                        <strong key={j}>{t.content}</strong>
-                      ) : t.type === 'italic' ? (
-                        <em key={j}>{t.content}</em>
-                      ) : (
-                        <span key={j}>{t.content}</span>
-                      )
-                    )}
-                  </p>
-                )
-              }
-              if (line.heading) {
-                const headingTokens = line.tokens.map((t, j) =>
-                  t.type === 'bold' ? (
-                    <strong key={j}>{t.content}</strong>
-                  ) : t.type === 'italic' ? (
-                    <em key={j}>{t.content}</em>
-                  ) : (
-                    <span key={j}>{t.content}</span>
-                  )
-                )
-                // 标题分层（与打印侧书脊/secthead/claim 三级对应）：1=报告大标题；2/3=节标题（既有样式）；4=子条小标题
-                if (line.level === 1) {
-                  return (
-                    <h1 key={i} className="text-2xl font-black mt-1 mb-3" style={{ color: 'var(--fg)' }}>
-                      {headingTokens}
-                    </h1>
-                  )
-                }
-                if (line.level === 4) {
-                  return (
-                    <h4 key={i} className="text-xs font-bold mt-3 mb-1" style={{ color: 'var(--fg)' }}>
-                      {headingTokens}
-                    </h4>
-                  )
-                }
-                return (
-                  <h3
-                    key={i}
-                    className="text-sm font-bold mt-4 mb-2"
-                    style={{ color: 'var(--fg)' }}
-                  >
-                    {headingTokens}
-                  </h3>
-                )
-              }
-              return (
-                <p key={i} className="mb-1" style={{ color: 'var(--fg-2)' }}>
-                  {line.tokens.map((t, j) =>
-                    t.type === 'bold' ? (
-                      <strong key={j} style={{ color: 'var(--fg)' }}>
-                        {t.content}
-                      </strong>
-                    ) : t.type === 'italic' ? (
-                      <em key={j}>{t.content}</em>
-                    ) : (
-                      <span key={j}>{t.content}</span>
-                    )
-                  )}
-                </p>
-              )
-            })}
-            </div>
-            {/* 数据图表：仅预览态展示真实数据快照（编辑态/打印/复制不涉及） */}
-            <ReportCharts />
-          </>
+          <ReportTextPreview blocks={parsedBlocks} />
         )}
       </div>
     </motion.div>
