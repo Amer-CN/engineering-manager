@@ -73,7 +73,8 @@ npx vite build                                   # dist/ 会被 dotnet build/run
 | 数据库表清单 / ER 图 / 字段规范 | [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) |
 | 冒烟测试完整流程 | [docs/SMOKE-TEST.md](docs/SMOKE-TEST.md) |
 | P0 安全修复计划（历史） | [docs/P0-FIX-PLAN.md](docs/P0-FIX-PLAN.md) |
-| 设计系统契约 | [DESIGN.md](DESIGN.md) |
+| 设计系统契约（屏幕） | [DESIGN.md](DESIGN.md) |
+| 报告打印契约（纸面版式真源，改报告版式必读） | [docs/REPORT-PRINT-CONTRACT.md](docs/REPORT-PRINT-CONTRACT.md) |
 | 版本分线（个人版/企业版冻结契约） | [docs/enterprise/FREEZE-CONTRACT.md](docs/enterprise/FREEZE-CONTRACT.md) |
 | 里程碑交接记录 | [docs/handoff/](docs/handoff/) |
 
