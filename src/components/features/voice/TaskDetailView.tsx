@@ -18,6 +18,7 @@ import { useToastContext } from '@/hooks/useToast'
 import { sttClient, saveSttJob } from '@/services/stt-client'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 import TranscriptEditor from './TranscriptEditor'
+import RailButton from './TaskDetailRailButton'
 import TranscriptNotePanel, { copyTextToClipboard } from './TranscriptNotePanel'
 import SttInsightsCard from './SttInsightsCard'
 import TranscriptSegmentList from './TranscriptSegmentList'
@@ -43,16 +44,6 @@ function formatTime(seconds: number): string {
   const s = Math.floor(seconds % 60)
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
-
-// 左侧竖排操作栏按钮（图标 + 悬浮提示）
-const RailButton: React.FC<{ icon: string; title: string; active?: boolean; onClick: () => void }> = ({ icon, title, active, onClick }) => (
-  <button
-    type="button" title={title} onClick={onClick}
-    className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${active ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg)]'}`}
-  >
-    <Icon name={icon} size={16} />
-  </button>
-)
 
 // 下拉菜单项
 const MenuItem: React.FC<{ icon?: string; label: string; disabled?: boolean; onClick?: () => void }> = ({ icon, label, disabled, onClick }) => (

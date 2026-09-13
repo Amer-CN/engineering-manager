@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/Input'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToastContext } from '@/hooks/useToast'
 import { useKnowledgeFolders } from '@/hooks/data/useKnowledgeFolders'
-import { maskKnowledgeText } from '@/utils/knowledgeTextMask'
 import { writeWritingPrefill } from '@/hooks/useWritingPrefill'
 import TranscriptRow from './TranscriptRow'
+import TranscriptMaskedPreview from './TranscriptMaskedPreview'
 import { speakerOf } from './SpeakerNameEditor'
 import type { SpeakerInfo } from './SpeakerNameEditor'
 import { detectSpeakerBase, moveFirstWordToPrev, moveLastWordToNext, insertSegmentAfter } from './segmentUtils'
@@ -317,12 +317,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       )}
 
       {/* 脱敏预览 */}
-      {masked && displayText && (
-        <div className="p-2 bg-[color:var(--panel-2)] rounded text-xs text-[color:var(--muted)]">
-          <span className="text-[color:var(--muted)]">脱敏预览：</span>
-          <span className="break-all">{maskKnowledgeText(displayText, true).substring(0, 200)}...</span>
-        </div>
-      )}
+      {masked && displayText && <TranscriptMaskedPreview text={displayText} />}
 
       {/* 入库 */}
       <div className="flex items-center gap-3 pt-2 border-t border-[color:var(--border)]">

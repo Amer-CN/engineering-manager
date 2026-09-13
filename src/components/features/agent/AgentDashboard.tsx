@@ -24,6 +24,7 @@ import AgentComposer from './AgentComposer'
 import AgentOverlays, { HistorySidebar } from './AgentOverlays'
 import AgentTopBar from './AgentTopBar'
 import AgentStreamTail from './AgentStreamTail'
+import AgentWelcomeHistoryEntry from './AgentWelcomeHistoryEntry'
 import MessageBubble from './MessageBubble'
 import RecoveryCard, { findRecoveryContext } from './RecoveryCard'
 import { getFilteredSuggestions } from './suggestions'
@@ -247,18 +248,7 @@ const AgentDashboard: React.FC = () => {
           </AnimatePresence>
 
           {/* 欢迎形态：历史入口（欢迎态无右栏，桌面也显示；抽屉复用 historyOpen） */}
-          {!chatMode && (
-            <div className="flex items-center justify-end px-6 pt-4 flex-shrink-0">
-              <button
-                onClick={() => setHistoryOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
-              >
-                <Icon name="Inbox" size={14} />
-                对话历史
-              </button>
-            </div>
-          )}
+          {!chatMode && <AgentWelcomeHistoryEntry onOpen={() => setHistoryOpen(true)} />}
 
           {/* 欢迎态主轴（K3 审查改版）：问候语 → 输入框 → 建议，垂直居中一组，
               同一 max-w 网格；球缩进输入框做状态头像（见 Composer 内 mascotSlot）。
