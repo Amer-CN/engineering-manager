@@ -1,11 +1,18 @@
-/**
- * AiProviderSection 的拆分件 — 行数门禁（主文件 ≤400 行）
- * 快捷档位按钮 + 模型能力编辑器 + 获取列表多选
- */
-
+/** AiProviderSection 拆分件（档位/能力/服务商行/密钥/可见列表） */
 import { useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
-import type { ModelCapability } from '@/types/agent'
+import { Button } from '../../ui/Button'
+import { Drawer } from '../../ui/Drawer'
+import type { ModelCapability, ProviderEntry } from '@/types/agent'
+
+export const INPUT_CLS = 'w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed'
+
+/** 接口协议 → 展示文案（列表态徽章 / detail 态三选一共用） */
+export const PROTOCOL_LABELS: Record<'chat' | 'responses' | 'anthropic', string> = {
+  chat: 'Chat Completions',
+  responses: 'Responses',
+  anthropic: 'Anthropic Messages',
+}
 
 /** maxTokens 快捷档位 */
 export const MAX_TOKEN_PRESETS = [2048, 4096, 8192, 16384]
@@ -176,6 +183,127 @@ export function CapBadge({ label, title }: { label: string; title: string }) {
   )
 }
 
+/** 当前生效徽章（服务商行用） */
+export function KeyActiveBadge() {
+  return (
+    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-accent-soft text-primary">
+      当前生效
+    </span>
+  )
+}
+
+/**
+ * 服务商行（列表态）— 名称/协议徽章/模型数 + 按钮区（启用/管理/删除）
+ * 更换密钥与协议三选一挪进 detail 态（服务商子页）；删除保留确认
+ */
+export function ProviderRow({
+  provider, isActive, disabled, onActivate, onManage, onDelete, showHiddenHint,
+}: {
+  provider: ProviderEntry
+  isActive: boolean
+  disabled: boolean
+  onActivate: () => void
+  onManage: () => void
+  onDelete: () => void
+  showHiddenHint?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" onClick={onManage} className="min-w-0 flex-1 text-left cursor-pointer" title="进入服务商管理">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium truncate text-foreground">{provider.name}</span>
+            <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro bg-accent-soft text-primary">
+              {PROTOCOL_LABELS[provider.protocol ?? 'chat']}
+            </span>
+            {isActive && <KeyActiveBadge />}
+          </div>
+          <p className="text-xs text-[color:var(--muted)] truncate mt-0.5">{provider.baseUrl} · {provider.models.length} 个模型</p>
+        </button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {!isActive && (
+            <button type="button" onClick={onActivate} disabled={disabled}
+              className="px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary">
+              启用
+            </button>
+          )}
+          <button type="button" onClick={onManage} disabled={disabled}
+            className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary">
+            管理 <Icon name="ChevronRight" size={12} />
+          </button>
+          <button type="button" onClick={onDelete} disabled={disabled}
+            className="p-1.5 rounded-lg hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-muted-foreground"
+            aria-label={`删除服务商 ${provider.name}`}
+          >
+            <Icon name="Trash2" size={14} />
+          </button>
+        </div>
+      </div>
+      {showHiddenHint && (
+        <p className="text-caption" style={{ color: 'var(--muted)' }}>该条目为误加的内置 Agnes 重复项，内置用法请用顶部开关；确认后可删除。</p>
+      )}
+    </div>
+  )
+}
+
+/** 更换密钥弹窗 — 单个 password 输入框；空输入时保存禁用（已保存的密钥出于安全不会回填） */
+export function KeyReplaceDialog({ isOpen, providerName, onCancel, onSave }: {
+  isOpen: boolean
+  /** 服务商名称（拼标题用） */
+  providerName: string
+  onCancel: () => void
+  /** 回传用户填写的新 key（已 trim，非空） */
+  onSave: (apiKey: string) => void
+}) {
+  const [key, setKey] = useState('')
+  const trimmed = key.trim()
+
+  return (
+    <Drawer open={isOpen} onClose={onCancel} icon="KeyRound" title={`更换 ${providerName} 的密钥`} width={360}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={onCancel}>取消</Button>
+          <Button variant="primary" size="sm" onClick={() => onSave(trimmed)} disabled={!trimmed}>保存密钥</Button>
+        </div>
+      }
+    >
+      <div className="px-6 py-5 space-y-3">
+        <div>
+          <label className="label">新 API Key</label>
+          <input type="password" value={key} onChange={e => setKey(e.target.value)} placeholder="请输入新的 API Key" className={INPUT_CLS} autoFocus />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          密钥加密存储，不会回显。保存后立即生效。
+        </p>
+      </div>
+    </Drawer>
+  )
+}
+
+/**
+ * 更换密钥弹窗宿主 — keyDialog 非空时渲染 KeyReplaceDialog
+ * 从 AiProviderSection 拆出以消化主文件行数门禁（≤400 行）
+ */
+export function KeyReplaceHost({
+  target, onCancel, onSave,
+}: {
+  /** 弹窗目标（providerId + 名称；null = 关闭） */
+  target: { providerId: string; label: string } | null
+  onCancel: () => void
+  onSave: (providerId: string, apiKey: string) => void
+}) {
+  if (!target) return null
+  return (
+    <KeyReplaceDialog
+      key={target.providerId}
+      isOpen
+      providerName={target.label}
+      onCancel={onCancel}
+      onSave={apiKey => onSave(target.providerId, apiKey)}
+    />
+  )
+}
+
 /**
  * 「获取模型列表」结果多选列表 — 添加服务商表单里勾选要启用的模型
  */
@@ -232,6 +360,37 @@ export function ModelMultiSelect({
           <div className="px-3 py-3 text-xs text-center text-muted-foreground">没有匹配「{search}」的模型</div>
         )}
       </div>
+    </div>
+  )
+}
+
+/** 内置 Agnes 重复条目判定（大小写不敏感前后空格容忍） */
+export const isBuiltInAgnes = (name: string) => name.trim().toLowerCase() === 'agnes'
+
+/** 服务商可见列表（含 Agnes 隐藏）——从 AiProviderSection 抽出守行数铁律 */
+export function VisibleProviders({ providers, showHiddenAgnes, addingProvider, activeProviderId, useBuiltIn, disabled, onActivate, onManage, onDelete, onShowHidden }: {
+  providers: ProviderEntry[]; showHiddenAgnes: boolean; addingProvider: boolean; activeProviderId: string | null; useBuiltIn: boolean; disabled: boolean;
+  onActivate: (id: string) => void; onManage: (id: string) => void; onDelete: (id: string, label: string) => void; onShowHidden: () => void
+}) {
+  const hiddenCount = providers.filter(p => isBuiltInAgnes(p.name)).length
+  const shown = showHiddenAgnes ? providers : providers.filter(p => !isBuiltInAgnes(p.name))
+  return (
+    <div className="space-y-2">
+      {shown.map(p => (
+        <ProviderRow key={p.id} provider={p} isActive={p.id === activeProviderId && !useBuiltIn} disabled={disabled}
+          onActivate={() => onActivate(p.id)} onManage={() => onManage(p.id)}
+          onDelete={() => onDelete(p.id, p.name)}
+          showHiddenHint={isBuiltInAgnes(p.name)} />
+      ))}
+      {providers.length === 0 && !addingProvider && (
+        <p className="text-xs text-[color:var(--muted)] py-2">还没有自定义服务商，点右上角「添加服务商」开始。</p>
+      )}
+      {hiddenCount > 0 && !showHiddenAgnes && (
+        <p className="text-caption" style={{ color: 'var(--muted)' }}>
+          已隐藏内置 Agnes 重复项（{hiddenCount}）——内置用法请用顶部开关。
+          <button type="button" onClick={onShowHidden} className="ml-1 underline">还原显示</button>
+        </p>
+      )}
     </div>
   )
 }

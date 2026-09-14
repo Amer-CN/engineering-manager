@@ -1,7 +1,7 @@
 # Agent 确认执行前端接口文档（Approval Card 后端对接指南）
 
-> 状态：**前端已就绪，等待后端对接**（提交 e4ab1fae，2026-09-05）
-> 用途：未来实现「AI 执行动作前需用户确认」功能时，后端开发者（或 AI 助手）按本文档对接前端确认卡。读完即可开工，不需要读组件源码。
+> 状态：**后端已对接（2026-09-06）**——循环拦截 + resolve 端点已落地；首个写工具 markInvoicesReceived。
+> 用途：实现「AI 执行动作前需用户确认」功能的对接说明书。读完即可开工，不需要读组件源码。
 
 ## 1. 产品背景与交互形态
 
@@ -62,18 +62,18 @@ interface AgentMessage {
 
 ## 3. 后端要做的事（按序）
 
-1. **SSE/REST 协议**：agent 回复里需要用户确认时（如 LLM 决定执行修改动作），在 assistant 消息 JSON 上加 `approval` 字段（形状见上）。`requestId` 建议用 `approval_{conversationId}_{seq}` 之类全局唯一值。
-2. **前端回传接收**：前端点选后目前只输出 `console.info('[approval] resolve ${requestId} -> ${optionKey}')`。对接方式：在 `src/components/features/agent/MessageBubble.tsx` 的 `handleApprovalResolve` 函数里（约 :100 附近，搜 `approval] resolve` 即达）把 console.info 换成向后端发请求（建议新增 `POST /api/agent/conversations/{id}/approval/resolve`，body = ApprovalResolution）。
-3. **执行与回填**：后端按 `requestId` 找到待确认请求、校验 `optionKey`、执行对应动作（**只执行用户确认过的 option.key，绝不默认执行**），然后把结果写回消息（更新 `approval.resolution` 或追加执行结果消息），下次拉取历史时前端自动显示已决态。
-4. **历史持久化**：`approval` 随消息存 `agent_messages` 表（content 或新列均可，注意 `GetConversationDetailAsync` 装配时带上该字段——参考 tool 结果的装配方式 AgentConversationService.cs）。
-5. **防重放**：同一 `requestId` 的 resolve 只应生效一次（幂等），重复点选/重放请求拒绝或幂等返回。
+1. **SSE/REST 协议**：agent 回复里需要用户确认时（如 LLM 决定执行修改动作），在 assistant 消息 JSON 上加 `approval` 字段（形状见上）。`requestId` 用 `approval_{conversationId}_{guid}` 全局唯一值。【已落地：非流式响应 `message.approval`；SSE 在 `done` 载荷捎带 `approval`，前端挂到最终 assistant 消息。后端内部扩展字段：`approval` JSON 额外携带 `action: { tool, args }`（建卡时绑定的待执行工具与原样参数，resolve 时以此对账执行）；该字段后端内部使用，前端 TS 类型未声明、反序列化自然忽略，第 2 节契约不变】
+2. **前端回传接收**：前端点选后经 `src/services/agent-client.ts` 的 `resolveAgentApproval`（MessageBubble 的 handleApprovalResolve 调用，conversationId 由消息携带）回传 `POST /api/agent/conversations/{id}/approval/resolve`，body = ApprovalResolution。【已落地】
+3. **执行与回填**：后端按 `requestId` 找到待确认请求、校验 `optionKey`、执行对应动作（**只执行用户确认过的 option.key，绝不默认执行**），然后把结果写回消息（更新 `approval.resolution` 或追加执行结果消息），下次拉取历史时前端自动显示已决态。【已落地：confirm 执行后回填 resolution 并追加静态执行结果 assistant 消息；cancel 仅回填】
+4. **历史持久化**：`approval` 随消息存 `agent_messages` 表（新列 `approval` TEXT，迁移 051），`GetConversationDetailAsync` 装配时带上该字段。【已落地】
+5. **防重放**：同一 `requestId` 的 resolve 只应生效一次（幂等），重复点选/重放请求拒绝或幂等返回。【已落地：重复 resolve 返回 alreadyResolved=true，不重复执行】
 
 ## 4. 前端行为说明（对接前必读）
 
 - **渲染位置**：`MessageBubble.tsx` —— assistant 消息、`message.approval` 存在时，渲染于正文之后、工具结果卡之前。
 - **已决态**：`approval.resolution` 非空 → 卡片收起交互（按钮不渲染），显示「已选择：{label}」+ 绿 ✓。
 - **未决 + 历史回放**：消息带 approval 但无 resolution → 保持可交互（用户可以对历史会话里的未决卡点选——后端自行决定是否接受老请求的确认，建议拒绝超过一定时间的）。
-- **本地态**：点选后前端立刻显示已决（不等后端），靠 `localResolution` 消息级 state；对接后端时建议以后端回填为准。
+- **本地态**：点选后前端立刻显示已决（不等后端），靠 `localResolution` 消息级 state；后端 resolve 失败时回滚本地已决态并走既有 toast 错误提示（已对接）。
 - **样式**：组件 `src/components/features/agent/ApprovalCard.tsx`（受控 props `ApprovalCardProps`，注释即接口文档）；置信度色走语义变量 `--success/--warning/--danger`，不新增 CSS 变量。
 
 ## 5. 现成的验证方式

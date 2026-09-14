@@ -32,6 +32,7 @@ const EXEMPT = [
   // 登录 / 首次引导
   { path: '/api/auth/login', reason: '登录本身（白名单）' },
   { path: '/api/agent/setup/test', reason: 'Agent 首次启动引导（白名单）' },
+  { path: '/api/agent/setup/provider-models', reason: '只读端点：用已存密钥拉取服务商模型列表，uid 校验，不写业务库（同类豁免 /api/agent/setup/test）' },
   { path: '/api/update/download', reason: '更新基础设施（白名单）' },
   { path: '/api/update/download/cancel', reason: '更新基础设施（白名单）' },
   { path: '/api/update/apply', reason: '更新基础设施（需登录）' },

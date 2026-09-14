@@ -1,12 +1,13 @@
 import React from 'react'
 
-export type ReportPurpose = 'review' | 'evidence' | 'work'
+export type ReportPurpose = 'review' | 'evidence' | 'work' | 'weekly'
 
-/** 报告用途三选一（默认经营复盘）：purpose 决定 AI 措辞分支（后端），不影响取数范围 */
+/** 报告用途四选一（默认经营复盘）：purpose 决定 AI 措辞分支（后端），不影响取数范围 */
 const PURPOSE_OPTIONS: { value: ReportPurpose; label: string; desc: string }[] = [
   { value: 'review', label: '经营复盘', desc: '老板视角 · 综合经营/工资专项 · 数据复盘与趋势判断' },
   { value: 'evidence', label: '对外举证', desc: '正式凭证 · 结算争议/银行授信/资质申报 · 零修辞数据陈述' },
   { value: 'work', label: '工作汇报', desc: '执行视角 · 我的本周/本月工作 · 第一人称、每条数据可溯源' },
+  { value: 'weekly', label: '周报速览', desc: 'Glance 粗笔画 · 本周两个关键数 + 双图卡 · 三秒快读' },
 ]
 
 /** 用途切换的作用域联动：work 锁定本人；evidence 隐藏按用户，当前在按用户则按权限回退（admin→全系统，否则→按项目）；其余不联动 */
@@ -28,7 +29,7 @@ interface ReportPurposeSectionProps {
 }
 
 /**
- * 「报告用途」三卡 — 位于表单顶部，样式与「报告形式」卡片一致（三列）。
+ * 「报告用途」四卡 — 位于表单顶部，样式与「报告形式」卡片一致（四列）。
  * 从 ReportGeneratorModal 抽出（用途选择逻辑内聚），守住其 400 行铁律。
  */
 const ReportPurposeSection: React.FC<ReportPurposeSectionProps> = ({
@@ -37,7 +38,7 @@ const ReportPurposeSection: React.FC<ReportPurposeSectionProps> = ({
   return (
     <div>
       <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--fg-2)' }}>报告用途</label>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {PURPOSE_OPTIONS.map((o) => {
           const isActive = purpose === o.value
           return (

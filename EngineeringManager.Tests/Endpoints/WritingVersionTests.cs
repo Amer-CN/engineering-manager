@@ -14,7 +14,7 @@ namespace EngineeringManager.Tests.Endpoints;
 ///   a. 保存留档：第一次保存留档旧内容；改上一条快照 created_at 到 6 分钟前再保存 → 再留档（共 2 条，内容正确）
 ///   b. 5min 节流：距上一条快照 &lt; 5min 的保存不新增快照
 ///   c. 上限清理：文档已有 51 条快照 → 保存触发裁剪到 50 条
-///   d. restore：回滚写回版本 title/content_md，且回滚前的当前内容先入档（不节流）
+///   d. restore：回滚写回版本 title/content_md/content_html（050 双写），且回滚前的当前内容先入档（不节流）
 ///   e. 归属隔离：非本人文档 versions/restore → 404/403
 /// 认证方式与 WritingFolderTests 一致：登录拿 JWT → Authorization Bearer。
 /// </summary>
@@ -82,8 +82,8 @@ public class WritingVersionTests : ApiTestBase
         return data.GetProperty("id").GetInt64();
     }
 
-    private Task<HttpResponseMessage> SaveAsync(string token, long docId, string contentMd) =>
-        AuthedAsync(token, HttpMethod.Put, $"/api/writing/documents/{docId}", new { contentMd });
+    private Task<HttpResponseMessage> SaveAsync(string token, long docId, string contentMd, string? contentHtml = null) =>
+        AuthedAsync(token, HttpMethod.Put, $"/api/writing/documents/{docId}", new { contentMd, contentHtml });
 
     private async Task<JsonElement> ListVersions(string token, long docId, string query = "?size=50") =>
         await GetData(await AuthedAsync(token, HttpMethod.Get, $"/api/writing/documents/{docId}/versions{query}"));
@@ -110,13 +110,13 @@ public class WritingVersionTests : ApiTestBase
         var token = await LoginAsync(AdminUser, AdminPassword);
         var docId = await CreateDoc(token, "初稿内容");
 
-        // 第一次保存：留档"初稿内容"
-        await GetData(await SaveAsync(token, docId, "第一版修改"));
+        // 第一次保存：留档"初稿内容"（content_html 为空 = 新建时的默认值），并写入 HTML
+        await GetData(await SaveAsync(token, docId, "第一版修改", "<p>第一版 HTML</p>"));
         // 模拟距上一条快照 >5min（直接 DB 改 created_at 到 6 分钟前）
         AgeLastSnapshot(docId);
 
-        // 第二次保存：留档"第一版修改"
-        await GetData(await SaveAsync(token, docId, "第二版修改"));
+        // 第二次保存：留档"第一版修改"（content_md/content_html 同进同出）
+        await GetData(await SaveAsync(token, docId, "第二版修改", "<p>第二版 HTML</p>"));
 
         var data = await ListVersions(token, docId);
         Assert.Equal(2, data.GetProperty("total").GetInt32());
@@ -124,6 +124,9 @@ public class WritingVersionTests : ApiTestBase
         // created_at DESC：最新在前
         Assert.Equal("第一版修改", items[0].GetProperty("contentMd").GetString());
         Assert.Equal("初稿内容", items[1].GetProperty("contentMd").GetString());
+        // 050 双写：快照 content_html 与 content_md 同进同出
+        Assert.Equal("<p>第一版 HTML</p>", items[0].GetProperty("contentHtml").GetString());
+        Assert.Equal("", items[1].GetProperty("contentHtml").GetString());
         // 保存人（display_name，users JOIN）
         Assert.Equal("管理员", items[0].GetProperty("createdBy").GetString());
     }
@@ -187,28 +190,33 @@ public class WritingVersionTests : ApiTestBase
         var token = await LoginAsync(AdminUser, AdminPassword);
         var docId = await CreateDoc(token, "回滚目标版本");
 
-        // 保存产生一条快照（= 回滚目标），age 后再保存一次改变当前内容
-        await GetData(await SaveAsync(token, docId, "改坏的版本"));
+        // 保存产生一条快照（= 回滚目标，content_html = "<p>目标 HTML</p>"），age 后再保存一次改变当前内容
+        await GetData(await SaveAsync(token, docId, "改坏的版本", "<p>目标 HTML</p>"));
         AgeLastSnapshot(docId);
-        await GetData(await SaveAsync(token, docId, "改得更坏"));
+        await GetData(await SaveAsync(token, docId, "改得更坏", "<p>改坏 HTML</p>"));
 
         var versions = await ListVersions(token, docId);
         var target = versions.GetProperty("items").EnumerateArray()
-            .First(v => v.GetProperty("contentMd").GetString() == "回滚目标版本");
+            .First(v => v.GetProperty("contentMd").GetString() == "改坏的版本");
+        // 050 双写：该快照记录的是保存前的 md/html
+        Assert.Equal("<p>目标 HTML</p>", target.GetProperty("contentHtml").GetString());
 
-        // restore 到"回滚目标版本"
+        // restore 到"改坏的版本"
         var data = await GetData(await AuthedAsync(token, HttpMethod.Post,
             $"/api/writing/documents/{docId}/versions/{target.GetProperty("id").GetInt64()}/restore"));
-        Assert.Equal("回滚目标版本", data.GetProperty("contentMd").GetString());
+        Assert.Equal("改坏的版本", data.GetProperty("contentMd").GetString());
+        Assert.Equal("<p>目标 HTML</p>", data.GetProperty("contentHtml").GetString());
 
-        // 文档内容已回滚（GET 详情直查）
+        // 文档内容已回滚（GET 详情直查）：md 与 html 同进同出
         var doc = await GetData(await AuthedAsync(token, HttpMethod.Get, $"/api/writing/documents/{docId}"));
-        Assert.Equal("回滚目标版本", doc.GetProperty("contentMd").GetString());
+        Assert.Equal("改坏的版本", doc.GetProperty("contentMd").GetString());
+        Assert.Equal("<p>目标 HTML</p>", doc.GetProperty("contentHtml").GetString());
 
         // 回滚前的当前内容（"改得更坏"）已入档且立即可见（restore 不节流）
         var after = await ListVersions(token, docId);
         Assert.Equal(3, after.GetProperty("total").GetInt32());
         Assert.Equal("改得更坏", after.GetProperty("items")[0].GetProperty("contentMd").GetString());
+        Assert.Equal("<p>改坏 HTML</p>", after.GetProperty("items")[0].GetProperty("contentHtml").GetString());
 
         // 审计已写（resource=writing_documents，event=restore_version）
         using (var conn = new SqliteConnection(ConnectionString))

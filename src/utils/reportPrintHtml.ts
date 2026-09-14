@@ -1,16 +1,16 @@
 /**
  * reportPrintHtml.ts — 报告中心整页印刷品化模板（打印/预览用单文件 HTML）
  *
- * 版式正本：vendor/lieflat-charts/templates/reports/report-04.zh.html（官方模板，只读）
+ * 版式正本：~/.zcode/skills/lieflat-charts/templates/reports/report-04.zh.html（官方模板，只读。全局 skill：~/.zcode/skills/lieflat-charts/，源 gh:larashero3-dotcom/lieflat-charts）
  *   学其版式参数转写：左侧书脊竖排大标题（writing-mode:vertical-rl）+ 底部竖排小字、
  *   顶部页眉（左产品名 | 右数据说明）+ 发丝横线、小节 = 右对齐小节名（宽字距）+
  *   结论句标题 + 内容、节间细线分隔、大写来源行（SECTION · 来源 · 日期）、
  *   「值得记住的数字」大数字块（特大等宽数字 + 双行小注）、双行页脚。
- * 色值正本：vendor/lieflat-charts/mono-tokens.js 的 MONO 墨阶
+ * 色值正本：~/.zcode/skills/lieflat-charts/mono-tokens.js 的 MONO 墨阶
  *   （INK #1C1C1A / PAPER #F0EFEB / MUTED #8F8E88 / FAINT #C6C5BF / GRID #DEDDD6）。
  * 图表正本（本批新增）：glance-gallery.html 的 dot waffle 方阵
  *   （COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10，图例=色点+名称+特大百分比）与
- *   basics-gallery.html C1 tick rows 横条骨架（类目名左侧小字 + 发丝轨道 + 条尾数值），
+ *   basics-gallery.html C1 tick rows 横条骨架（类目名左侧小字 + 条尾数值），
  *   参数转写、代码自写；色板 = colorPresets palm.ser 正本转写（与预览同系统）。
  *
  * hex 只出现在本文件：打印产物是独立单文件 HTML（不进产品组件），浅色打印前提。
@@ -65,7 +65,7 @@ export interface ReportPrintCharts {
 export interface ReportPrintSection {
   /** 小节名（来自 "## "/"### " 行，右对齐宽字距）；引言节为 null（无小节名） */
   name: string | null
-  /** 结论句标题（该节首个非列表/非表格段落行；无则为空串，不渲染） */
+  /** 结论句标题（该节列表/表格出现之前的首个散文行；无则为空串，不渲染） */
   heading: string
   /** 正文行：段落原样；"- "/"* " 开头 = 列表项；行首 | 连续块 = 表格（渲染时分组） */
   lines: string[]
@@ -98,6 +98,7 @@ const MONO_LAD = ['#1C1C1A', '#4A4944', '#8F8E88', '#B0AFA9', '#D8D7D1']
 const PALM_SER = ['#43593B', '#D4A017', '#77835A', '#F2D17E', '#ACAD79', '#58402E']
 
 const UL_RE = /^[-*]\s+(.*)/
+const OL_RE = /^(\d+)\.\s+(.*)$/
 const TABLE_LINE_RE = /^\|/
 
 /** 行内标记 → HTML（输入须已转义）：**粗体** / *斜体*，与 templateMarkup 打印路径同规则 */
@@ -149,26 +150,66 @@ function renderTable(t: ReportPrintTable): string {
  * AI 报告 markdown → 结构化 sections（纯解析，不改写任何文字）。
  * 规则：
  * - "# " 行（首个）= 报告大标题（进书脊竖排，不进正文）；
+ * - "> " 引用行剥前缀（不裸露 >）：匹配「期间：…」的提取为 period（首个生效，
+ *   进书脊底部小字，不进正文）；其余照旧作普通内容行；
  * - "## " / "### " 行 = 小节标题，其后续非井号行归该节；
  * - "#### " 行 = 子条，井号不裸露，并入节内容作加粗行（**子条**）；
  * - 首个 ## 之前的行 = 引言节（name = null，无小节名）；
- * - "- "/"* " 开头行 = 列表项（保留记号原样，渲染时并入 <ul>）；
+ * - "- "/"* " 开头行 = 列表项、"1. " 编号行 = 有序列表项（保留记号原样，渲染时并入
+ *   <ul>/<ol>；编号行属列表，不提升为结论句）；
  * - 行首 | 的连续行块 = 表格（渲染时整块转细线表；孤行不成表）；
- * - 每节首个非列表/非表格行提为结论句 heading（内容不丢，仍渲染为标题）；
+ * - ```chart-* 围栏块（AI 夹带的图表数据）整块剥除：开栏行识别、内容与闭栏行均不进 lines；
+ * - 节名「值得记住的数字」：lines 中匹配「- 值｜标签｜小注」的行解析为该节
+ *   bigNumbers（大数字块；小注缺省 ''，全 trim）并从 lines 移除；不匹配行保持普通行；
+ * - 每节「列表/表格出现之前的首个散文行」提为结论句 heading（纯列表/表格节无 claim，内容不丢）；
  * - 空行剔除；无任何 ## 时自然兜底为单节（全部行进该节，不丢内容）。
  */
 export function parseReportMarkdown(markdown: string): {
   title: string | null
+  /** 引用行「期间：…」提取的报告期间（多个取首个；无则 null）→ 书脊底部小字 */
+  period: string | null
   sections: ReportPrintSection[]
 } {
+  const QUOTE_RE = /^> /
+  const PERIOD_RE = /^期间：(.*)$/
+  const BIG_NUMBER_RE = /^- (.+?)｜(.+?)(?:｜(.*))?$/
+  const FENCE_OPEN_CHART_RE = /^```(chart-[\w-]+)/
+  const FENCE_CLOSE_RE = /^```/
+
   const lines = (markdown || '').split('\n')
   let title: string | null = null
+  let period: string | null = null
   const raw: { name: string | null; lines: string[] }[] = []
   let current: { name: string | null; lines: string[] } | null = null
+  let fenceKind: string | null = null // 非 null = 正在剥除的 chart 围栏块
 
   for (const rawLine of lines) {
     const line = rawLine.trim()
     if (!line) continue // 空行剔除
+    if (fenceKind !== null) {
+      // 围栏块内：闭栏行结束剥除，其余内容整体丢弃（fence 不进 lines）
+      if (FENCE_CLOSE_RE.test(line)) fenceKind = null
+      continue
+    }
+    const fenceOpen = FENCE_OPEN_CHART_RE.exec(line)
+    if (fenceOpen) {
+      fenceKind = fenceOpen[1] // ```chart-* 开栏：整块剥除
+      continue
+    }
+    if (QUOTE_RE.test(line)) {
+      const quoted = line.replace(QUOTE_RE, '').trim()
+      const pm = PERIOD_RE.exec(quoted)
+      if (pm) {
+        if (period === null) period = pm[1].trim() // 期间行 → period（首个生效），不进正文
+        continue
+      }
+      if (!current) {
+        current = { name: null, lines: [] } // 引言节
+        raw.push(current)
+      }
+      current.lines.push(quoted) // 非期间引用行：剥前缀照旧作普通内容行
+      continue
+    }
     const h = /^(#{1,4})\s*(.*)$/.exec(line)
     if (h) {
       const level = h[1].length
@@ -204,28 +245,45 @@ export function parseReportMarkdown(markdown: string): {
     let heading = ''
     const rest: string[] = []
     let headingTaken = false
+    const isNumbersSection = rs.name === '值得记住的数字'
+    const bigNumbers: ReportPrintBigNumber[] = []
+    let sawBlock = false // 列表/表格已出现：其后散文不再提升（claim 仅认先行散文）
     for (const line of rs.lines) {
-      if (!headingTaken && !UL_RE.test(line) && !TABLE_LINE_RE.test(line)) {
-        heading = line // 首个非列表/非表格行 → 结论句标题
+      const isList = UL_RE.test(line) || OL_RE.test(line)
+      const isTable = TABLE_LINE_RE.test(line)
+      if (!headingTaken && !sawBlock && !isList && !isTable) {
+        heading = line // 列表/表格出现之前的首个散文行 → 结论句标题
         headingTaken = true
         continue
       }
+      if (isList || isTable) sawBlock = true
+      const bn = isNumbersSection ? BIG_NUMBER_RE.exec(line) : null
+      if (bn) {
+        bigNumbers.push({ value: bn[1].trim(), label: bn[2].trim(), sub: (bn[3] ?? '').trim() })
+        continue // 从 lines 移除（改由大数字块渲染）
+      }
       rest.push(line)
     }
-    return { name: rs.name, heading, lines: rest }
+    return {
+      name: rs.name,
+      heading,
+      lines: rest,
+      ...(isNumbersSection ? { bigNumbers } : {}),
+    }
   })
 
-  return { title, sections }
+  return { title, period, sections }
 }
 
-/** 正文行 → HTML："- " 连续行并入 <ul>；行首 | 连续块（≥2 行）转细线表，孤行按段落；每行全转义 */
+/** 正文行 → HTML："- "/"* " 连续行并入 <ul>、"1. " 编号行并入 <ol>（start 取首条原始编号保真；
+ *  类型切换时闭合重开，顺序保持）；行首 | 连续块（≥2 行）转细线表，孤行按段落；每行全转义 */
 function renderLines(lines: string[]): string {
   const out: string[] = []
-  let inList = false
+  let listTag: 'ul' | 'ol' | null = null
   const closeList = () => {
-    if (inList) {
-      out.push('</ul>')
-      inList = false
+    if (listTag) {
+      out.push(`</${listTag}>`)
+      listTag = null
     }
   }
   let i = 0
@@ -245,13 +303,22 @@ function renderLines(lines: string[]): string {
       }
       continue
     }
-    const m = UL_RE.exec(line)
-    if (m) {
-      if (!inList) {
+    const ul = UL_RE.exec(line)
+    const ol = ul ? null : OL_RE.exec(line)
+    if (ul) {
+      if (listTag !== 'ul') {
+        closeList()
         out.push('<ul>')
-        inList = true
+        listTag = 'ul'
       }
-      out.push(`<li>${inlineToHtml(escapeHtml(m[1]))}</li>`)
+      out.push(`<li>${inlineToHtml(escapeHtml(ul[1]))}</li>`)
+    } else if (ol) {
+      if (listTag !== 'ol') {
+        closeList()
+        out.push(`<ol start="${ol[1]}">`) // 编号保真：start 取 AI 原始编号，后续同列项由浏览器递增
+        listTag = 'ol'
+      }
+      out.push(`<li>${inlineToHtml(escapeHtml(ol[2]))}</li>`)
     } else {
       closeList()
       out.push(`<p>${inlineToHtml(escapeHtml(line))}</p>`)
@@ -273,6 +340,19 @@ function renderStats(nums: ReportPrintBigNumber[]): string {
     )
     .join('')
   return `<div class="stats" style="grid-template-columns:repeat(${nums.length},1fr)">${cells}</div>`
+}
+
+/**
+ * SVG text 无自动换行，超出 viewBox 的部分被画布硬裁（2026-09-08 压力实测：
+ * 30 字符类目名在图例与条形图两侧丢字）。按字符宽度估算（CJK 全角 = cjk 单位，
+ * 其余 = ascii 单位），超宽截断补 …。仅用于画布内单行标签。与 chartReport 同名助手同口径。
+ */
+function fitSvgText(name: string, maxUnits: number, cjk: number, ascii: number): string {
+  const width = (s: string) => [...s].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e7f ? cjk : ascii), 0)
+  if (width(name) <= maxUnits) return name
+  let s = name
+  while (s.length > 1 && width(s) + ascii > maxUnits) s = s.slice(0, -1)
+  return s + '…'
 }
 
 /**
@@ -331,7 +411,7 @@ export function buildWaffleSvg(rows: ReportPrintWaffleRow[]): string {
     const y = 32 + g * PITCH
     parts.push(`<circle cx="246" cy="${y}" r="5" fill="${r.color}"/>`)
     parts.push(
-      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${MUTED}">${escapeHtml(r.name)}</text>`,
+      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${MUTED}">${escapeHtml(fitSvgText(r.name, 116, 10, 5.5))}</text>`,
     )
     parts.push(
       `<text x="258" y="${y + 22}" font-size="30" font-weight="800" fill="${INK}">${r.pct}%</text>`,
@@ -340,7 +420,7 @@ export function buildWaffleSvg(rows: ReportPrintWaffleRow[]): string {
 
   if (overflow) {
     parts.push(
-      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="7" font-weight="600" letter-spacing=".12em" fill="#B0AFA9">占比四舍五入</text>`,
+      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="11" font-weight="600" letter-spacing=".12em" fill="#B0AFA9">占比四舍五入</text>`,
     )
   }
   parts.push('</svg>')
@@ -350,13 +430,13 @@ export function buildWaffleSvg(rows: ReportPrintWaffleRow[]): string {
 /**
  * 支出 TOP 横向条形（报告附图）：静态 SVG 字符串。
  * 版式参数转写自官方 basics-gallery C1 tick rows 骨架（类目名左侧小字宽字距 +
- * 发丝轨道 + 条尾等宽数值），条形为细条（10px，EditorialBars 同手感）。
+ * 条尾等宽数值），条形为细条（10px，EditorialBars 同手感）。
  * 条长严格正比（max 守卫：全量最大值为满条，0/负值条宽 0 但名称数值仍显）。
  * 色板 = palm.ser 正本（与预览同系统，逐条按序取色）；纯静态：无 <script>、无动画、无随机数。
  */
 export function buildTopBarsSvg(rows: { name: string; value: number }[], unit: string): string {
-  const X0 = 126
-  const BARMAX = 380
+  const X0 = 198
+  const BARMAX = 330
   const PITCH = 36
   const BH = 10
   const max = rows.length > 0 ? Math.max(...rows.map((r) => r.value)) : 0
@@ -369,17 +449,14 @@ export function buildTopBarsSvg(rows: { name: string; value: number }[], unit: s
   rows.forEach((r, i) => {
     const y = 12 + i * PITCH
     parts.push(
-      `<text x="118" y="${y + 9}" text-anchor="end" font-size="10" font-weight="600" letter-spacing=".06em" fill="#6A6963">${escapeHtml(r.name)}</text>`,
-    )
-    parts.push(
-      `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${GRID}" stroke-width="1"/>`,
+      `<text x="190" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="#6A6963">${escapeHtml(fitSvgText(r.name, 186, 11, 6))}</text>`,
     )
     const w = max > 0 && r.value > 0 ? Math.round((r.value / max) * BARMAX * 100) / 100 : 0
     parts.push(
       `<rect x="${X0}" y="${y}" width="${w}" height="${BH}" rx="2" fill="${PALM_SER[i % PALM_SER.length]}"/>`,
     )
     parts.push(
-      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="11" font-weight="700" fill="${INK}">${escapeHtml(unit)}${escapeHtml(fmtThousands(r.value))}</text>`,
+      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="12" font-weight="700" fill="${INK}">${escapeHtml(unit)}${escapeHtml(fmtThousands(r.value))}</text>`,
     )
   })
   parts.push('</svg>')
@@ -445,6 +522,11 @@ export function buildReportPrintHtml(
   const src = escapeHtml(meta.source)
   const at = escapeHtml(meta.takenAt)
   const footL = escapeHtml(meta.footerLeft)
+
+  /* 书脊字号自适应（P2）：固定 56px 时长标题竖排超 A4 页高（~1123px），尾字被页底
+     裁掉且与 .b 底部标签同列叠印（fixed 书脊逐页重复）。900 = 页高减 .b 标签区预算；
+     按转义前 title 长度算；短标题（≤16 字）floor(900/16)=56 仍 56px，零回归。 */
+  const spineFs = Math.max(24, Math.min(56, Math.floor(900 / Math.max(title.length, 1))))
 
   const body = sections
     .map((s, i) => {
@@ -530,43 +612,43 @@ export function buildReportPrintHtml(
     display:flex;justify-content:center;padding:56px 24px}
   .sheet{width:1080px;max-width:1080px;display:grid;grid-template-columns:110px 1fr}
 
-  /* ── 书脊：竖排大标题 + 底部竖排小字 ── */
+  /* ── 书脊：竖排大标题 + 底部竖排小字（字号按标题长度自适应，见 spineFs）── */
   .spine{position:relative;border-right:1px solid var(--ink)}
   .spine .t{position:absolute;top:0;left:14px;writing-mode:vertical-rl;
-    font-weight:900;font-size:56px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
+    font-weight:900;font-size:${spineFs}px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
   .spine .b{position:absolute;bottom:0;left:48px;writing-mode:vertical-rl;
-    font-size:9px;font-weight:700;letter-spacing:.26em;color:var(--muted)}
+    font-size:12px;font-weight:700;letter-spacing:.26em;color:var(--muted)}
 
   .content{padding-left:40px}
 
   /* ── 顶部页眉：左产品名 | 右数据说明 ── */
   .tophead{display:flex;gap:18px;align-items:baseline;border-bottom:1px solid var(--ink);
     padding-bottom:10px;margin-bottom:40px}
-  .tophead .site{font-family:var(--num);font-weight:600;font-size:13px;
+  .tophead .site{font-family:var(--num);font-weight:600;font-size:12px;
     letter-spacing:.08em;text-transform:uppercase}
   .tophead .sep{color:var(--faint)}
-  .tophead .tag{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--muted)}
+  .tophead .tag{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--muted)}
 
   /* ── 小节：右对齐小节名（宽字距）+ 发丝线；结论句标题；正文 ── */
   .secthead{display:flex;align-items:baseline;gap:14px;margin:44px 0 8px}
   .secthead .line{flex:1;border-top:1px solid var(--ink)}
-  .secthead .t{font-weight:700;font-size:15px;letter-spacing:.2em;text-align:right}
+  .secthead .t{font-weight:700;font-size:19px;letter-spacing:.2em;text-align:right}
   .secthead.first{margin-top:0}
 
-  .claim{font-size:13px;font-weight:700;color:var(--ink);margin:4px 0 2px}
-  .section p{font-size:12.5px;line-height:1.8;margin:8px 0;color:var(--ink)}
+  .claim{font-size:16px;font-weight:700;color:var(--ink);margin:4px 0 2px}
+  .section p{font-size:14px;line-height:1.8;margin:8px 0;color:var(--ink)}
   .section ul{margin:8px 0;padding-left:1.6em}
-  .section li{font-size:12.5px;line-height:1.8;margin:3px 0;color:var(--ink)}
+  .section li{font-size:14px;line-height:1.8;margin:3px 0;color:var(--ink)}
 
   /* ── 正文表格：官方细线表（表头小写字距 · 发丝行线 · 无竖线 · 无背景色块） ── */
   .tablewrap{margin:10px 0}
   table.tb{width:100%;border-collapse:collapse}
-  .tb th{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  .tb th{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
     color:var(--muted);text-align:left;padding:6px 10px 5px;border-bottom:1px solid var(--ink)}
-  .tb td{font-size:11.5px;line-height:1.6;padding:6px 10px;border-bottom:1px solid var(--grid)}
+  .tb td{font-size:14px;line-height:1.6;padding:6px 10px;border-bottom:1px solid var(--grid)}
 
   /* ── 大写来源行：SECTION · 来源 · 日期 ── */
-  .srcline{font-size:9px;font-weight:600;letter-spacing:.1em;
+  .srcline{font-size:10px;font-weight:600;letter-spacing:.1em;
     color:var(--faint);margin-top:8px;text-transform:uppercase}
 
   /* ── 值得记住的数字：大数字块（特大等宽数字 + 双行小注）── */
@@ -575,19 +657,19 @@ export function buildReportPrintHtml(
   .stats>div:first-child{padding-left:0}
   .stats>div:last-child{border-right:0;padding-right:0}
   .kpi .v{font-family:var(--num);font-weight:800;font-size:38px;line-height:1}
-  .kpi .r{font-size:10px;font-weight:700;color:var(--muted);margin-top:4px}
-  .kpi .l{font-size:9.5px;font-weight:600;letter-spacing:.12em;
+  .kpi .r{font-size:12px;font-weight:700;color:var(--muted);margin-top:4px}
+  .kpi .l{font-size:12px;font-weight:600;letter-spacing:.12em;
     color:var(--faint);margin-top:3px}
 
   /* ── 报告附图：官方正本参数的静态 SVG（方阵 + 横条）── */
   .chartblk{margin:24px 0 4px}
-  .chartname{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--muted);
+  .chartname{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);
     margin-bottom:2px;text-transform:uppercase}
   .chartblk svg{width:100%;height:auto;display:block}
 
   /* ── 页脚：左文案 · 右数据来源行 ── */
   .foot{margin-top:48px;border-top:1px solid var(--ink);padding-top:12px;
-    display:flex;justify-content:space-between;font-size:9px;font-weight:600;
+    display:flex;justify-content:space-between;font-size:12px;font-weight:600;
     letter-spacing:.12em;color:var(--muted)}
 
   /* ── A4 打印适配：页边距 + 分页避免 ── */
@@ -600,7 +682,10 @@ export function buildReportPrintHtml(
        @page 左边距 12mm + 书脊 24mm + 空隙 6mm，正文 .content 让位 30mm。 */
     .spine{position:fixed;left:0;top:0;bottom:0;width:24mm;border-right:1px solid var(--ink)}
     .content{padding-left:30mm}
-    .tophead,.section,.stats,.foot,.chartblk{break-inside:avoid;page-break-inside:avoid}
+    /* 分页：.section 整节禁拆会让大节推下页、前一页大片空白（半空页），故可拆；
+       表格 .tablewrap 保持原子（行线不从中间断）；.secthead/.claim 后紧跟内容防孤儿标题 */
+    .tophead,.stats,.foot,.chartblk,.tablewrap{break-inside:avoid;page-break-inside:avoid}
+    .secthead,.claim{break-after:avoid;page-break-after:avoid}
   }
 </style>
 </head>
@@ -642,6 +727,11 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
   const src = escapeHtml(meta.source)
   const at = escapeHtml(meta.takenAt)
   const footL = escapeHtml(meta.footerLeft)
+
+  /* 书脊字号自适应（P2 镜像，同 buildReportPrintHtml 公式）：固定 56px 时长标题竖排超
+     A4 页高（~1123px），尾字被页底裁掉且与 .b 底部标签同列叠印（fixed 书脊逐页重复）。
+     900 = 页高减 .b 标签区预算；按转义前 title 长度算；短标题（≤16 字）仍 56px 零回归。 */
+  const spineFs = Math.max(24, Math.min(56, Math.floor(900 / Math.max((data.title || '运营报告').length, 1))))
 
   const body = data.sections
     .map((s, i) => {
@@ -717,44 +807,44 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
     display:flex;justify-content:center;padding:56px 24px}
   .sheet{width:1080px;max-width:1080px;display:grid;grid-template-columns:110px 1fr}
 
-  /* ── 书脊：竖排大标题 + 底部竖排小字 ── */
+  /* ── 书脊：竖排大标题 + 底部竖排小字（字号按标题长度自适应，见 spineFs）── */
   .spine{position:relative;border-right:1px solid var(--ink)}
   .spine .t{position:absolute;top:0;left:14px;writing-mode:vertical-rl;
-    font-weight:900;font-size:56px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
+    font-weight:900;font-size:${spineFs}px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
   .spine .b{position:absolute;bottom:0;left:48px;writing-mode:vertical-rl;
-    font-size:9px;font-weight:700;letter-spacing:.26em;color:var(--mut)}
+    font-size:12px;font-weight:700;letter-spacing:.26em;color:var(--mut)}
 
   .content{padding-left:40px}
 
   /* ── 顶部页眉 ── */
   .tophead{display:flex;gap:18px;align-items:baseline;border-bottom:1px solid var(--ink);
     padding-bottom:10px;margin-bottom:36px}
-  .tophead .site{font-family:var(--num);font-weight:600;font-size:13px;
+  .tophead .site{font-family:var(--num);font-weight:600;font-size:12px;
     letter-spacing:.08em;text-transform:uppercase}
   .tophead .sep{color:var(--faint)}
-  .tophead .tag{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--mut)}
+  .tophead .tag{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--mut)}
 
   /* ── 小节：右对齐小节名（宽字距）+ 发丝线；结论句标题；要点 ── */
   .secthead{display:flex;align-items:baseline;gap:14px;margin:44px 0 8px}
   .secthead .line{flex:1;border-top:1px solid var(--ink)}
-  .secthead .t{font-weight:700;font-size:15px;letter-spacing:.2em;text-align:right}
+  .secthead .t{font-weight:700;font-size:19px;letter-spacing:.2em;text-align:right}
   .secthead.first{margin-top:0}
 
-  .claim{font-size:13px;font-weight:700;color:var(--ink);margin:4px 0 2px}
-  .section p{font-size:12.5px;line-height:1.8;margin:8px 0;color:var(--ink)}
+  .claim{font-size:16px;font-weight:700;color:var(--ink);margin:4px 0 2px}
+  .section p{font-size:14px;line-height:1.8;margin:8px 0;color:var(--ink)}
   .section ul{margin:8px 0;padding-left:1.6em}
-  .section li{font-size:12.5px;line-height:1.8;margin:3px 0;color:var(--ink)}
+  .section li{font-size:14px;line-height:1.8;margin:3px 0;color:var(--ink)}
 
   /* ── 大写来源行 ── */
-  .srcline{font-size:9px;font-weight:600;letter-spacing:.1em;
+  .srcline{font-size:10px;font-weight:600;letter-spacing:.1em;
     color:var(--faint);margin-top:8px;text-transform:uppercase}
 
   /* ── 图块：图名小字 + SVG（宽 100%）+ 图例句 ── */
   .chartblk{margin:18px 0 4px}
-  .chartname{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--mut);
+  .chartname{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--mut);
     margin-bottom:2px;text-transform:uppercase}
   .chartblk svg{width:100%;height:auto;display:block}
-  .caption{font-size:9px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:4px}
+  .caption{font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:4px}
 
   /* ── 值得记住的数字：大数字块 ── */
   .stats{display:grid;gap:0;margin-top:14px;border-top:1px solid var(--ink)}
@@ -762,11 +852,11 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
   .stats>div:first-child{padding-left:0}
   .stats>div:last-child{border-right:0;padding-right:0}
   .kpi .v{font-family:var(--num);font-weight:800;font-size:38px;line-height:1}
-  .kpi .l{font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:3px}
+  .kpi .l{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:3px}
 
   /* ── 页脚 ── */
   .foot{margin-top:48px;border-top:1px solid var(--ink);padding-top:12px;
-    display:flex;justify-content:space-between;font-size:9px;font-weight:600;
+    display:flex;justify-content:space-between;font-size:12px;font-weight:600;
     letter-spacing:.12em;color:var(--mut)}
 
   /* ── A4 打印适配：书脊每页贯穿（fixed 逐页重复） ── */
@@ -776,7 +866,10 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
     .sheet{width:100%;max-width:none;display:block}
     .spine{position:fixed;left:0;top:0;bottom:0;width:24mm;border-right:1px solid var(--ink)}
     .content{padding-left:30mm}
-    .tophead,.section,.stats,.foot,.chartblk{break-inside:avoid;page-break-inside:avoid}
+    /* 分页：.section 整节禁拆会让大节推下页、前一页大片空白（半空页），故可拆；
+       表格 .tablewrap 保持原子（行线不从中间断）；.secthead/.claim 后紧跟内容防孤儿标题 */
+    .tophead,.stats,.foot,.chartblk,.tablewrap{break-inside:avoid;page-break-inside:avoid}
+    .secthead,.claim{break-after:avoid;page-break-after:avoid}
   }
 </style>
 </head>

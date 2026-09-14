@@ -276,20 +276,55 @@ async function markdownImageParagraphs(line: string): Promise<Paragraph[]> {
   return paras;
 }
 
-export async function exportMarkdownAsDocx(markdown: string, title: string): Promise<void> {
+/** 文档标题段（宋体加粗 2 号居中，公文头；markdown / HTML 两路径共用） */
+function titleParagraph(title: string): Paragraph {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 240 },
+    children: [new TextRun({ text: title || "未命名文档", bold: true, font: FONT_TITLE, size: 44 })],
+  });
+}
+
+/** 打包 docx 并触发浏览器下载（markdown / HTML 两路径共用） */
+async function downloadDocx(doc: Document, title: string): Promise<void> {
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title || "文档"}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function exportMarkdownAsDocx(markdown: string, title: string, sourceHtml?: string): Promise<void> {
+  // 050 双写：编辑器 HTML 非空 → 样式保留路径（HTML→docx 映射）；否则走现有 markdown 路径（逐字节不变）
+  if (sourceHtml && sourceHtml.trim() !== "") {
+    await downloadDocx(
+      new Document({
+        numbering: {
+          config: [{ reference: "ol", levels: [{ level: 0, format: "decimal", text: "%1.", alignment: AlignmentType.LEFT }] }],
+        },
+        sections: [{ children: [titleParagraph(title), ...htmlToDocxChildren(sourceHtml)] }],
+        styles: {
+          default: {
+            document: { run: { font: FONT_BODY, size: 32 } },
+          },
+        },
+      }),
+      title,
+    );
+    return;
+  }
+
   markdown = stripProtectedSpans(markdown);
   markdown = stripStyleAnnotationLines(markdown);
   const lines = markdown.split("\n");
   const children: (Paragraph | Table)[] = [];
 
   // 文档标题（宋体加粗 2 号居中，公文头）
-  children.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 240 },
-      children: [new TextRun({ text: title || "未命名文档", bold: true, font: FONT_TITLE, size: 44 })],
-    }),
-  );
+  children.push(titleParagraph(title));
 
   let olIndex = 0;
   for (let i = 0; i < lines.length; i++) {
@@ -360,13 +395,282 @@ export async function exportMarkdownAsDocx(markdown: string, title: string): Pro
     },
   });
 
-  const blob = await Packer.toBlob(doc);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${title || "文档"}.docx`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  await downloadDocx(doc, title);
+}
+
+// ── 050 双写：编辑器 HTML → docx（样式保留路径）──
+// 映射（简报清单）：p/h1-3（text-align 对齐）/ul ol li/blockquote/hr/table
+//   + span 的 color/font-size/font-family + mark 背景色→highlight（黄/绿/青/品红近似）；
+// 白名单外标签只取文本（docx 无注入面）；图片不在映射清单内，忽略。
+
+/** 行内格式累积态（walks 期间自外向内叠加） */
+interface HtmlRunFmt {
+  bold?: boolean;
+  italics?: boolean;
+  strike?: boolean;
+  /** docx IRunOptions.underline 只收对象形式（布尔 false 不合法），u 标记置 {} */
+  underline?: {};
+  color?: string; // RRGGBB（无 #）
+  size?: number; // half-point
+  font?: string;
+  highlight?: "yellow" | "green" | "cyan" | "magenta";
+}
+
+/** #rgb / #rrggbb / rgb(a) → [r,g,b]；解析失败返回 null */
+function cssColorToRgb(value: string): [number, number, number] | null {
+  const v = value.trim().toLowerCase();
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/.exec(v);
+  if (hex) {
+    const h = hex[1].length === 3 ? hex[1].split("").map((c) => c + c).join("") : hex[1];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  const rgb = /^rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(v);
+  if (rgb) {
+    return [rgb[1], rgb[2], rgb[3]].map((n) => Math.min(255, parseInt(n, 10))) as [number, number, number];
+  }
+  return null;
+}
+
+/** 色值 → docx RRGGBB（无 #）；解析失败返回 undefined（走默认色） */
+function toDocxColor(value: string): string | undefined {
+  const rgb = cssColorToRgb(value);
+  if (!rgb) return undefined;
+  return rgb.map((n) => n.toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+/** mark 背景色 → 最近的高亮枚举（黄/绿/青/品红，按色相环距离；解析失败回落黄色） */
+function nearestHighlight(value: string): "yellow" | "green" | "cyan" | "magenta" {
+  const anchors: [name: "yellow" | "green" | "cyan" | "magenta", hue: number][] = [
+    ["yellow", 60],
+    ["green", 120],
+    ["cyan", 180],
+    ["magenta", 300],
+  ];
+  const rgb = cssColorToRgb(value);
+  if (!rgb) return "yellow";
+  const [r, g, b] = rgb;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let hue = 0;
+  if (max !== min) {
+    const d = max - min;
+    if (max === r) hue = ((g - b) / d) % 6;
+    else if (max === g) hue = (b - r) / d + 2;
+    else hue = (r - g) / d + 4;
+    hue = ((hue * 60) + 360) % 360;
+  }
+  let best: "yellow" | "green" | "cyan" | "magenta" = "yellow";
+  let bestDist = 361;
+  for (const [name, h] of anchors) {
+    const dist = Math.min(Math.abs(hue - h), 360 - Math.abs(hue - h));
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = name;
+    }
+  }
+  return best;
+}
+
+/** font-size → docx half-point（pt×2，px 按 0.75 换算 pt）；解析失败返回 undefined */
+function toHalfPoints(value: string): number | undefined {
+  const m = /^\s*([\d.]+)\s*(pt|px)?\s*$/i.exec(value);
+  if (!m) return undefined;
+  const n = parseFloat(m[1]);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  const pt = (m[2] ?? "").toLowerCase() === "px" ? n * 0.75 : n;
+  return Math.max(1, Math.round(pt * 2));
+}
+
+/** text-align 样式 → AlignmentType；未声明/未知返回 undefined（走 docx 默认左对齐） */
+function alignmentFrom(el: Element): (typeof AlignmentType)[keyof typeof AlignmentType] | undefined {
+  const m = /(?:^|;)\s*text-align\s*:\s*([a-z]+)/i.exec(el.getAttribute("style") ?? "");
+  switch (m?.[1]?.toLowerCase()) {
+    case "center":
+      return AlignmentType.CENTER;
+    case "right":
+      return AlignmentType.RIGHT;
+    case "justify":
+      return AlignmentType.JUSTIFIED;
+    case "left":
+      return AlignmentType.LEFT;
+    default:
+      return undefined;
+  }
+}
+
+/** 从元素 style 提取白名单属性叠加到 fmt（span：color/font-size/font-family；mark：背景色→highlight） */
+function fmtFromElement(el: Element, base: HtmlRunFmt, isMark: boolean): HtmlRunFmt {
+  const fmt = { ...base };
+  const style = el.getAttribute("style") ?? "";
+  for (const decl of style.split(";")) {
+    const idx = decl.indexOf(":");
+    if (idx < 0) continue;
+    const prop = decl.slice(0, idx).trim().toLowerCase();
+    const value = decl.slice(idx + 1).trim();
+    if (prop === "color") fmt.color = toDocxColor(value) ?? fmt.color;
+    else if (prop === "font-size") fmt.size = toHalfPoints(value) ?? fmt.size;
+    else if (prop === "font-family") fmt.font = value.split(",")[0].replace(/["']/g, "").trim() || fmt.font;
+    else if (isMark && (prop === "background" || prop === "background-color")) fmt.highlight = nearestHighlight(value);
+  }
+  return fmt;
+}
+
+/** 递归收集行内 TextRun（strong/b/em/i/del/s/u/mark/span + 文本；br→换行；img/script/style 忽略） */
+function htmlInlineRuns(node: Node, base: HtmlRunFmt): TextRun[] {
+  const runs: TextRun[] = [];
+  for (const child of Array.from(node.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const text = child.textContent ?? "";
+      if (text) runs.push(new TextRun({ text, ...base, font: base.font ?? FONT_BODY }));
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+    const el = child as Element;
+    const tag = el.tagName.toLowerCase();
+    if (tag === "br") {
+      runs.push(new TextRun({ text: "", break: 1 }));
+      continue;
+    }
+    let fmt = { ...base };
+    if (tag === "strong" || tag === "b") fmt.bold = true;
+    else if (tag === "em" || tag === "i") fmt.italics = true;
+    else if (tag === "del" || tag === "s") fmt.strike = true;
+    else if (tag === "u") fmt.underline = {};
+    else if (tag === "mark") fmt = fmtFromElement(el, fmt, true);
+    else if (tag === "span" || tag === "font") fmt = fmtFromElement(el, fmt, false);
+    else if (tag === "img" || tag === "script" || tag === "style") continue;
+    runs.push(...htmlInlineRuns(el, fmt));
+  }
+  return runs;
+}
+
+/** ul/ol → 列表段落（li 行内内容 + 嵌套列表递归，展平为 level 0，与 markdown 路径一致） */
+function collectHtmlList(listEl: Element, ordered: boolean, out: (Paragraph | Table)[]): void {
+  for (const child of Array.from(listEl.children)) {
+    const tag = child.tagName.toLowerCase();
+    if (tag === "li") {
+      const inlineNodes: Node[] = [];
+      const nested: Element[] = [];
+      for (const c of Array.from(child.childNodes)) {
+        if (c.nodeType === Node.ELEMENT_NODE && ["ul", "ol"].includes((c as Element).tagName.toLowerCase())) {
+          nested.push(c as Element);
+        } else {
+          inlineNodes.push(c);
+        }
+      }
+      const holder = child.ownerDocument!.createElement("div");
+      for (const c of inlineNodes) holder.appendChild(c.cloneNode(true));
+      out.push(
+        ordered
+          ? new Paragraph({ numbering: { reference: "ol", level: 0 }, children: htmlInlineRuns(holder, {}) })
+          : new Paragraph({ bullet: { level: 0 }, children: htmlInlineRuns(holder, {}) }),
+      );
+      for (const n of nested) collectHtmlList(n, n.tagName.toLowerCase() === "ol", out);
+    } else if (tag === "ul" || tag === "ol") {
+      collectHtmlList(child, tag === "ol", out);
+    }
+  }
+}
+
+/** table → docx Table（首行表头加灰底加粗，同 markdown 路径；无行返回 null） */
+function htmlTableToDocx(tableEl: Element): Table | null {
+  const trs: Element[] = [];
+  for (const section of Array.from(tableEl.children)) {
+    const st = section.tagName.toLowerCase();
+    if (st === "tr") trs.push(section);
+    else if (st === "thead" || st === "tbody" || st === "tfoot") {
+      for (const tr of Array.from(section.children)) {
+        if (tr.tagName.toLowerCase() === "tr") trs.push(tr);
+      }
+    }
+  }
+  const rowDefs = trs
+    .map((tr) => Array.from(tr.children).filter((c) => ["td", "th"].includes(c.tagName.toLowerCase())))
+    .filter((cells) => cells.length > 0);
+  if (rowDefs.length === 0) return null;
+  const mkCell = (cell: Element, header: boolean) =>
+    new TableCell({
+      ...(header ? { shading: { fill: "EEEEEE" } } : {}),
+      children: [new Paragraph({ children: htmlInlineRuns(cell, header ? { bold: true, font: FONT_BODY } : { font: FONT_BODY }) })],
+    });
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, children: rowDefs[0].map((c) => mkCell(c, true)) }),
+      ...rowDefs.slice(1).map((row) => new TableRow({ children: row.map((c) => mkCell(c, false)) })),
+    ],
+  });
+}
+
+/** 块级节点 → Paragraph/Table；未识别块级标签（div/pre/section…）递归上提子节点 */
+function htmlBlocks(root: Node, out: (Paragraph | Table)[]): void {
+  for (const child of Array.from(root.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const text = (child.textContent ?? "").trim();
+      if (text) out.push(new Paragraph({ children: [new TextRun({ text, font: FONT_BODY })] }));
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+    const el = child as Element;
+    const tag = el.tagName.toLowerCase();
+    const align = alignmentFrom(el);
+    switch (tag) {
+      case "h1":
+      case "h2":
+      case "h3": {
+        const fonts = { h1: FONT_H1, h2: FONT_H2, h3: FONT_BODY } as const;
+        const levels = { h1: HeadingLevel.HEADING_1, h2: HeadingLevel.HEADING_2, h3: HeadingLevel.HEADING_3 } as const;
+        out.push(
+          new Paragraph({
+            heading: levels[tag],
+            ...(align ? { alignment: align } : {}),
+            children: htmlInlineRuns(el, { bold: true, font: fonts[tag], size: 32 }),
+          }),
+        );
+        break;
+      }
+      case "p":
+        out.push(
+          new Paragraph({
+            spacing: { after: 120, ...LINE_SPACING_28PT },
+            indent: { firstLine: 640 },
+            ...(align ? { alignment: align } : {}),
+            children: htmlInlineRuns(el, {}),
+          }),
+        );
+        break;
+      case "ul":
+        collectHtmlList(el, false, out);
+        break;
+      case "ol":
+        collectHtmlList(el, true, out);
+        break;
+      case "blockquote":
+        out.push(
+          new Paragraph({
+            indent: { left: 400 },
+            children: htmlInlineRuns(el, { italics: true, color: "666666" }),
+          }),
+        );
+        break;
+      case "hr":
+        out.push(new Paragraph({ children: [new TextRun({ text: "───────", color: "CCCCCC" })] }));
+        break;
+      case "table": {
+        const table = htmlTableToDocx(el);
+        if (table) out.push(table);
+        break;
+      }
+      default:
+        htmlBlocks(el, out);
+    }
+  }
+}
+
+/** 编辑器 HTML → docx children（050 双写样式保留路径；无块级内容时返回空数组，产物仅含标题段） */
+function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
+  const children: (Paragraph | Table)[] = [];
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  htmlBlocks(doc.body, children);
+  return children;
 }

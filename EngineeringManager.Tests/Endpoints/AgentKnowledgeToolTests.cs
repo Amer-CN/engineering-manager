@@ -218,7 +218,7 @@ public class AgentKnowledgeToolTests
     }
 
     [Fact]
-    public void A6_Admin_TotalToolCount_Is_15()
+    public void A6_Admin_TotalToolCount_Is_16()
     {
         var tools = CreateToolService();
         var ctx = CreateHttpContext("admin");
@@ -226,7 +226,8 @@ public class AgentKnowledgeToolTests
         var available = tools.GetAvailableTools(ctx);
         var names = available.Select(t => (string)((dynamic)t).function.name).ToList();
 
-        Assert.Equal(15, names.Count);
+        // 15 只读工具 + markInvoicesReceived（审批门一期写工具，admin 含 invoices:update）
+        Assert.Equal(16, names.Count);
         Assert.Contains("getDashboardStats", names);
         Assert.Contains("getProjects", names);
         Assert.Contains("getProjectDetail", names);
@@ -242,6 +243,7 @@ public class AgentKnowledgeToolTests
         Assert.Contains("getPartners", names);
         Assert.Contains("runSafeQuery", names);
         Assert.Contains("searchKnowledgeBase", names);
+        Assert.Contains("markInvoicesReceived", names);
     }
 
     [Fact]

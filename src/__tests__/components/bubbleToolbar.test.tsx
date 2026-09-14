@@ -23,6 +23,11 @@ import Highlight from "@tiptap/extension-highlight";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
 import BubbleToolbar from "@/components/features/writing/BubbleToolbar";
 
+// BubbleToolbar 链上挂了 useActiveLlmModel（react-query）——工具栏测试不关心模型显示，mock 掉免 Provider
+vi.mock("@/hooks/data/useActiveLlmModel", () => ({
+  useActiveLlmModel: () => ({ data: null, isLoading: false }),
+}));
+
 /**
  * jsdom 无布局引擎：Range 上缺 getClientRects / getBoundingClientRect，
  * BubbleMenu 定位链路（posToDOMRect → EditorView.coordsAtPos）会抛

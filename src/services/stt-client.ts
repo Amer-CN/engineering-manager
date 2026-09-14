@@ -226,6 +226,8 @@ export async function createSttJob(input: {
   isMultiSpeaker: boolean
   numSpeakers?: number
   context?: string
+  /** 转写引擎（后端白名单校验；空值回退 qwen3-asr-1.7b-gguf） */
+  engine?: string
 }): Promise<ApiResponse<{ jobId: number; status: string }>> {
   try {
     const token = getToken()

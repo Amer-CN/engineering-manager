@@ -287,7 +287,7 @@ export const RESOURCE_LABELS: Record<PermissionResource, string> = {
   drawings: '图纸管理',
   knowledge: '知识库',
   voice: '语音转文字',
-  writing: '写作中心',
+  writing: '文秘助手',
   reports: '报告生成',
   settings: '系统设置',
   users: '用户管理',

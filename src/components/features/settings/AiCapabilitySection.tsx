@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useOCRConfig } from '@/hooks/useOCRConfig'
 import { AiProviderSection } from './AiProviderSection'
 import { SettingsOcrSection } from '@/components/SettingsOcrSection'
@@ -6,28 +7,33 @@ import { SettingsOcrSection } from '@/components/SettingsOcrSection'
  * AI 能力面板 (v0.83.0 设置页重构)
  * 子区: AI 助手(大模型) / AI 智能识别(OCR)
  * 治卡顿: useOCRConfig 下沉到本面板 — 仅在进入「AI 能力」分类时才请求 OCR 配置/统计
+ * 服务商子页（detail 态）纯净化：经 onDetailChange 上报隐藏 OCR 区块，仅 list 态显示
  */
 export function AiCapabilitySection() {
   const ocr = useOCRConfig()
+  /** AiProviderSection 当前是否处于服务商子页（detail 态） */
+  const [providerDetail, setProviderDetail] = useState(false)
 
   return (
     <div className="space-y-6">
       <div id="ai-provider" data-setting-anchor>
-        <AiProviderSection />
+        <AiProviderSection onDetailChange={setProviderDetail} />
       </div>
-      <div id="ocr" data-setting-anchor>
-        <SettingsOcrSection
-          ocrConfig={ocr.ocrConfig}
-          setOcrConfig={ocr.setOcrConfig}
-          ocrStatus={ocr.ocrStatus}
-          testingOCR={ocr.testingOCR}
-          savingOCR={ocr.savingOCR}
-          ocrMessage={ocr.ocrMessage}
-          onSave={ocr.handleSaveOCRConfig}
-          onTest={ocr.handleTestOCR}
-          onClearKeys={ocr.handleClearOcrKeys}
-        />
-      </div>
+      {!providerDetail && (
+        <div id="ocr" data-setting-anchor>
+          <SettingsOcrSection
+            ocrConfig={ocr.ocrConfig}
+            setOcrConfig={ocr.setOcrConfig}
+            ocrStatus={ocr.ocrStatus}
+            testingOCR={ocr.testingOCR}
+            savingOCR={ocr.savingOCR}
+            ocrMessage={ocr.ocrMessage}
+            onSave={ocr.handleSaveOCRConfig}
+            onTest={ocr.handleTestOCR}
+            onClearKeys={ocr.handleClearOcrKeys}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Icon } from '@/components/ui/Icon'
-import { getAgentModels } from '@/services/agent-client'
+import { getAgentModels, getLlmProviderConfig } from '@/services/agent-client'
 
 export type ReasoningLevel = 'off' | 'medium' | 'high'
 
@@ -28,6 +28,8 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
   model, onModelChange, reasoningLevel, onReasoningLevelChange,
 }) => {
   const [models, setModels] = useState<string[]>([])
+  /** 是否使用内置免费模型（false = 自定义服务商，模型按自有渠道 key 计费）；拉取失败默认 true 沿旧展示 */
+  const [useBuiltIn, setUseBuiltIn] = useState(true)
   const [modelOpen, setModelOpen] = useState(false)
   const [levelOpen, setLevelOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -37,6 +39,9 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
     // 单模型也记录：自定义 provider 配置后常显模型名（修复「配置了自定义模型仍显示默认」）
     getAgentModels().then(list => { if (!cancelled && list.length > 0) setModels(list) })
       .catch(() => { /* 静默：列表不可用时隐藏选择器 */ })
+    // 免费/自有渠道徽章分流：ModelPicker 的 props 无 providers 来源，沿本文件既有独立拉取模式取 useBuiltIn
+    getLlmProviderConfig().then(cfg => { if (!cancelled && cfg) setUseBuiltIn(cfg.useBuiltIn) })
+      .catch(() => { /* 静默：取不到按内置处理 */ })
     return () => { cancelled = true }
   }, [])
 
@@ -93,21 +98,30 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
                   <span className="truncate" style={{ color: model === m ? 'var(--accent)' : 'var(--fg-2)', fontWeight: model === m ? 600 : 400 }}>
                     {m}
                   </span>
-                  {m.includes('pro') && (
+                  {useBuiltIn ? (
+                    m.includes('pro') ? (
+                      <span
+                        className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro"
+                        style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}
+                        title="付费模型：按 token 计费"
+                      >
+                        付费
+                      </span>
+                    ) : (
+                      <span
+                        className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro"
+                        style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+                      >
+                        免费
+                      </span>
+                    )
+                  ) : (
                     <span
                       className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro"
                       style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}
-                      title="付费模型：按 token 计费"
+                      title="按你的渠道 key 计费"
                     >
-                      付费
-                    </span>
-                  )}
-                  {!m.includes('pro') && (
-                    <span
-                      className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro"
-                      style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
-                    >
-                      免费
+                      自有渠道
                     </span>
                   )}
                 </button>

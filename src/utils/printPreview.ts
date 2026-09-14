@@ -161,14 +161,99 @@ function escapeTitle(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// ── sourceHtml 白名单清洗（050 双写：编辑器 HTML 是样式唯一载体）──
+
+/** 允许保留的标签：p/h1-3/span/mark/u/strong/em/del/s/ul/ol/li/blockquote + table 系 + br/hr/img（编辑器输出集） */
+const PRINT_KEEP_TAGS = new Set([
+  "p", "h1", "h2", "h3", "span", "mark", "u", "strong", "em", "del", "s",
+  "ul", "ol", "li", "blockquote", "br", "hr", "img",
+  "table", "thead", "tbody", "tr", "td", "th",
+]);
+
+/** 整树丢弃（脚本/样式/壳层，防注入） */
+const PRINT_DROP_TAGS = new Set(["script", "style", "link", "meta", "iframe", "object", "embed"]);
+
+/** style 属性白名单（050：color/background(-color)/font-size/font-family/text-align） */
+const PRINT_STYLE_PROPS = new Set(["color", "background", "background-color", "font-size", "font-family", "text-align"]);
+
+/** 过滤 style 属性：仅保留白名单属性声明（保持原声明文本） */
+function filterStyleAttr(style: string): string {
+  return style
+    .split(";")
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .filter((d) => PRINT_STYLE_PROPS.has(d.slice(0, d.indexOf(":")).trim().toLowerCase()))
+    .join(";");
+}
+
+/** img src 协议白名单（与 pasteSanitizer 同源：data:image/ 非 svg，或 http(s)） */
+function isSafeImgSrc(src: string): boolean {
+  const v = src.trim().toLowerCase();
+  if (v.startsWith("data:image/")) return !v.startsWith("data:image/svg+xml");
+  return /^https?:\/\//.test(v);
+}
+
+/** 递归重建：白名单标签保留（style 过滤），未识别标签去标签留内容，DROP 整树丢弃 */
+function rebuildPrintNode(src: Node, out: Node): void {
+  const doc = out.ownerDocument!;
+  for (const child of Array.from(src.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      out.appendChild(child.cloneNode(true));
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue; // 注释等一律丢弃
+    const el = child as Element;
+    const tag = el.tagName.toLowerCase();
+    if (tag.includes(":") || PRINT_DROP_TAGS.has(tag)) continue;
+    if (!PRINT_KEEP_TAGS.has(tag)) {
+      rebuildPrintNode(el, out); // 未识别标签：递归上提子节点
+      continue;
+    }
+    const created = doc.createElement(tag);
+    if (tag === "img") {
+      const imgSrc = el.getAttribute("src");
+      if (imgSrc && isSafeImgSrc(imgSrc)) created.setAttribute("src", imgSrc);
+      const alt = el.getAttribute("alt");
+      if (alt != null) created.setAttribute("alt", alt);
+    }
+    if (tag === "td" || tag === "th") {
+      for (const name of ["colspan", "rowspan"]) {
+        const v = el.getAttribute(name);
+        if (v != null) created.setAttribute(name, v);
+      }
+    }
+    const style = el.getAttribute("style");
+    if (style) {
+      const filtered = filterStyleAttr(style);
+      if (filtered) created.setAttribute("style", filtered);
+    }
+    rebuildPrintNode(el, created);
+    out.appendChild(created);
+  }
+}
+
+/** 清洗编辑器 HTML：白名单标签 + style 白名单属性，供打印预览/网页导出直接使用 */
+function sanitizeSourceHtml(html: string): string {
+  if (typeof html !== "string" || html.trim() === "") return "";
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const out = doc.createElement("div");
+  rebuildPrintNode(doc.body, out);
+  return out.innerHTML;
+}
+
 /**
  * 生成完整打印预览 HTML 文档（进 iframe srcdoc）。
  * @param markdown 编辑器 markdown 原文（内部做与导出一致的清洗）
  * @param title 文档标题
+ * @param sourceHtml 编辑器 getHTML()（050 双写）；非空时经白名单清洗直接用（样式唯一载体），
+ *   为空/缺省走 markdown 路径（与现状逐字节一致）
  */
-export function buildPrintPreviewHtml(markdown: string, title: string): string {
+export function buildPrintPreviewHtml(markdown: string, title: string, sourceHtml?: string): string {
   const cleaned = stripStyleAnnotationLines(stripProtectedSpans(markdown));
-  const body = markdownToBodyHtml(cleaned);
+  const body =
+    sourceHtml && sourceHtml.trim() !== ""
+      ? sanitizeSourceHtml(sourceHtml)
+      : markdownToBodyHtml(cleaned);
   const titleHtml = `<h1 style="font-family:${FONT_TITLE};font-size:22pt;font-weight:700;text-align:center;margin:0 0 18pt;line-height:32pt">${escapeTitle(title)}</h1>`;
   return `<!DOCTYPE html>
 <html lang="zh-CN">

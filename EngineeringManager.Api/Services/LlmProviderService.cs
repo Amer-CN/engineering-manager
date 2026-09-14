@@ -41,6 +41,12 @@ public class LlmProviderService : ILlmChatService
     private static readonly ConcurrentDictionary<string, HttpClient> ProxyClients = new();
 
     /// <summary>
+    /// OpenCode 稳定会话标识（x-opencode-session 头的值）。进程内复用同一值——
+    /// 官方要求 stable session（opencode.ai/docs/go），按请求随机会被视为滥用。
+    /// </summary>
+    private static readonly string OpenCodeSessionId = Guid.NewGuid().ToString();
+
+    /// <summary>
     /// 规范化代理地址：空 = null（直连）；缺 scheme 补 http://；非法 = null + 告警
     /// </summary>
     internal static string? NormalizeProxyUrl(string? proxyUrl)
@@ -123,6 +129,7 @@ public class LlmProviderService : ILlmChatService
             using var request = new HttpRequestMessage(HttpMethod.Get,
                 $"{baseUrl.TrimEnd('/')}/models");
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
+            ApplyOpenCodeSession(request, baseUrl);
 
             var response = await client.SendAsync(request, timeoutCts.Token);
             if (!response.IsSuccessStatusCode)
@@ -201,7 +208,9 @@ public class LlmProviderService : ILlmChatService
     }
 
     /// <summary>
-    /// 非流式 Chat API 调用 — 支持 function calling
+    /// 非流式 Chat API 调用 — 支持 function calling。
+    /// 协议分支：chat（OpenAI Chat Completions）/ responses（OpenAI Responses）
+    /// / anthropic（Anthropic Messages）。未知 protocol 按 chat 回退（fail-safe）。
     /// </summary>
     /// <param name="ct">取消令牌 — 触发时中止底层 HTTP 请求（HttpClient 层取消）</param>
     public async Task<ChatCompletionResponse?> ChatAsync(
@@ -212,40 +221,79 @@ public class LlmProviderService : ILlmChatService
         CancellationToken ct = default)
     {
         var route = _router.GetRoute("chat");
+        var protocol = NormalizeProtocol(route.Protocol);
 
         var payload = new Dictionary<string, object>
         {
             ["model"] = model ?? route.Model,
-            ["messages"] = messages,
         };
+        string endpoint;
+        Dictionary<string, string>? extraHeaders = null;
+        if (protocol == "anthropic")
+        {
+            endpoint = $"{route.BaseUrl.TrimEnd('/')}/v1/messages";
+            BuildAnthropicPayload(payload, messages, tools, route);
+            extraHeaders = new Dictionary<string, string>
+            {
+                ["x-api-key"] = route.ApiKey,
+                ["anthropic-version"] = "2023-06-01",
+            };
+        }
+        else if (protocol == "responses")
+        {
+            endpoint = $"{route.BaseUrl.TrimEnd('/')}/responses";
+            BuildResponsesPayload(payload, messages, route);
+        }
+        else
+        {
+            endpoint = $"{route.BaseUrl.TrimEnd('/')}/chat/completions";
+            payload["messages"] = messages;
+        }
 
-        if (tools != null && tools.Count > 0)
+        if (tools != null && tools.Count > 0 && protocol == "chat")
             payload["tools"] = tools;
 
         if (route.Temperature > 0)
             payload["temperature"] = route.Temperature;
 
-        if (route.MaxTokens > 0)
-            payload["max_tokens"] = route.MaxTokens;
+        if (protocol == "anthropic")
+        {
+            // Anthropic 的 max_tokens 必填（已在 BuildAnthropicPayload 处理）
+        }
+        else if (route.MaxTokens > 0)
+        {
+            // Responses 协议只认 max_output_tokens：同时携带 max_tokens 会被严格校验的
+            // 上游直接 400 拒（2026-09-06 实测 Zen/muse-spark-1.3-contributor-free）
+            if (protocol == "responses")
+                payload["max_output_tokens"] = route.MaxTokens;
+            else
+                payload["max_tokens"] = route.MaxTokens;
+        }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
-        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
+        // none/low/medium/high/max——非法值 400 拒。off 档交由 ApplyBuiltInAgnesThinkingControl
+        // 对内置通道映射为 "none"；自定义服务商 off = 不发字段（维持原状））
         if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
             payload["reasoning_effort"] = reasoningEffort;
 
-        AddAgnesThinkingParameters(route, payload);
+        ApplyBuiltInAgnesThinkingControl(route, reasoningEffort, payload);
 
         try
         {
             var client = BuildClient(route.ProxyUrl);
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(120));
+            // 300s：与流式路径一致；须大于报告生成的 180s 预算，否则内部先掐、用户看不到友好超时提示
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(300));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var request = new HttpRequestMessage(HttpMethod.Post,
-                $"{route.BaseUrl.TrimEnd('/')}/chat/completions");
-            request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            if (extraHeaders != null)
+                foreach (var h in extraHeaders)
+                    request.Headers.Add(h.Key, h.Value);
+            else
+                request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            ApplyOpenCodeSession(request, route.BaseUrl);
             request.Content = content;
 
             using var response = await client.SendAsync(request, timeoutCts.Token);
@@ -257,11 +305,167 @@ public class LlmProviderService : ILlmChatService
                 return null;
             }
 
-            return JsonSerializer.Deserialize<ChatCompletionResponse>(responseBody, SerializerOptions);
+            return ParseChatResponse(responseBody, protocol, model ?? route.Model);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[LlmProviderService] ChatAsync 失败: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>protocol 归一化：anthropic/responses/chat 三取值，未知按 chat 回退</summary>
+    internal static string NormalizeProtocol(string? protocol)
+    {
+        if (string.Equals(protocol, "anthropic", StringComparison.OrdinalIgnoreCase)) return "anthropic";
+        if (string.Equals(protocol, "responses", StringComparison.OrdinalIgnoreCase)) return "responses";
+        return "chat";
+    }
+
+    /// <summary>
+    /// OpenCode（opencode.ai）文档化契约：出站必须携带稳定会话头 x-opencode-session，
+    /// 缺头 400 MissingSessionID（"free tier can only be used in OpenCode" 文案即此门槛）。
+    /// 三条协议路径（chat/responses/anthropic）与 /models 均需；非 opencode.ai 服务商不带。
+    /// 2026-09-07 实测：带头后同一请求由 400 变 429（身份门已过，仅免费层限速）。
+    /// </summary>
+    private static void ApplyOpenCodeSession(HttpRequestMessage req, string baseUrl)
+    {
+        if (!string.IsNullOrEmpty(baseUrl) &&
+            baseUrl.Contains("opencode.ai", StringComparison.OrdinalIgnoreCase))
+        {
+            req.Headers.TryAddWithoutValidation("x-opencode-session", OpenCodeSessionId);
+        }
+    }
+
+    /// <summary>
+    /// Anthropic Messages 请求体：system 剥离为独立字段（首条 system），messages 只含
+    /// user/assistant；max_tokens 必填。tools 本批不支持 Anthropic tool_use（调用方勿传）。
+    /// </summary>
+    internal static void BuildAnthropicPayload(
+        Dictionary<string, object> payload,
+        List<AgentMessage> messages,
+        List<object>? tools,
+        ModelRouteInfo route)
+    {
+        string? system = null;
+        var rest = new List<object>();
+        foreach (var m in messages)
+        {
+            if (m.Role == MessageRole.System && system == null)
+            {
+                system = m.Content ?? "";
+                continue;
+            }
+            rest.Add(new Dictionary<string, object>
+            {
+                ["role"] = m.Role == MessageRole.Tool ? "user" : m.Role,
+                ["content"] = m.Content ?? "",
+            });
+        }
+        if (!string.IsNullOrEmpty(system))
+            payload["system"] = system;
+        payload["messages"] = rest;
+        payload["max_tokens"] = route.MaxTokens > 0 ? route.MaxTokens : 4096;
+    }
+
+    /// <summary>
+    /// OpenAI Responses 请求体：system 首条作 instructions，其余 role/content 拼成 input 数组
+    /// </summary>
+    internal static void BuildResponsesPayload(
+        Dictionary<string, object> payload,
+        List<AgentMessage> messages,
+        ModelRouteInfo route)
+    {
+        string? instructions = null;
+        var input = new List<object>();
+        foreach (var m in messages)
+        {
+            if (m.Role == MessageRole.System && instructions == null)
+            {
+                instructions = m.Content ?? "";
+                continue;
+            }
+            input.Add(new Dictionary<string, object>
+            {
+                ["role"] = m.Role,
+                ["content"] = m.Content ?? "",
+            });
+        }
+        if (!string.IsNullOrEmpty(instructions))
+            payload["instructions"] = instructions;
+        payload["input"] = input;
+    }
+
+    /// <summary>
+    /// 响应解析：chat 走标准反序列化；responses 从 output 数组首个 message 提取；
+    /// anthropic 从 content 数组首个 text 块提取。解析失败返回 null（调用方按失败处理）
+    /// </summary>
+    internal static ChatCompletionResponse? ParseChatResponse(string body, string protocol, string model)
+    {
+        try
+        {
+            if (protocol == "responses")
+            {
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("output", out var output))
+                {
+                    foreach (var item in output.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("type", out var t) && t.GetString() == "message"
+                            && item.TryGetProperty("content", out var content))
+                        {
+                            foreach (var part in content.EnumerateArray())
+                            {
+                                if (part.TryGetProperty("type", out var pt) && pt.GetString() == "output_text"
+                                    && part.TryGetProperty("text", out var text))
+                                {
+                                    return new ChatCompletionResponse
+                                    {
+                                        Model = model,
+                                        Choices = new List<ChatChoice>
+                                        {
+                                            new() { Message = new ChatResponseMessage { Content = text.GetString() } }
+                                        },
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+                Console.Error.WriteLine($"[LlmProviderService] Responses 解析失败: {body.Truncate(300)}");
+                return null;
+            }
+            if (protocol == "anthropic")
+            {
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("content", out var content))
+                {
+                    foreach (var part in content.EnumerateArray())
+                    {
+                        if (part.TryGetProperty("type", out var pt) && pt.GetString() == "text"
+                            && part.TryGetProperty("text", out var text))
+                        {
+                            return new ChatCompletionResponse
+                            {
+                                Model = model,
+                                Choices = new List<ChatChoice>
+                                {
+                                    new() { Message = new ChatResponseMessage { Content = text.GetString() } }
+                                },
+                            };
+                        }
+                    }
+                }
+                Console.Error.WriteLine($"[LlmProviderService] Anthropic 解析失败: {body.Truncate(300)}");
+                return null;
+            }
+            return JsonSerializer.Deserialize<ChatCompletionResponse>(body, SerializerOptions);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[LlmProviderService] 响应解析失败: {ex.Message}");
             return null;
         }
     }
@@ -278,29 +482,48 @@ public class LlmProviderService : ILlmChatService
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var route = _router.GetRoute("chat-stream");
+        var protocol = NormalizeProtocol(route.Protocol);
 
         var payload = new Dictionary<string, object>
         {
             ["model"] = model ?? route.Model,
-            ["messages"] = messages,
             ["stream"] = true,
         };
+        if (protocol == "anthropic")
+        {
+            BuildAnthropicPayload(payload, messages, tools, route);
+        }
+        else if (protocol == "responses")
+        {
+            BuildResponsesPayload(payload, messages, route);
+        }
+        else
+        {
+            payload["messages"] = messages;
+        }
 
-        if (tools != null && tools.Count > 0)
+        if (tools != null && tools.Count > 0 && protocol == "chat")
             payload["tools"] = tools;
 
         if (route.Temperature > 0)
             payload["temperature"] = route.Temperature;
 
-        if (route.MaxTokens > 0)
-            payload["max_tokens"] = route.MaxTokens;
+        if (protocol != "anthropic" && route.MaxTokens > 0)
+        {
+            // 同 ChatAsync：responses 只发 max_output_tokens，禁止混入 max_tokens
+            if (protocol == "responses")
+                payload["max_output_tokens"] = route.MaxTokens;
+            else
+                payload["max_tokens"] = route.MaxTokens;
+        }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
-        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
+        // none/low/medium/high/max——非法值 400 拒。off 档交由 ApplyBuiltInAgnesThinkingControl
+        // 对内置通道映射为 "none"；自定义服务商 off = 不发字段（维持原状））
         if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
             payload["reasoning_effort"] = reasoningEffort;
 
-        AddAgnesThinkingParameters(route, payload);
+        ApplyBuiltInAgnesThinkingControl(route, reasoningEffort, payload);
 
         // 分离连接与 yield：错误/取消经 ConnectStreamAsync 返回值传递（try/catch 内不能 yield return）；
         // timeoutCts 非空时由本方法持有（using），SSE 总超时 300s 覆盖到读取结束
@@ -358,24 +581,22 @@ public class LlmProviderService : ILlmChatService
     }
 
     /// <summary>
-    /// 为内置 Agnes OpenAI 兼容请求启用 Thinking。
-    /// Agnes 官方在 Chat Completions 格式中仅声明 chat_template_kwargs.enable_thinking；
-    /// thinking.type / budget_tokens 属于 Anthropic 兼容格式，不能直接混入该请求。
+    /// 内置 Agnes 通道的思考档位控制。
+    /// 3.0 flash 默认深度思考，且 2.5 时代的模板级思考开关参数
+    /// 对 3.0 无效（2026-09-08 实测 true/false 均思考）；真正的开关是 reasoning_effort。
+    /// 用户选「off」时前端显式传 "off"，此处映射为 "none" 才能真正关思考；
+    /// medium/high 已由通用透传写入 payload，无需处理；null（报表/公文/语音洞察等
+    /// 无档位调用方）不干预 = 沿用 3.0 默认思考。
     /// </summary>
-    internal static void AddAgnesThinkingParameters(
+    internal static void ApplyBuiltInAgnesThinkingControl(
         ModelRouteInfo route,
+        string? reasoningEffort,
         Dictionary<string, object> payload)
     {
-        if (!route.UseBuiltIn ||
-            !route.Model.Equals("agnes-2.5-flash", StringComparison.OrdinalIgnoreCase))
-        {
+        if (!route.UseBuiltIn || reasoningEffort != "off")
             return;
-        }
 
-        payload["chat_template_kwargs"] = new Dictionary<string, object>
-        {
-            ["enable_thinking"] = true,
-        };
+        payload["reasoning_effort"] = "none";
     }
 
     private async Task<(StreamReader? Reader, string? Error, CancellationTokenSource? TimeoutCts)> ConnectStreamAsync(
@@ -385,15 +606,30 @@ public class LlmProviderService : ILlmChatService
     {
         try
         {
+            var protocol = NormalizeProtocol(route.Protocol);
+            var endpoint = protocol switch
+            {
+                "anthropic" => $"{route.BaseUrl.TrimEnd('/')}/v1/messages",
+                "responses" => $"{route.BaseUrl.TrimEnd('/')}/responses",
+                _ => $"{route.BaseUrl.TrimEnd('/')}/chat/completions",
+            };
             var client = BuildClient(route.ProxyUrl);
             var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(300));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var request = new HttpRequestMessage(HttpMethod.Post,
-                $"{route.BaseUrl.TrimEnd('/')}/chat/completions");
-            request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            if (protocol == "anthropic")
+            {
+                request.Headers.Add("x-api-key", route.ApiKey);
+                request.Headers.Add("anthropic-version", "2023-06-01");
+            }
+            else
+            {
+                request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            }
+            ApplyOpenCodeSession(request, route.BaseUrl);
             request.Content = content;
 
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);

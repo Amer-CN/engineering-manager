@@ -10,7 +10,7 @@
  * ⌘K 唤起 AgentSearch；会话流逻辑在 useAgentConversationFlow.ts
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
@@ -18,11 +18,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePermission } from '@/hooks/usePermission'
 import { useMascotAppearance } from '@/hooks/useMascotAppearance'
 import { getLlmProviderConfig } from '@/services/agent-client'
+import type { AgentConversation } from '@/types/agent'
 
 import AgentComposer from './AgentComposer'
 import AgentOverlays, { HistorySidebar } from './AgentOverlays'
 import AgentTopBar from './AgentTopBar'
 import AgentStreamTail from './AgentStreamTail'
+import AgentWelcomeHistoryEntry from './AgentWelcomeHistoryEntry'
 import MessageBubble from './MessageBubble'
 import RecoveryCard, { findRecoveryContext } from './RecoveryCard'
 import { getFilteredSuggestions } from './suggestions'
@@ -72,6 +74,7 @@ const AgentDashboard: React.FC = () => {
     handleResend,
     handleSwitchVersion,
     handleForkTo,
+    handleConversationsDeleted: killDeletedStreams,
   } = useAgentConversationFlow({
     inputValue, setInputValue, inputRef,
     model: pickModel, reasoningLevel,
@@ -98,6 +101,18 @@ const AgentDashboard: React.FC = () => {
   const handleForkMessage = (idx: number) => {
     handleForkTo(idx)
   }
+
+  /** 会话删除联动：掐被删会话的后台在途流；删的是当前会话 → 跳相邻幸存会话，删光才回欢迎页 */
+  const handleConversationsDeleted = useCallback(
+    (ids: number[], next: AgentConversation | null) => {
+      killDeletedStreams(ids)
+      if (conversationId != null && ids.includes(conversationId)) {
+        if (next) void handleSelectConversation(next)
+        else handleNewConversation()
+      }
+    },
+    [conversationId, killDeletedStreams, handleSelectConversation, handleNewConversation],
+  )
 
   // ── 自动滚动（用户上滚时暂停跟随）──
   useEffect(() => {
@@ -233,18 +248,7 @@ const AgentDashboard: React.FC = () => {
           </AnimatePresence>
 
           {/* 欢迎形态：历史入口（欢迎态无右栏，桌面也显示；抽屉复用 historyOpen） */}
-          {!chatMode && (
-            <div className="flex items-center justify-end px-6 pt-4 flex-shrink-0">
-              <button
-                onClick={() => setHistoryOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
-              >
-                <Icon name="Inbox" size={14} />
-                对话历史
-              </button>
-            </div>
-          )}
+          {!chatMode && <AgentWelcomeHistoryEntry onOpen={() => setHistoryOpen(true)} />}
 
           {/* 欢迎态主轴（K3 审查改版）：问候语 → 输入框 → 建议，垂直居中一组，
               同一 max-w 网格；球缩进输入框做状态头像（见 Composer 内 mascotSlot）。
@@ -366,7 +370,7 @@ const AgentDashboard: React.FC = () => {
             conversationId={conversationId}
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}
-            onCurrentConversationDeleted={handleNewConversation}
+            onConversationsDeleted={handleConversationsDeleted}
             refreshTrigger={refreshTrigger}
           />
         )}
@@ -376,7 +380,7 @@ const AgentDashboard: React.FC = () => {
         conversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
-        onCurrentConversationDeleted={handleNewConversation}
+        onConversationsDeleted={handleConversationsDeleted}
         refreshTrigger={refreshTrigger}
         historyOpen={historyOpen}
         onHistoryClose={() => setHistoryOpen(false)}

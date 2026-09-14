@@ -2,6 +2,7 @@ using System.Data;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Dapper;
 using EngineeringManager.Api;
 using EngineeringManager.Api.Services;
@@ -699,15 +700,27 @@ public class BgeE2ETestsV2
         return ""; // unreachable
     }
 
-    /// <summary>从 results_06b.json 读取指定 key 的转写文本</summary>
+    /// <summary>从 results_06b.json 读取指定 key 的转写文本。
+    /// key 中的 [已脱敏] 是 051 PII 清洗在测试源留下的占位（本地产物保留真实文件名），
+    /// 精确匹配失败时把它当通配符模糊匹配，要求唯一命中。</summary>
     private static string LoadTranscriptText(string key)
     {
         Assert.True(File.Exists(ArtifactPath), $"STT 产物文件不存在: {ArtifactPath}");
         var json = File.ReadAllText(ArtifactPath);
         var doc = JsonDocument.Parse(json);
-        Assert.True(doc.RootElement.TryGetProperty(key, out var element),
-            $"STT 产物中不包含 key: {key}");
-        return element.GetProperty("text").GetString()!;
+        if (doc.RootElement.TryGetProperty(key, out var element))
+            return element.GetProperty("text").GetString()!;
+        var pattern = "^" + Regex.Escape(key).Replace(Regex.Escape("[已脱敏]"), ".*") + "$";
+        string? matched = null;
+        foreach (var p in doc.RootElement.EnumerateObject())
+        {
+            if (!Regex.IsMatch(p.Name, pattern)) continue;
+            Assert.True(matched == null,
+                $"STT 产物中 key 通配符匹配不唯一: {key}（同时命中 {matched} 与 {p.Name}）");
+            matched = p.Name;
+        }
+        Assert.True(matched != null, $"STT 产物中不包含 key: {key}");
+        return doc.RootElement.GetProperty(matched!).GetProperty("text").GetString()!;
     }
 
     /// <summary>计算 SHA-256 哈希</summary>

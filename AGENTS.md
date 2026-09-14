@@ -58,6 +58,7 @@ npx vite build                                   # dist/ 会被 dotnet build/run
 5. 金额字段一律 `INTEGER`（分），禁止浮点
 6. 组件硬性约束（违反 build 检查失败）：`<PageContainer>` / `<Button>` / `<Card>`、slate-* 不用 gray-*、text-caption/micro 不用任意值字号
 7. 新页面开发 Checklist（8 条）与新增表/字段 Checklist（5 条）→ [docs/CONVENTIONS.md](docs/CONVENTIONS.md)，写页面/建表前逐条确认
+8. **财税零容错区**：改动发票/工资社保/结算/成本台账相关代码前，必读 [docs/finance-knowledge/REDLINES.md](docs/finance-knowledge/REDLINES.md) 与 [CHECKLIST.md](docs/finance-knowledge/CHECKLIST.md) 对应模块清单；口径以 [INDEX.md](docs/finance-knowledge/INDEX.md) 状态表为准，「待复核」条目不得作为实现依据
 
 ## 🔗 深链索引（细则真源）
 
@@ -72,7 +73,8 @@ npx vite build                                   # dist/ 会被 dotnet build/run
 | 数据库表清单 / ER 图 / 字段规范 | [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) |
 | 冒烟测试完整流程 | [docs/SMOKE-TEST.md](docs/SMOKE-TEST.md) |
 | P0 安全修复计划（历史） | [docs/P0-FIX-PLAN.md](docs/P0-FIX-PLAN.md) |
-| 设计系统契约 | [DESIGN.md](DESIGN.md) |
+| 设计系统契约（屏幕） | [DESIGN.md](DESIGN.md) |
+| 报告打印契约（纸面版式真源，改报告版式必读） | [docs/REPORT-PRINT-CONTRACT.md](docs/REPORT-PRINT-CONTRACT.md) |
 | 版本分线（个人版/企业版冻结契约） | [docs/enterprise/FREEZE-CONTRACT.md](docs/enterprise/FREEZE-CONTRACT.md) |
 | 里程碑交接记录 | [docs/handoff/](docs/handoff/) |
 

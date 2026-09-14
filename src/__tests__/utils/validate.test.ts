@@ -9,6 +9,7 @@ import {
   minLength,
   maxLength,
   inRange,
+  validateInvoiceNumber,
 } from '../../utils/validate'
 
 describe('validate.ts', () => {
@@ -215,6 +216,35 @@ describe('validate.ts', () => {
       expect(inRange(10, 1, 10)).toBe(true)  // 边界
       expect(inRange(0, 1, 10)).toBe(false)
       expect(inRange(11, 1, 10)).toBe(false)
+    })
+  })
+
+  // ─── validateInvoiceNumber（数电票 20 位校验，非阻塞提示） ────
+  describe('validateInvoiceNumber', () => {
+    it('20 位纯数字号码应通过（返回 null）', () => {
+      expect(validateInvoiceNumber('12345678901234567890', '')).toBeNull()
+      expect(validateInvoiceNumber('24412000000123456789', '')).toBeNull()
+    })
+
+    it('8 位号码且无发票代码应返回警告文案', () => {
+      const msg = validateInvoiceNumber('12345678', '')
+      expect(msg).not.toBeNull()
+      expect(msg).toContain('20位数字')
+      expect(msg).toContain('发票代码')
+    })
+
+    it('8 位号码但填写了发票代码应通过（旧版票不校验位数）', () => {
+      expect(validateInvoiceNumber('12345678', '044032000111')).toBeNull()
+    })
+
+    it('含非数字字符的 20 位号码应返回警告文案', () => {
+      expect(validateInvoiceNumber('123456789012345678ab', '')).not.toBeNull()
+      expect(validateInvoiceNumber('1234567890123456789a', '')).not.toBeNull()
+    })
+
+    it('号码为空应通过（不提示）', () => {
+      expect(validateInvoiceNumber('', '')).toBeNull()
+      expect(validateInvoiceNumber('   ', '')).toBeNull()
     })
   })
 })

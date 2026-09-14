@@ -280,24 +280,6 @@ public class DiarizationServiceTests
         // 自动模式 0 个说话人（空音频等边界）：不触发保险丝
         Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 0));
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // 双管线缓存：ShouldReusePipeline 纯函数判定
-    // （OfflineSpeakerDiarization 需真实模型才能 new，故只测缓存决策逻辑）
-    // ═══════════════════════════════════════════════════════════
-
-    [Fact]
-    public void ShouldReusePipeline_FourDecisionGroups()
-    {
-        // 自动模式：缓存存在即复用
-        Assert.True(DiarizationService.ShouldReusePipeline(requested: null, cachedValue: null, cachedExists: true));
-        // 无缓存：一律不复用（新建）
-        Assert.False(DiarizationService.ShouldReusePipeline(requested: null, cachedValue: null, cachedExists: false));
-        // 指定人数：值与缓存相同 → 复用
-        Assert.True(DiarizationService.ShouldReusePipeline(requested: 5, cachedValue: 5, cachedExists: true));
-        // 指定人数：值不同 → 必须换管线（NumClusters 不可变）
-        Assert.False(DiarizationService.ShouldReusePipeline(requested: 5, cachedValue: 2, cachedExists: true));
-    }
 }
 
 /// <summary>

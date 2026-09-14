@@ -118,6 +118,10 @@ export interface MarkupLine {
   listContent?: string
   /** 表格块（连续行首 | ≥2 行合并为一行结构；分隔行跳过）。tokens 保留原始行文本，未渲染 table 的调用方不丢内容 */
   table?: MarkupTable
+  /** 标题层级（heading=true 时 = 井号数 1-4；消费方按层级分样式，缺省按既有单一样式处理） */
+  level?: number
+  /** 引用行（仅 parseMarkup opts.blockquote=true 时产出；tokens 为剥除 "> " 前缀后的内容） */
+  quote?: boolean
 }
 
 /** markdown 表格块（与 reportPrintHtml 的 ReportPrintTable 同构） */
@@ -146,10 +150,10 @@ function isSeparatorRow(cells: string[]): boolean {
   return cells.length > 0 && cells.every((c) => /^:?-+:?$/.test(c))
 }
 
-/** 单行 → 行结构（标题 / 列表 / 文本） */
+/** 单行 → 行结构（标题 / 列表 / 文本；标题行带 level = 井号数 1-4） */
 function parseSingleLine(line: string): MarkupLine {
-  const heading = HEADING_RE.test(line)
-  if (heading) return { heading: true, tokens: tokenizeInline(line.replace(HEADING_RE, '')) }
+  const h = HEADING_RE.exec(line)
+  if (h) return { heading: true, level: h[1].length, tokens: tokenizeInline(line.replace(HEADING_RE, '')) }
 
   const ulMatch = UL_RE.exec(line)
   if (ulMatch) return { heading: false, tokens: [], listType: 'ul', listContent: ulMatch[1] }
@@ -171,8 +175,12 @@ function parseTableLine(block: string[]): MarkupLine {
   }
 }
 
-/** 全文 → 行结构（预览渲染用）；连续行首 | 的块（≥2 行）合并为表格行，孤行不成表 */
-export function parseMarkup(text: string): MarkupLine[] {
+/**
+ * 全文 → 行结构（预览渲染用）；连续行首 | 的块（≥2 行）合并为表格行，孤行不成表。
+ * opts.blockquote（缺省 false）：识别 "^> " 引用行为 quote 行（剥前缀、孤行也算）；
+ * 缺省 false 时行为与无参调用逐字符一致（合同预览等既有消费方零变化）。
+ */
+export function parseMarkup(text: string, opts?: { blockquote?: boolean }): MarkupLine[] {
   const lines = (text || '').split('\n')
   const out: MarkupLine[] = []
   let i = 0
@@ -187,6 +195,14 @@ export function parseMarkup(text: string): MarkupLine[] {
       if (block.length >= 2) {
         out.push(parseTableLine(block))
         i = j
+        continue
+      }
+    }
+    if (opts?.blockquote) {
+      const trimmed = lines[i].trim()
+      if (trimmed.startsWith('> ')) {
+        out.push({ heading: false, quote: true, tokens: tokenizeInline(trimmed.slice(2).trim()) })
+        i++
         continue
       }
     }

@@ -53,9 +53,9 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftMaterial, setDraftMaterial] = useState("");
   const [checkOpen, setCheckOpen] = useState(false);
-  // R13 预览态：打印预览弹窗（打开时对当前 markdown 做快照，非实时同步）
+  // R13 预览态：打印预览弹窗（打开时对当前 markdown/HTML 做快照，非实时同步）
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewSnapshot, setPreviewSnapshot] = useState({ markdown: "", title: "" });
+  const [previewSnapshot, setPreviewSnapshot] = useState({ markdown: "", html: "", title: "" });
   // 公文版式皮肤开关（usePaperStyle 封装 localStorage 读写，刷新后自动恢复）
   const [paperGongwen, togglePaperStyle] = usePaperStyle();
   const saveTimer = useRef<number | null>(null);
@@ -78,8 +78,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       Color,
       FontFamily,
       FontSizeMark,
-      TextAlign.configure({ types: ["paragraph"] }),
-      Highlight,
+      TextAlign.configure({ types: ["paragraph", "heading"] }),
+      Highlight.configure({ multicolor: true }),
       ProtectedSpan,
       Table.configure({ resizable: true }),
       TableRow,
@@ -141,9 +141,15 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       if (res.success && res.data) {
         setDoc(res.data);
         setTitle(res.data.title);
-        // contentType: "markdown" 由 @tiptap/markdown 注入（core 的 SetContentOptions 类型未声明，需 as never），
-        // 不传则按 HTML 解析，[[...]] / **...** 等 markdown 语法会变成字面文本
-        editor?.commands.setContent(res.data.contentMd || "", { contentType: "markdown" } as never);
+        // 加载优先 content_html（样式唯一载体，@tiptap/markdown 序列化对 style 静默丢弃）；
+        // 为空（老文档/AI 初稿）回退 markdown 路径，行为与现状一致
+        if (res.data.contentHtml) {
+          editor?.commands.setContent(res.data.contentHtml);
+        } else {
+          // contentType: "markdown" 由 @tiptap/markdown 注入（core 的 SetContentOptions 类型未声明，需 as never），
+          // 不传则按 HTML 解析，[[...]] / **...** 等 markdown 语法会变成字面文本
+          editor?.commands.setContent(res.data.contentMd || "", { contentType: "markdown" } as never);
+        }
         // W3：若存在匹配本文档的起草素材（语音页「生成会议纪要」预填），自动打开起草面板
         try {
           const raw = sessionStorage.getItem("writing:draftMaterial");
@@ -167,7 +173,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     if (!editor) return;
     setSaveState("saving");
     const md = editor.getMarkdown();
-    const res = await updateWritingDoc(docId, { title: title.trim() || "未命名文档", contentMd: md });
+    // 双写：content_md（AI/体检/历史 diff 依赖）+ content_html（样式唯一载体）
+    const res = await updateWritingDoc(docId, { title: title.trim() || "未命名文档", contentMd: md, contentHtml: editor.getHTML() });
     setSaveState(res.success ? "saved" : "idle");
     if (!res.success) showToast(res.error || "保存失败", "error");
   }, [editor, docId, title, showToast]);
@@ -247,7 +254,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
 
   // R15：快照式预览（打开瞬间定格，不实时同步）；顶栏按钮与导出 PDF 项共用
   const openPreview = useCallback(() => {
-    setPreviewSnapshot({ markdown: editor?.getMarkdown() ?? "", title });
+    setPreviewSnapshot({ markdown: editor?.getMarkdown() ?? "", html: editor?.getHTML() ?? "", title });
     setPreviewOpen(true);
   }, [editor, title]);
 
@@ -356,6 +363,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
         markdown={previewSnapshot.markdown}
+        html={previewSnapshot.html}
         title={previewSnapshot.title}
       />
       {/* 版本历史（T2 草稿找回）：入口按钮 + 弹窗在复合组件里；恢复成功复位保存状态 */}

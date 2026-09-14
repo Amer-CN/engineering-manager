@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { useToastContext } from '@/hooks/useToast'
 import { useMask } from '@/contexts/MaskContext'
 import { sttClient, type SttCapability, type SttJobDetail, type SttSegment } from '@/services/stt-client'
 import AudioInputCard from './AudioInputCard'
 import SttJobList from './SttJobList'
+import SttCapabilityCard from './SttCapabilityCard'
 import TranscriptEditor from './TranscriptEditor'
 import TaskDetailView from './TaskDetailView'
 import TranscriptionParams, { type RecordingType } from './TranscriptionParams'
@@ -35,9 +35,27 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [recordingType, setRecordingType] = useState<RecordingType>('single')
   const [numSpeakers, setNumSpeakers] = useState<number>(0) // 0=自动估计，不硬指定人数
   const [hotwords, setHotwords] = useState('')
+  const [engine, setEngine] = useState('qwen3-asr-1.7b-gguf') // 转写引擎：qwen3=GPU 快；MOSS=方言优先 CPU
+  const [audioDurationSec, setAudioDurationSec] = useState<number | null>(null) // 已选音频时长（秒），用于引擎选择引导
 
-  const [creating, setCreating] = useState(false)
-  const [cancelling, setCancelling] = useState(false)
+  // 读取已选音频时长（Audio 元素 metadata，不依赖后端）
+  const probeDuration = useCallback((file: File) => {
+    if (typeof URL === 'undefined' || !URL.createObjectURL) { setAudioDurationSec(null); return }
+    const url = URL.createObjectURL(file)
+    const el = new Audio()
+    el.preload = 'metadata'
+    el.onloadedmetadata = () => {
+      setAudioDurationSec(Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null)
+      URL.revokeObjectURL(url)
+    }
+    el.onerror = () => { setAudioDurationSec(null); URL.revokeObjectURL(url) }
+    el.src = url
+  }, [])
+
+  // 任务操作在途标志（useState 门禁 ≤8：creating + cancelling 聚合为单对象态，行为等价）
+  const [jobOps, setJobOps] = useState<{ creating: boolean; cancelling: boolean }>({ creating: false, cancelling: false })
+  const creating = jobOps.creating
+  const cancelling = jobOps.cancelling
   const [currentJob, setCurrentJob] = useState<SttJobDetail | null>(null)
   const [detailJob, setDetailJob] = useState<SttJobDetail | null>(null) // 详情子页面（仿通义听悟）当前任务
   const [jobLoading, setJobLoading] = useState(false)
@@ -105,6 +123,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   // 清除已选音频
   const handleClearInput = useCallback(() => {
     setSelectedFile(null)
+    setAudioDurationSec(null)
     setUploadedPath(null)
     setUploadProgress(0)
     setAudio(null)
@@ -134,6 +153,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     const objectUrl = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(file) : null
     setAudio(objectUrl)
     setSelectedFile(file)
+    probeDuration(file)
     setUploadedPath(null)
     setUploadProgress(0)
 
@@ -165,7 +185,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       showToast('本地转写不可用', 'error')
       return
     }
-    setCreating(true)
+    setJobOps(s => ({ ...s, creating: true }))
     const isMulti = recordingType !== 'single'
     const ns = recordingType === 'dual' ? 2 : (recordingType === 'multi' ? (numSpeakers >= 2 ? numSpeakers : undefined) : undefined)
     const res = await sttClient.createSttJob({
@@ -173,8 +193,9 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       isMultiSpeaker: isMulti,
       numSpeakers: ns,
       context: hotwords.trim() || undefined,
+      engine,
     })
-    setCreating(false)
+    setJobOps(s => ({ ...s, creating: false }))
     if (res.success && res.data) {
       showToast('转写任务已创建', 'success')
       // 进入任务详情并开始轮询
@@ -191,7 +212,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     } else {
       showToast(res.error || '创建任务失败', 'error')
     }
-  }, [uploadedPath, capability, recordingType, numSpeakers, hotwords, showToast, startPolling])
+  }, [uploadedPath, capability, recordingType, numSpeakers, hotwords, engine, showToast, startPolling])
 
   // 选择已有任务（历史任务无本地音频，清掉播放 URL）
   const handleSelectJob = useCallback(async (jobId: number) => {
@@ -213,9 +234,9 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   // 取消进行中的转写任务
   const handleCancelJob = useCallback(async () => {
     if (!currentJob) return
-    setCancelling(true)
+    setJobOps(s => ({ ...s, cancelling: true }))
     const res = await sttClient.cancelSttJob(currentJob.id)
-    setCancelling(false)
+    setJobOps(s => ({ ...s, cancelling: false }))
     if (res.success) {
       showToast('已取消转写任务', 'success')
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -258,35 +279,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   return (
     <div className="space-y-6">
       {/* 能力检测 */}
-      {capLoading ? (
-        <div className="flex items-center gap-2 text-sm text-[color:var(--muted)]">
-          <Icon name="Loader2" size={16} className="animate-spin" />
-          <span>检测转写能力...</span>
-        </div>
-      ) : !canTranscribe ? (
-        <Card padding="md" className="bg-warning-50 border-warning-200">
-          <div className="flex items-start gap-3">
-            <Icon name="AlertTriangle" size={20} className="text-warning-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-warning-800">语音转写当前不可用</p>
-              <p className="text-xs text-warning-700 mt-1">
-                {capability?.unavailableReason || '需要独立显卡和 ASR 模型'}
-              </p>
-              <p className="text-xs text-warning-600 mt-1">云端转写尚未启用</p>
-            </div>
-          </div>
-        </Card>
-      ) : (
-        <Card padding="sm" className="bg-success-50 border-success-200">
-          <div className="flex items-center gap-2 text-sm">
-            <Icon name="CheckCircle" size={16} className="text-success-500" />
-            <span className="text-success-800 font-medium">Qwen3-ASR-1.7B 本地模型已就绪</span>
-            {!canDiarize && (
-              <Badge variant="warning" size="sm">说话人分离模型未就绪</Badge>
-            )}
-          </div>
-        </Card>
-      )}
+      <SttCapabilityCard capLoading={capLoading} canTranscribe={canTranscribe} canDiarize={canDiarize} capability={capability} />
 
       {/* 上传区域 + 参数 */}
       {canTranscribe && (
@@ -309,6 +302,9 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
             numSpeakers={numSpeakers}
             onNumSpeakersChange={setNumSpeakers}
             hotwords={hotwords}
+            engine={engine}
+            onEngineChange={setEngine}
+            audioDurationSec={audioDurationSec}
             onHotwordsChange={setHotwords}
             creating={creating}
             uploadedPath={uploadedPath}

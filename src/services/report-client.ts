@@ -17,8 +17,8 @@ export interface ReportRequest {
   format?: 'text' | 'chart'
   /** 报告主题：general=综合经营（缺省）；wage=工资专项（工资台账聚合，老板视角工资月报） */
   theme?: 'general' | 'wage'
-  /** 报告用途：review=经营复盘（缺省）；evidence=对外举证（正式凭证措辞）；work=工作汇报（第一人称，后端强制 scope=当前用户） */
-  purpose?: 'review' | 'evidence' | 'work'
+  /** 报告用途：review=经营复盘（缺省）；evidence=对外举证；work=工作汇报（后端强制 scope=当前用户）；weekly=周报速览（前端 R12 模板，后端按通用 review 分支出数据） */
+  purpose?: 'review' | 'evidence' | 'work' | 'weekly'
 }
 
 export interface ReportResponse {
@@ -28,11 +28,13 @@ export interface ReportResponse {
 
 /**
  * 生成报告
+ *
+ * signal：可选中止信号，用户取消生成时由弹窗层传入以中止在途请求
  */
-export function generateReport(request: ReportRequest): Promise<{
+export function generateReport(request: ReportRequest, signal?: AbortSignal): Promise<{
   success: boolean
   data?: ReportResponse
   error?: string
 }> {
-  return apiClient.post<ReportResponse>('/api/reports/generate', request)
+  return apiClient.post<ReportResponse>('/api/reports/generate', request, signal)
 }

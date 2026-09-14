@@ -155,14 +155,14 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
       {/* S24 Stitch: 班组 pill-tabs（动效批 1：滑动胶囊高亮）
           胶囊在按钮下层（z-0，无 z 提升避免盖住文字），按钮背景透明，
           底色全部由胶囊承载——文字永远在胶囊之上，三主题可读。 */}
-      <div className="relative flex items-center gap-2 mb-5 flex-wrap" ref={teamPill.containerRef}>
+      <div className="relative flex items-center gap-2 mb-5 flex-wrap" ref={teamPill.containerRef} onMouseLeave={teamPill.leaveContainer}>
         <span aria-hidden className="pointer-events-none absolute rounded-full"
           style={{ ...teamPill.pillStyle, background: 'var(--accent)' }} />
         <button
           onClick={() => { setFilterTeam(null); setFilterProject(null) }}
           ref={teamPill.registerItem('all')}
           onMouseEnter={() => teamPill.setHovered('all')}
-          onMouseLeave={() => teamPill.setHovered(null)}
+          onMouseLeave={teamPill.leaveItem}
           className={`relative z-10 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             !filterTeam || teamPill.hovered === 'all'
               ? 'text-[color:var(--on-accent)]'
@@ -177,7 +177,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
             onClick={() => { setFilterTeam(t.id); setFilterProject(t.projectId) }}
             ref={teamPill.registerItem(String(t.id))}
             onMouseEnter={() => teamPill.setHovered(String(t.id))}
-            onMouseLeave={() => teamPill.setHovered(null)}
+            onMouseLeave={teamPill.leaveItem}
             className={`relative z-10 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               filterTeam === t.id || teamPill.hovered === String(t.id)
                 ? 'text-[color:var(--on-accent)]'

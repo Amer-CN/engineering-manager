@@ -54,7 +54,8 @@ public class ModelRoutingService : IModelRouter
             UseBuiltIn: config.UseBuiltIn,
             Temperature: config.Temperature > 0 ? config.Temperature : 0.7,
             MaxTokens: config.MaxTokens > 0 ? config.MaxTokens : 4096,
-            ProxyUrl: config.ProxyUrl
+            ProxyUrl: config.ProxyUrl,
+            Protocol: string.IsNullOrEmpty(config.Protocol) ? "chat" : config.Protocol
         );
     }
 }

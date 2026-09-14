@@ -257,10 +257,10 @@ const WritingIndex: React.FC = () => {
             </div>
             <div>
               <h1 className="text-lg font-bold" style={{ color: "var(--fg)" }}>
-                写作中心
+                文秘助手
               </h1>
               <p className="text-xs" style={{ color: "var(--muted)" }}>
-                给素材让 AI 成文，或空白手写；选中文字随时 AI 改写
+                公文起草 · 总结汇报；给素材让 AI 成文，或空白手写
               </p>
             </div>
           </div>

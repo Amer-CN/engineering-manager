@@ -29,6 +29,12 @@ public class AgentToolService
     }
 
     /// <summary>
+    /// 按名称查工具（含 RequiresApproval 标志；resolve 端点与工具循环拦截用）
+    /// </summary>
+    public AgentTool? GetTool(string name) =>
+        _allTools.FirstOrDefault(t => t.Name == name);
+
+    /// <summary>
     /// 根据当前用户权限返回可用工具列表（OpenAI function calling 格式）
     /// </summary>
     public List<object> GetAvailableTools(HttpContext ctx)
@@ -82,6 +88,19 @@ public class AgentToolService
                 ToolCallId = "",
                 Success = false,
                 Error = $"权限不足：需要 {tool.RequiredPermission}",
+            };
+        }
+
+        // RequiresApproval 工具（写操作）不允许经此路径直接执行：
+        // 只能走 AgentEndpoints 的确认卡（approval）流程，resolve 后经 ExecuteApprovedAsync 落地。
+        if (tool.RequiresApproval)
+        {
+            return new ToolCallResult
+            {
+                ToolName = toolName,
+                ToolCallId = "",
+                Success = false,
+                Error = "写操作必须经用户确认后执行（approval 流程），不能直接调用",
             };
         }
 
@@ -612,6 +631,88 @@ public class AgentToolService
     }
 
     // ═══════════════════════════════════════════════════════════
+    // 写工具执行（approval 确认后由 resolve 端点调用；ExecuteToolAsync 永不触达）
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>写工具确认执行结果：成功翻状态与未命中/未变更的发票 ID</summary>
+    public record AgentApprovalExecutionResult(IReadOnlyList<long> UpdatedIds, IReadOnlyList<long> MissingIds);
+
+    /// <summary>
+    /// markInvoicesReceived 执行体 — 薄封装既有 PUT /api/invoices/{id}/status 的行级写入门逻辑：
+    /// 预读行归属 → RowWriteGate.Classify（先全量预检，任何 Denied 直接 403，不做半途执行；
+    /// AllowedViaAuthorization 跨人落 audit，fail-closed 同事务）→ 只翻 status='received'
+    /// （不触碰任何金额列）。权限（invoices:update）由 resolve 端点在调用前校验；
+    /// invoiceIds 从服务端持久化的 tool_calls 原样参数解析，不信任请求 body。
+    /// </summary>
+    public async Task<AgentApprovalExecutionResult> MarkInvoicesReceivedAsync(
+        JsonElement args, HttpContext ctx, IDbConnection db)
+    {
+        var invoiceIds = ParseInvoiceIds(args);
+        if (invoiceIds.Count == 0)
+            throw new InvalidOperationException("参数 invoiceIds 必须为非空整数数组");
+
+        // 第一遍：全量预检行归属（与 ProjectWorkerMiscEndpoints PUT /api/invoices/{id}/status 同一形状），
+        // 任何 Denied 直接拒绝 —— 不产生部分执行。
+        foreach (var id in invoiceIds)
+        {
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM invoices WHERE id=@Id",
+                new { Id = id });
+            if (row == null) continue; // 未命中行在执行遍记入 MissingIds，不阻断其余
+            var access = RowWriteGate.Classify(ctx, db, row.created_by as string, row.project_id as long?);
+            if (access == RowWriteOutcome.Denied)
+                throw new UnauthorizedAccessException("无权修改该发票");
+        }
+
+        // 第二遍：执行（只翻收齐状态，对齐既有 status 端点的 UPDATE 形状，禁止金额列）
+        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        var updatedIds = new List<long>();
+        var missingIds = new List<long>();
+        foreach (var id in invoiceIds)
+        {
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM invoices WHERE id=@Id",
+                new { Id = id });
+            if (row == null) { missingIds.Add(id); continue; }
+
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync(
+                "UPDATE invoices SET status='received', updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { Now = now, Id = id }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "invoices", id, "agent.markInvoicesReceived", createdBy, projectId);
+            }
+            tx.Commit();
+            if (affected > 0) updatedIds.Add(id); else missingIds.Add(id);
+        }
+
+        return new AgentApprovalExecutionResult(updatedIds, missingIds);
+    }
+
+    /// <summary>解析 invoiceIds 参数（整数数组，去重；非法项跳过）</summary>
+    public static List<long> ParseInvoiceIds(JsonElement args)
+    {
+        var ids = new List<long>();
+        if (args.TryGetProperty("invoiceIds", out var prop) && prop.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in prop.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.Number)
+                {
+                    try { ids.Add(item.GetInt64()); } catch { /* 超范围数值跳过 */ }
+                }
+            }
+        }
+        return ids.Distinct().ToList();
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 辅助方法
     // ═══════════════════════════════════════════════════════════
 
@@ -917,6 +1018,25 @@ public class AgentToolService
                 },
             }, new[] { "query" }),
             RequiredPermission = "knowledge:read",
+            PiiFields = Array.Empty<string>(),
+        });
+
+        // 16. markInvoicesReceived（写工具 — 需用户确认后执行）
+        registry.Add(new AgentTool
+        {
+            Name = "markInvoicesReceived",
+            Description = "把指定发票标记为已收齐（invoices.status 置为 received）。属于写操作：调用后不会立即执行，会生成确认卡等待用户点选确认。",
+            Parameters = BuildParams(new Dictionary<string, object>
+            {
+                ["invoiceIds"] = new
+                {
+                    type = "array",
+                    items = new { type = "integer" },
+                    description = "要标记为已收齐的发票 ID 列表（getInvoices / getPendingInvoices 返回的 id）",
+                },
+            }, new[] { "invoiceIds" }),
+            RequiredPermission = "invoices:update",
+            RequiresApproval = true,
             PiiFields = Array.Empty<string>(),
         });
 

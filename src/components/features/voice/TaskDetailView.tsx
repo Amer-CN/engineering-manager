@@ -18,6 +18,7 @@ import { useToastContext } from '@/hooks/useToast'
 import { sttClient, saveSttJob } from '@/services/stt-client'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 import TranscriptEditor from './TranscriptEditor'
+import RailButton from './TaskDetailRailButton'
 import TranscriptNotePanel, { copyTextToClipboard } from './TranscriptNotePanel'
 import SttInsightsCard from './SttInsightsCard'
 import TranscriptSegmentList from './TranscriptSegmentList'
@@ -44,16 +45,6 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-// 左侧竖排操作栏按钮（图标 + 悬浮提示）
-const RailButton: React.FC<{ icon: string; title: string; active?: boolean; onClick: () => void }> = ({ icon, title, active, onClick }) => (
-  <button
-    type="button" title={title} onClick={onClick}
-    className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${active ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg)]'}`}
-  >
-    <Icon name={icon} size={16} />
-  </button>
-)
-
 // 下拉菜单项
 const MenuItem: React.FC<{ icon?: string; label: string; disabled?: boolean; onClick?: () => void }> = ({ icon, label, disabled, onClick }) => (
   <button
@@ -72,7 +63,10 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   const [media, setMedia] = useState<{ url: string | null; duration: number; jobOverride: SttJobDetail | null }>({ url: null, duration: job.durationSec ?? 0, jobOverride: null })
   const curJob = media.jobOverride ?? job // 七期：保存成功后 getSttJob 拉新写 override，覆盖父组件 prop 渲染（不动 TranscriptionWorkspace）
   const { flat, paragraphs } = useMemo(() => {
-    const f = normalizeSegments((curJob.segments ?? []).filter(s => s.speaker > 0)) // 过滤 speaker 0（同 TranscriptEditor）后按行归一化；无有效段落 = 单人纯文本视图
+    // 过滤规则与 TranscriptEditor 一致（base 感知）：0 基数据 speaker 0 是真人放行；1 基历史数据的噪声簇 0 过滤
+    const segs = curJob.segments ?? []
+    const base = detectSpeakerBase(segs)
+    const f = normalizeSegments(segs.filter(s => s.speaker > 0 || (base === 0 && s.speaker === 0)))
     return { flat: f, paragraphs: groupIntoParagraphs(f) } // flat 与 paragraphs 同源（均归一化）：播放扫描索引与段落 segStartIdx 对齐
   }, [curJob.segments])
   const [playState, setPlayState] = useState<{ playing: boolean; time: number }>({ playing: false, time: 0 })

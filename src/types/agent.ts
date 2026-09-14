@@ -14,7 +14,7 @@ export interface AgentChatRequest {
   conversationId?: number
   /** 本次调用覆盖默认模型（空 = 跟随配置） */
   model?: string
-  /** 推理档位 off/low/medium/high（off/空 = 不传） */
+  /** 推理档位 off/medium/high（off 显式传：内置 Agnes 映射为 reasoning_effort:none；空 = 不传） */
   reasoningLevel?: string
 }
 
@@ -104,6 +104,8 @@ export interface ProviderModelEntry {
   id: string
   input: string[]
   output: string[]
+  /** 上下文长度（tokens 数；null/缺失 = 未标注，旧数据自动兼容） */
+  contextWindow?: number | null
 }
 
 /**
@@ -118,6 +120,8 @@ export interface ProviderEntry {
   hasApiKey?: boolean
   models: ProviderModelEntry[]
   activeModelId: string
+  /** 接口协议：chat=Chat Completions（缺省）| responses=OpenAI Responses | anthropic=Anthropic Messages；读取缺省视为 chat */
+  protocol?: 'chat' | 'responses' | 'anthropic'
 }
 
 /** 多服务商配置 — AI 设置的完整状态（整份回传保存） */

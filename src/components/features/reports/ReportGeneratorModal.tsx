@@ -1,11 +1,14 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import ButtonLoader from '@/components/ui/ButtonLoader'
 import { generateReport, type ReportRequest } from '@/services/report-client'
+import { getTemplateId } from '@/utils/reportTemplates/index'
 import ReportResultPanel from './ReportResultPanel'
 import ReportPurposeSection, { type ReportPurpose } from './ReportPurposeSection'
+import { THEME_OPTIONS, FORMAT_OPTIONS, ACTION_OPTIONS, renderPickSection } from './ReportPickSections'
 import { useAuth } from '@/hooks/useAuth'
+import ActiveModelNote from '@/components/features/agent/ActiveModelNote'
 
 interface ReportGeneratorModalProps {
   onClose: () => void
@@ -13,61 +16,8 @@ interface ReportGeneratorModalProps {
 
 type PeriodPreset = 'day' | 'week' | 'month' | 'custom'
 type ScopeType = 'all' | 'project' | 'user'
-type ReportFormat = 'text' | 'chart'
-type ReportTheme = 'general' | 'wage'
-
-/** 报告主题二选一（默认综合经营） */
-const THEME_OPTIONS: { value: ReportTheme; label: string; desc: string }[] = [
-  { value: 'general', label: '综合经营', desc: '操作记录+业务 KPI，全局经营视角' },
-  { value: 'wage', label: '工资专项', desc: '工资总额/项目分布/走势/用工构成，老板视角' },
-]
-
-/** 报告形式二选一（默认文本版，零惊讶） */
-const FORMAT_OPTIONS: { value: ReportFormat; label: string; desc: string }[] = [
-  { value: 'text', label: '文本版', desc: '全文+表格+附图，适合存档细读' },
-  { value: 'chart', label: '图形版', desc: '每节一图+大数字，适合例会投影' },
-]
-
-const ACTION_OPTIONS = [
-  { value: 'create', label: '新增' },
-  { value: 'update', label: '修改' },
-  { value: 'delete', label: '删除' },
-  { value: 'export', label: '导出' },
-  { value: 'import', label: '导入' },
-  { value: 'login', label: '登录' },
-  { value: 'logout', label: '登出' },
-]
-
-/** 「报告主题」「报告形式」共用的二选一卡片节（DOM 与原内联版一致，控制文件行数在铁律上限内） */
-function renderPickSection<T extends string>(
-  title: string, options: { value: T; label: string; desc: string }[], active: T, onPick: (value: T) => void
-) {
-  return (
-    <div>
-      <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--fg-2)' }}>{title}</label>
-      <div className="grid grid-cols-2 gap-2">
-        {options.map((o) => {
-          const isActive = active === o.value
-          return (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => onPick(o.value)}
-              className="rounded-lg border px-3 py-2.5 text-left transition-colors"
-              style={{
-                borderColor: isActive ? 'var(--accent)' : 'var(--border)',
-                background: isActive ? 'var(--accent-soft, var(--bg))' : 'transparent',
-              }}
-            >
-              <div className="text-xs font-bold" style={{ color: isActive ? 'var(--fg)' : 'var(--fg-2)' }}>{o.label}</div>
-              <div className="text-caption mt-1" style={{ color: 'var(--muted)' }}>{o.desc}</div>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+export type ReportFormat = 'text' | 'chart'
+export type ReportTheme = 'general' | 'wage'
 
 /**
  * 报告生成弹窗 — 选周期/范围 → 一键生成 → 富文本预览编辑 → 导出
@@ -86,14 +36,25 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
   const [format, setFormat] = useState<ReportFormat>('text')
   const [theme, setTheme] = useState<ReportTheme>('general')
   const [purpose, setPurpose] = useState<ReportPurpose>('review')
-  // 结果面板的 format 取生成时快照（结果出来后改表单不影响已生成报告的呈现）
+  // 结果面板的 format/template 取生成时快照（结果出来后改表单不影响已生成报告的呈现）
   const [resultFormat, setResultFormat] = useState<ReportFormat>('text')
+  const [resultTemplateId, setResultTemplateId] = useState<string>('r04')
 
   // 生成状态
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [markdown, setMarkdown] = useState('')
   const [timestamp, setTimestamp] = useState('')
+  // 当前在途请求的控制器（用于用户主动取消生成）
+  const abortRef = useRef<AbortController | null>(null)
+
+  // 组件卸载时中止在途请求，避免弹窗关闭后后台继续生成
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+      abortRef.current = null
+    }
+  }, [])
 
   // 构建请求
   const buildRequest = useCallback((): ReportRequest => {
@@ -123,22 +84,38 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
 
   // 生成报告
   const handleGenerate = useCallback(async () => {
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setLoading(true)
     setError(null)
     setMarkdown('')
 
     const request = buildRequest()
-    const result = await generateReport(request)
+    const result = await generateReport(request, controller.signal)
 
+    // 用户已主动取消：丢弃本次结果，不设错误、不设 markdown（弹窗已由 handleCancel 处理状态）
+    if (controller.signal.aborted) return
+
+    abortRef.current = null
     setLoading(false)
     if (result.success && result.data) {
       setMarkdown(result.data.markdown)
       setTimestamp(result.data.timestamp)
       setResultFormat(request.format ?? 'text')
+      setResultTemplateId(getTemplateId(request.purpose ?? 'review', request.theme))
     } else {
       setError(result.error ?? '生成失败，请重试')
     }
   }, [buildRequest])
+
+  // 用户主动取消生成：中止在途请求并回到待生成状态；thenClose 为真时同时关闭弹窗
+  const handleCancel = useCallback((thenClose: boolean) => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
+    if (thenClose) onClose()
+  }, [onClose])
 
   // 构建请求
   const toggleAction = (action: string) => {
@@ -157,11 +134,11 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {/* 背景遮罩 */}
+        {/* 背景遮罩：生成中禁点——误触关闭会丢弃已等待数分钟的生成结果 */}
         <div
           className="absolute inset-0"
-          style={{ background: 'rgba(0,0,0,0.5)' }}
-          onClick={onClose}
+          style={{ background: 'rgba(0,0,0,0.5)', cursor: loading ? 'wait' : 'default' }}
+          onClick={loading ? undefined : onClose}
         />
 
         {/* 弹窗 */}
@@ -192,8 +169,10 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
                 </span>
               )}
             </div>
+            {/* 生成中点 X = 取消生成并关闭（中止在途请求）；非生成中直接关闭 */}
             <button
-              onClick={onClose}
+              onClick={loading ? () => handleCancel(true) : onClose}
+              aria-label={loading ? '取消生成并关闭' : '关闭'}
               className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
               style={{ color: 'var(--muted)' }}
               onMouseEnter={(e) => {
@@ -368,26 +347,40 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
               </div>
             )}
 
-            {/* ── 生成按钮 ── */}
-            <button
-              onClick={handleGenerate}
-              disabled={loading}
-              className="w-full py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
-            >
-              {loading ? (
-                <ButtonLoader loading={true} loadingText="正在生成...">生成报告</ButtonLoader>
-              ) : (
-                <>
-                  <Icon name="Sparkles" size={16} />
-                  生成报告
-                </>
+            {/* ── 生成按钮（生成中旁附「取消生成」：中止请求并回到待生成状态，不关窗） ── */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="w-full py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+              >
+                {loading ? (
+                  <ButtonLoader loading={true} loadingText="正在生成...">生成报告</ButtonLoader>
+                ) : (
+                  <>
+                    <Icon name="Sparkles" size={16} />
+                    生成报告
+                  </>
+                )}
+              </button>
+              {loading && (
+                <button
+                  onClick={() => handleCancel(false)}
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium border transition-opacity hover:opacity-80"
+                  style={{ borderColor: 'var(--border)', color: 'var(--fg-2)' }}
+                >
+                  取消生成
+                </button>
               )}
-            </button>
+            </div>
+
+            {/* ── 当前生效模型 ── */}
+            <ActiveModelNote />
 
             {/* ── 生成结果 ── */}
             {hasResult && (
-              <ReportResultPanel markdown={markdown} onUpdateMarkdown={setMarkdown} format={resultFormat} />
+              <ReportResultPanel markdown={markdown} onUpdateMarkdown={setMarkdown} format={resultFormat} templateId={resultTemplateId} />
             )}
           </div>
         </motion.div>

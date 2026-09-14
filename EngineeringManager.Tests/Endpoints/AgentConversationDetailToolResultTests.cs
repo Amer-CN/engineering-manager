@@ -31,7 +31,8 @@ public class AgentConversationDetailToolResultTests
     {
         var conn = new SqliteConnection("Data Source=:memory:");
         conn.Open();
-        // 表结构对齐 Migrations/Scripts/027_AddAgentTables.sql（detail 查询涉及的列）
+        // 表结构对齐 Migrations/Scripts/027_AddAgentTables.sql（detail 查询涉及的列）；
+        // 051_AddAgentApprovalColumn.sql 增加可空 approval 列（detail 查询同样涉及）
         conn.Execute(@"
             CREATE TABLE agent_conversations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,6 +50,7 @@ public class AgentConversationDetailToolResultTests
                 tool_calls TEXT,
                 tool_call_id TEXT,
                 name TEXT,
+                approval TEXT,
                 created_at TEXT NOT NULL
             );
         ");

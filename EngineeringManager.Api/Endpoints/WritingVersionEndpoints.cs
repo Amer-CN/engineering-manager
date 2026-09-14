@@ -12,7 +12,7 @@ namespace EngineeringManager.Api;
 /// - GET  /api/writing/documents/{id}/versions                     版本列表（分页 size≤50，created_at DESC）
 /// - POST /api/writing/documents/{id}/versions/{versionId}/restore 回滚（先快照当前，再 UPDATE）
 ///
-/// 快照语义：PUT documents 保存且 ContentMd 非空时，更新前把库里旧 title/content_md
+/// 快照语义：PUT documents 保存且 ContentMd 非空时，更新前把库里旧 title/content_md/content_html
 /// 留档（WritingEndpoints PUT 调用本文件 ShouldSnapshot/InsertSnapshotAsync）；
 /// 5min 节流防 2s 防抖自动保存刷爆表（距上一条快照 <5min 跳过，不看内容 diff，
 /// 简单可预期）；每文档保留最近 50 条，超出删最旧（同事务）。
@@ -61,7 +61,7 @@ public static class WritingVersionEndpoints
                 var total = db.ExecuteScalar<int>(
                     "SELECT COUNT(*) FROM writing_document_versions WHERE document_id = @Id", new { Id = id });
 
-                var items = db.Query($@"SELECT v.id, v.title, v.content_md, v.created_by, v.created_at,
+                var items = db.Query($@"SELECT v.id, v.title, v.content_md, v.content_html, v.created_by, v.created_at,
                                                COALESCE(NULLIF(u.display_name, ''), v.created_by) AS created_by_name
                                        FROM writing_document_versions v
                                        LEFT JOIN users u ON u.id = v.created_by
@@ -83,6 +83,7 @@ public static class WritingVersionEndpoints
                             id = (long)r.id,
                             r.title,
                             contentMd = r.content_md,
+                            contentHtml = r.content_html,
                             createdBy = r.created_by_name,
                             createdAt = r.created_at,
                         }),
@@ -120,32 +121,33 @@ public static class WritingVersionEndpoints
                     return Common.NotFound("文档不存在或无权操作");
 
                 var version = db.QueryFirstOrDefault<dynamic>(@"
-                    SELECT id, title, content_md FROM writing_document_versions
+                    SELECT id, title, content_md, content_html FROM writing_document_versions
                     WHERE id = @VersionId AND document_id = @Id",
                     new { VersionId = versionId, Id = id });
                 if (version is null)
                     return Common.NotFound("版本不存在");
 
                 var current = db.QueryFirstOrDefault<dynamic>(
-                    "SELECT title, content_md FROM writing_documents WHERE id = @Id", new { Id = id });
+                    "SELECT title, content_md, content_html FROM writing_documents WHERE id = @Id", new { Id = id });
                 if (current is null)
                     return Common.NotFound("文档不存在或无权操作");
                 var now = Common.NowString();
 
                 using var tx = db.BeginTransaction();
                 // 回滚是显式操作：当前内容必留档（不走 5min 节流），再写回版本值；同事务失败一起回滚
-                await InsertSnapshotAsync(db, tx, id, (string)current.title, (string)current.content_md, uid, now);
+                await InsertSnapshotAsync(db, tx, id, (string)current.title, (string)current.content_md,
+                    (string)current.content_html, uid, now);
                 await db.ExecuteAsync(@"
-                    UPDATE writing_documents SET title = @Title, content_md = @Content, updated_at = @Now
+                    UPDATE writing_documents SET title = @Title, content_md = @Content, content_html = @ContentHtml, updated_at = @Now
                     WHERE id = @Id",
-                    new { Title = (string)version.title, Content = (string)version.content_md, Now = now, Id = id },
+                    new { Title = (string)version.title, Content = (string)version.content_md, ContentHtml = (string)version.content_html, Now = now, Id = id },
                     transaction: tx);
                 tx.Commit();
 
                 await WriteAuditAsync(db, ctx, uid, "update", "writing_documents", id,
                     JsonSerializer.Serialize(new { @event = "restore_version", versionId }));
 
-                return Common.Ok(new { title = (string)version.title, contentMd = (string)version.content_md });
+                return Common.Ok(new { title = (string)version.title, contentMd = (string)version.content_md, contentHtml = (string)version.content_html });
             }
             catch (Exception ex)
             {
@@ -177,12 +179,12 @@ public static class WritingVersionEndpoints
     /// 须与文档 UPDATE 同事务调用（失败一起回滚）。
     /// </summary>
     internal static async Task InsertSnapshotAsync(
-        IDbConnection db, IDbTransaction tx, long documentId, string title, string contentMd, string uid, string now)
+        IDbConnection db, IDbTransaction tx, long documentId, string title, string contentMd, string contentHtml, string uid, string now)
     {
         await db.ExecuteAsync(@"INSERT INTO writing_document_versions
-            (document_id, title, content_md, created_by, created_at)
-            VALUES (@DocumentId, @Title, @Content, @Uid, @Now)",
-            new { DocumentId = documentId, Title = title, Content = contentMd, Uid = uid, Now = now },
+            (document_id, title, content_md, content_html, created_by, created_at)
+            VALUES (@DocumentId, @Title, @Content, @ContentHtml, @Uid, @Now)",
+            new { DocumentId = documentId, Title = title, Content = contentMd, ContentHtml = contentHtml, Uid = uid, Now = now },
             transaction: tx);
 
         // 上限裁剪：保留最近 50 条（按插入序 id 倒序，created_at 秒级粒度会撞同秒，id 才稳定）

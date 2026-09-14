@@ -86,12 +86,13 @@ async function get<T>(path: string, params?: Record<string, unknown>): Promise<A
 /**
  * POST 请求
  */
-async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+async function post<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<ApiResponse<T>> {
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: body ? JSON.stringify(body) : undefined,
+      signal,
     });
     if (resp.status === 401) setToken(null);
     if (!resp.ok) {
@@ -104,6 +105,11 @@ async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     const raw = await resp.json();
     return convertKeysToCamelCase(raw);
   } catch (err) {
+    // 用户主动取消（AbortController.abort()）不是故障：静默返回，不进 console.error
+    // （console.error 会被 crash 模块拦截进反馈传真，FX-001 实证），也不显示为错误。
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { success: false, error: 'aborted' };
+    }
     console.error(`[API] POST ${path} 失败:`, err);
     return { success: false, error: String(err) };
   }

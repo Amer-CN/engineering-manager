@@ -243,8 +243,8 @@ public static class WritingEndpoints
 
                 var now = Common.NowString();
                 var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO writing_documents
-                    (title, doc_type, style_id, content_md, project_id, source_type, source_ref, created_by, created_at, updated_at)
-                    VALUES (@Title, @DocType, @StyleId, @Content, @ProjectId, @SourceType, @SourceRef, @Uid, @Now, @Now);
+                    (title, doc_type, style_id, content_md, content_html, project_id, source_type, source_ref, created_by, created_at, updated_at)
+                    VALUES (@Title, @DocType, @StyleId, @Content, @ContentHtml, @ProjectId, @SourceType, @SourceRef, @Uid, @Now, @Now);
                     SELECT last_insert_rowid();",
                     new
                     {
@@ -252,6 +252,7 @@ public static class WritingEndpoints
                         DocType = docType ?? "",
                         StyleId = styleId,
                         Content = dto.ContentMd ?? "",
+                        ContentHtml = "",
                         ProjectId = dto.ProjectId,
                         SourceType = sourceType,
                         SourceRef = Common.Sanitize(dto.SourceRef ?? ""),
@@ -284,7 +285,7 @@ public static class WritingEndpoints
             try
             {
                 var row = db.QueryFirstOrDefault<dynamic>(@"
-                    SELECT id, title, doc_type, style_id, content_md, project_id, source_type, source_ref,
+                    SELECT id, title, doc_type, style_id, content_md, content_html, project_id, source_type, source_ref,
                            created_by, created_at, updated_at
                     FROM writing_documents
                     WHERE id = @Id AND deleted_at IS NULL
@@ -303,6 +304,7 @@ public static class WritingEndpoints
                         docType = row.doc_type,
                         styleId = row.style_id,
                         contentMd = row.content_md,
+                        contentHtml = row.content_html,
                         projectId = row.project_id,
                         sourceType = row.source_type,
                         sourceRef = row.source_ref,
@@ -320,7 +322,7 @@ public static class WritingEndpoints
 
         // ─────────────────────────────────────────────────────────
         // PUT /api/writing/documents/{id} — 更新文档
-        // 白名单：title / contentMd / projectId；其余字段一律忽略
+        // 白名单：title / contentMd / contentHtml / projectId；其余字段一律忽略
         // ─────────────────────────────────────────────────────────
         app.MapPut("/api/writing/documents/{id}", async (
             HttpContext ctx,
@@ -341,9 +343,9 @@ public static class WritingEndpoints
                 if (!owned)
                     return Common.NotFound("文档不存在或无权操作");
 
-                // R9 空 PUT 不假更新：全字段空（Title 空白 且 ContentMd null 且 ProjectId null）
+                // R9 空 PUT 不假更新：全字段空（Title 空白 且 ContentMd null 且 ContentHtml null 且 ProjectId null）
                 // 直接成功返回，不 UPDATE、不 bump updated_at、不写审计
-                if (string.IsNullOrWhiteSpace(dto.Title) && dto.ContentMd is null && !dto.ProjectId.HasValue)
+                if (string.IsNullOrWhiteSpace(dto.Title) && dto.ContentMd is null && dto.ContentHtml is null && !dto.ProjectId.HasValue)
                     return Common.Ok();
 
                 var sets = new List<string> { "[updated_at] = @Now" };
@@ -364,6 +366,11 @@ public static class WritingEndpoints
                     sets.Add("[content_md] = @Content");
                     p.Add("Content", dto.ContentMd);
                 }
+                if (dto.ContentHtml is not null)
+                {
+                    sets.Add("[content_html] = @ContentHtml");
+                    p.Add("ContentHtml", dto.ContentHtml);
+                }
                 if (dto.ProjectId.HasValue)
                 {
                     if (!KnowledgeBaseService.CanAccessProject(db, dto.ProjectId.Value, uid, isAdmin))
@@ -379,11 +386,11 @@ public static class WritingEndpoints
                     if (dto.ContentMd is not null)
                     {
                         var current = await db.QueryFirstOrDefaultAsync<dynamic>(
-                            "SELECT title, content_md FROM writing_documents WHERE id = @Id",
+                            "SELECT title, content_md, content_html FROM writing_documents WHERE id = @Id",
                             new { Id = id }, transaction: tx);
                         if (current is not null && ShouldSnapshot(db, id))
                             await WritingVersionEndpoints.InsertSnapshotAsync(db, tx, id,
-                                (string)current.title, (string)current.content_md, uid, Common.NowString());
+                                (string)current.title, (string)current.content_md, (string)current.content_html, uid, Common.NowString());
                     }
 
                     await db.ExecuteAsync(
@@ -637,6 +644,7 @@ public sealed record WritingCreateDto(
 public sealed record WritingUpdateDto(
     string? Title,
     string? ContentMd,
+    string? ContentHtml,
     int? ProjectId);
 
 /// <summary>量化风格体检请求（POST /api/writing/style-check）</summary>

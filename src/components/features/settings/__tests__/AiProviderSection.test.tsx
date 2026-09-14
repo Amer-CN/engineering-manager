@@ -1,11 +1,8 @@
-/**
- * AiProviderSection.test.tsx — AI 助手设置（多服务商管理）测试
- */
+/** AiProviderSection.test.tsx — AI 助手设置（多服务商管理）测试 */
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 
-// ── Mock agent-client ──
 const mockGetLlmProviderConfig = vi.hoisted(() => vi.fn())
 const mockSaveLlmProviderConfig = vi.hoisted(() => vi.fn())
 const mockTestLlmProviderConnection = vi.hoisted(() => vi.fn())
@@ -18,7 +15,6 @@ vi.mock('@/services/agent-client', () => ({
   reloadLlmProviderConfig: mockReloadLlmProviderConfig,
 }))
 
-// ── Mock toast store ──
 const mockToast = vi.hoisted(() => ({
   showToast: vi.fn(),
 }))
@@ -31,11 +27,11 @@ import { AiProviderSection } from '../AiProviderSection'
 const emptyConfig = {
   providerName: 'Agnes',
   baseUrl: 'https://apihub.agnes-ai.com/v1',
-  model: 'agnes-2.5-flash',
+  model: 'agnes-3.0-flash',
   useBuiltIn: true,
   temperature: 0.7,
   maxTokens: 4096,
-  availableModels: ['agnes-2.5-flash'],
+  availableModels: ['agnes-3.0-flash'],
   modelCapabilities: {},
   hasApiKey: false,
   activeProviderId: null,
@@ -61,7 +57,6 @@ const oneProviderConfig = {
   activeProviderId: 'p_1',
   providers: [deepseekProvider],
 }
-
 
 describe('AiProviderSection（多服务商管理）', () => {
   beforeEach(() => {
@@ -142,6 +137,10 @@ describe('AiProviderSection（多服务商管理）', () => {
     mockGetLlmProviderConfig.mockResolvedValue(oneProviderConfig)
     render(<AiProviderSection />)
 
+    // 模型列表已挪进服务商子页：先点名称进 detail
+    await waitFor(() => expect(screen.getByText('DeepSeek')).toBeTruthy())
+    fireEvent.click(screen.getByTitle('进入服务商管理'))
+
     // 既有模型带「图」徽章
     await waitFor(() => expect(screen.getByText('deepseek-vl')).toBeTruthy())
     expect(screen.getByTitle('支持图片输入')).toBeTruthy()
@@ -166,6 +165,8 @@ describe('AiProviderSection（多服务商管理）', () => {
     mockGetLlmProviderConfig.mockResolvedValue(oneProviderConfig)
     render(<AiProviderSection />)
 
+    await waitFor(() => expect(screen.getByText('DeepSeek')).toBeTruthy())
+    fireEvent.click(screen.getByTitle('进入服务商管理'))
     await waitFor(() => expect(screen.getByText('添加模型')).toBeTruthy())
     fireEvent.click(screen.getByText('添加模型'))
     await waitFor(() => expect(screen.getByText('模型 ID')).toBeTruthy())
@@ -213,6 +214,12 @@ describe('AiProviderSection（多服务商管理）', () => {
     await waitFor(() => expect(screen.getByText('智谱')).toBeTruthy())
     // 切换启用智谱（自动保存）
     fireEvent.click(screen.getByText('启用'))
+    // 模型列表已挪进服务商子页：按名称找到智谱的「管理」按钮进 detail
+    await waitFor(() => expect(screen.getByText('智谱')).toBeTruthy())
+    const manageBtn = screen.getAllByTitle('进入服务商管理')
+      .find(b => (b as HTMLElement).textContent?.includes('智谱'))!
+    fireEvent.click(manageBtn)
+
     await waitFor(() => expect(screen.getByText('glm-5.3')).toBeTruthy())
     // 等本次自动保存结束（保存中按钮 disabled；成功弹 success Toast）
     await waitFor(() => expect(mockToast.showToast).toHaveBeenCalledWith('AI 设置已保存', 'success'))
@@ -298,6 +305,9 @@ describe('AiProviderSection（多服务商管理）', () => {
   test('界面无「保存」主按钮；弹窗内「保存模型」保留；显示「改动自动保存」', async () => {
     mockGetLlmProviderConfig.mockResolvedValue(oneProviderConfig)
     render(<AiProviderSection />)
+    // 模型列表已挪进服务商子页：先进 detail 再验证自动保存态
+    await waitFor(() => expect(screen.getByText('DeepSeek')).toBeTruthy())
+    fireEvent.click(screen.getByTitle('进入服务商管理'))
     await waitFor(() => expect(screen.getByText('deepseek-chat')).toBeTruthy())
 
     expect(screen.queryByRole('button', { name: '保存' })).toBeNull()

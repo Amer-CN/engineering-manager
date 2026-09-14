@@ -144,7 +144,7 @@ export function ReportCharts() {
     >
       <div className="flex items-center gap-2 mb-3">
         <Icon name="BarChart3" size={14} className="text-[color:var(--muted)]" />
-        <h3 className="text-sm font-semibold text-[color:var(--fg-2)]">报告附图 · 数据快照</h3>
+        <h3 className="text-sm font-semibold text-[color:var(--fg-2)]">报告附图</h3>
       </div>
       {/* 上下堆叠（原 lg 并排时图例被卡片右缘截断）：两卡全幅，图例/类目名完整显示 */}
       <div className="grid grid-cols-1 gap-4">
@@ -181,9 +181,10 @@ export function ReportCharts() {
         >
           {data.expenseTop.length > 0 ? (
             /* 编辑风横向条形（与打印生成器 buildTopBarsSvg 同口径）：降序传入 + 条尾 ¥ 金额。
-               色逐条随数据取 Palm SER（与方阵同系统）；组件默认仅首条显色
-               （上批裁定：不传 accentFirst），其余条为中性墨阶。 */
+               matchPrint：色逐条随数据取 Palm SER（与方阵同系统），与打印 buildTopBarsSvg
+               逐条上色/无轨道/数值贴条尾同观感。 */
             <EditorialBars
+              matchPrint
               data={data.expenseTop.map((d, i) => ({
                 name: d.name,
                 value: d.amount,
