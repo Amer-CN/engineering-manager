@@ -37,7 +37,7 @@ public class AgentToolSqlColumnTests
                 type TEXT, sub_type TEXT, status TEXT, settlement_no TEXT, name TEXT, amount REAL,
                 settlement_date TEXT, period_start TEXT, period_end TEXT,
                 submitted_by TEXT, submitted_at TEXT, approved_by TEXT, approved_at TEXT, paid_at TEXT,
-                remarks TEXT, created_at TEXT, created_by TEXT);
+                remarks TEXT, created_at TEXT, created_by TEXT, deleted_at TEXT);
             CREATE TABLE members (
                 id INTEGER PRIMARY KEY, name TEXT, phone TEXT, email TEXT, member_type TEXT, role TEXT,
                 status TEXT, id_card TEXT, wage_bank_account TEXT,
