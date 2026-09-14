@@ -1,4 +1,4 @@
--- 050_AddMissingIndexes.sql
+-- 052_AddMissingIndexes.sql
 -- 对应审计编号：D-08 / D-09 / D-10（2026-09-04 深度审计——高频查询列缺索引）
 -- 全部 CREATE INDEX IF NOT EXISTS，可重复执行；表名 [] 包裹（项目红线）
 
