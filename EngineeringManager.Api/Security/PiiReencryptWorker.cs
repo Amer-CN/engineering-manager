@@ -49,9 +49,12 @@ public class PiiReencryptWorker
 
     public Task StartAsync(IDbConnection db, string triggeredBy)
     {
-        var status = db.QueryFirstOrDefault<dynamic>("SELECT status FROM pii_reencrypt_status WHERE id=1");
-        var currentStatus = status?.status as string;
-        if (currentStatus == "running")
+        // F3(审计): 原子占位取代 check-then-act——两个并发触发请求只有一个能把状态置为 running；
+        // 上次崩溃遗留的 running 由启动复位兜底（Program.cs 启动时 running→interrupted），不再永久锁死
+        var claimed = db.Execute(
+            "UPDATE pii_reencrypt_status SET status='running', updated_at=@Now WHERE id=1 AND status<>'running'",
+            new { Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
+        if (claimed == 0)
             throw new InvalidOperationException("PII re-encrypt 已在运行中");
 
         return Task.Run(() => RunInternalAsync(db, triggeredBy));

@@ -106,7 +106,9 @@ echo    OK
 :: 7. Commit, tag, push, create GitHub Release
 echo.
 echo [7/7] Committing and pushing...
-git add -A
+:: #5(审计): 不用 git add -A —— 工作区可能残留 373MB 未跟踪 exe，-A 会吞进提交导致 push 必败；
+:: 只加发布产物清单（step1 sync-version 改版本引用，step6 make-manifest 改 manifest）
+git add update/manifest.json CHANGELOG.md src/constants/changelog.ts package.json package-lock.json
 git commit -m "release: v%VERSION%"
 git tag v%VERSION%
 git push origin master --tags

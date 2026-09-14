@@ -21,7 +21,7 @@ public static class ProjectWorkerMiscEndpoints
             {
                 await db.ExecuteAsync(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at, last_modified_at, contract_signer,contract_start,contract_end,safety_training,work_section,exit_date)
 VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,'active',@CreatedBy,@Now, @Now, @ContractSigner,@ContractStart,@ContractEnd,@SafetyTraining,@WorkSection,@ExitDate)",
-                    new { dto.WorkerId, dto.ProjectId, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, CreatedBy = uid, Now = Common.NowString(),
+                    new { dto.WorkerId, dto.ProjectId, dto.TeamId, DailyWage = MoneyUnit.ToFen(dto.DailyWage), dto.WorkerType, dto.EntryDate, CreatedBy = uid, Now = Common.NowString(),
                           dto.ContractSigner, dto.ContractStart, dto.ContractEnd,
                           SafetyTraining = dto.SafetyTraining == true ? 1 : 0,
                           dto.WorkSection, dto.ExitDate,
@@ -55,13 +55,13 @@ VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,'active',
 
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故无 409 档、WHERE 只留 id
             // （列集照原样：team_id/daily_wage/worker_type/entry_date/status + version+1/last_modified_at；
-            //  daily_wage 沿用工资域惯例「分」，原样直传不换算；补传 Now——见上注）
+            //  daily_wage 2026-09 分制契约：API 元 → MoneyUnit.ToFen 转分落库；补传 Now——见上注）
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status,
 contract_signer=COALESCE(@ContractSigner, contract_signer),contract_start=COALESCE(@ContractStart, contract_start),contract_end=COALESCE(@ContractEnd, contract_end),
 safety_training=COALESCE(@SafetyTraining, safety_training),work_section=COALESCE(@WorkSection, work_section),exit_date=COALESCE(@ExitDate, exit_date),
  version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { dto.Id, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, dto.Status, Now = Common.NowString(),
+                new { dto.Id, dto.TeamId, DailyWage = MoneyUnit.ToFen(dto.DailyWage), dto.WorkerType, dto.EntryDate, dto.Status, Now = Common.NowString(),
                 dto.ContractSigner, dto.ContractStart, dto.ContractEnd,
                 SafetyTraining = dto.SafetyTraining.HasValue ? (int?)(dto.SafetyTraining.Value ? 1 : 0) : (int?)null,
                 dto.WorkSection, dto.ExitDate,

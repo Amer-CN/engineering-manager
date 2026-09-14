@@ -5,6 +5,20 @@
  */
 
 import { useState } from 'react'
+
+/** 删除确认目标（主文件与弹窗共用） */
+export type DelTarget =
+  | { kind: 'provider'; id: string; label: string }
+  | { kind: 'model'; providerId: string; modelId: string; label: string }
+
+/** 当前生效徽章 */
+export function ActiveBadge() {
+  return (
+    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-accent-soft text-primary">
+      当前生效
+    </span>
+  )
+}
 import { Icon } from '@/components/ui/Icon'
 import { Button } from '../../ui/Button'
 import { Drawer } from '../../ui/Drawer'

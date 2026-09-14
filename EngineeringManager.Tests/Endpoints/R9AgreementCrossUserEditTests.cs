@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
+using EngineeringManager.Api;
 
 namespace EngineeringManager.Tests.Endpoints;
 
@@ -151,7 +152,7 @@ public class R9AgreementCrossUserEditTests : ApiTestBase
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var row = QueryAgreement(agrId)!;
         Assert.Equal("新协议", (string)row.name);
-        Assert.Equal(2000.0, (double)row.amount);
+        Assert.Equal(MoneyUnit.ToFen(2000.0), (double)row.amount);
         // 且 audit_logs 增一行（cross_user_edit、resource=agreement_contracts、resource_id=该行、user_id=B）
         Assert.Equal(1L, CountAuditForAgreement(agrId, AgrUid));
     }
@@ -184,7 +185,7 @@ public class R9AgreementCrossUserEditTests : ApiTestBase
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var row = QueryAgreement(agrId)!;
         Assert.Equal("新协议", (string)row.name);   // 库值改写
-        Assert.Equal(2000.0, (double)row.amount);
+        Assert.Equal(MoneyUnit.ToFen(2000.0), (double)row.amount);
         Assert.Equal(0L, CountAuditForAgreement(agrId, AgrUid)); // 本人修改不落审计
     }
 
@@ -199,7 +200,7 @@ public class R9AgreementCrossUserEditTests : ApiTestBase
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var row = QueryAgreement(agrId)!;
         Assert.Equal("新协议", (string)row.name);
-        Assert.Equal(2000.0, (double)row.amount);
+        Assert.Equal(MoneyUnit.ToFen(2000.0), (double)row.amount);
     }
 
     // ── Pin4：B + 双种子 PUT 不存在的 id → 404（WriteResult 语义钉住，不要预期 403）──

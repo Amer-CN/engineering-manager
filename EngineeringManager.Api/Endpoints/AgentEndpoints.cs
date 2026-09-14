@@ -26,6 +26,7 @@ public static class AgentEndpoints
 
         app.MapPost("/api/agent/chat", async (
             HttpContext ctx,
+            CancellationToken ct,
             IDbConnection db,
             AgentChatRequest request,
             ILlmChatService llm,
@@ -85,8 +86,11 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
+                    // F5(审计): 透传 RequestAborted——客户端断开后 LLM 轮次/工具执行/落库立即停止，
+                    // 不再把用户已放弃的中间消息写进会话、白烧 LLM token
+                    ct.ThrowIfCancellationRequested();
                     var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
-                        request.ReasoningLevel);
+                        request.ReasoningLevel, ct);
 
                     if (response == null)
                     {
@@ -217,6 +221,7 @@ public static class AgentEndpoints
 
         app.MapPost("/api/agent/chat/stream", async (
             HttpContext ctx,
+            CancellationToken ct,
             IDbConnection db,
             AgentChatRequest request,
             ILlmChatService llm,
@@ -232,7 +237,6 @@ public static class AgentEndpoints
             }
 
             // 客户端断开令牌：透传到 LLM 调用与 SSE 写出（断开即停生成，半截回复仍落库）
-            var ct = ctx.RequestAborted;
 
             // 设置 SSE 响应头
             ctx.Response.ContentType = "text/event-stream";
@@ -295,6 +299,8 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
+                    // F5(审计): 透传 RequestAborted，断连即停（同 /api/agent/chat）
+                    ct.ThrowIfCancellationRequested();
                     var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
                         request.ReasoningLevel, ct);
 

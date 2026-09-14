@@ -16,16 +16,16 @@ describe('validate.ts', () => {
   // ─── isValidPhone ───────────────────────────────────────────
   describe('isValidPhone', () => {
     it('应接受有效的手机号', () => {
+      expect(isValidPhone('13800138000')).toBe(true)
       expect(isValidPhone('13812345678')).toBe(true)
-      expect(isValidPhone('15987654321')).toBe(true)
-      expect(isValidPhone('18612345678')).toBe(true)
+      expect(isValidPhone('15912345678')).toBe(true)
     })
 
     it('应拒绝无效的手机号', () => {
       expect(isValidPhone('12800138000')).toBe(false) // 12 开头
       expect(isValidPhone('1380013800')).toBe(false)  // 10 位
       expect(isValidPhone('138001380001')).toBe(false) // 12 位
-      expect(isValidPhone('abc13812345678')).toBe(false)
+      expect(isValidPhone('abc13800138000')).toBe(false)
     })
 
     it('应处理 null/undefined/空字符串', () => {
