@@ -184,7 +184,7 @@ public class MossTranscribeEngine : ISttEngine
             }
             finally
             {
-                try { Directory.Delete(tempDir, true); } catch { /* 临时目录清理失败不致命 */ }
+                try { Directory.Delete(tempDir, true); } catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] MOSS 临时目录清理失败（不致命）: {Common.Sanitize(ex.Message)}"); }
             }
         }
 
@@ -249,6 +249,7 @@ public class MossTranscribeEngine : ISttEngine
                 }
                 catch (Exception ex) when (useVk && ShouldFallbackToCpu(ex, ct))
                 {
+                    Console.Error.WriteLine($"[SttEngine] MOSS Vulkan 失败，回退 CPU 版: {Common.Sanitize(ex.Message)}");
                     // Vulkan 起不来（驱动/DLL 问题）或非零退出 → 兜底回退 CPU 版
                     // （热词路径不走 Vulkan：基线 vk 版无 --hotwords，useVk 恒 false，此 catch 不触发）
                     Console.WriteLine($"[MossTranscribeEngine] Vulkan 版失败（{ex.Message}），回退 CPU 版重试");
@@ -308,7 +309,7 @@ public class MossTranscribeEngine : ISttEngine
                             KillProcessTree(process);
                         }
                     }
-                    catch { /* 保险丝检查自身异常不致命 */ }
+                    catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] MOSS 保险丝检查自身异常（不致命）: {Common.Sanitize(ex.Message)}"); }
                 }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
 
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -516,7 +517,7 @@ public class MossTranscribeEngine : ISttEngine
                 return link;
             }
         }
-        catch { /* junction 失败回退原路径 */ }
+        catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] MOSS %TEMP% junction 创建失败，回退原路径: {Common.Sanitize(ex.Message)}"); }
         _asciiDirCache = engineDir;
         return engineDir;
     }
@@ -554,8 +555,9 @@ public class MossTranscribeEngine : ISttEngine
             var snapped = FindSilenceCut(samples, sampleRate, nominalSec - windowStartSec, SnapSearchSec, SnapFrameSec);
             return windowStartSec + snapped;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.Error.WriteLine($"[SttEngine] MOSS 静音对齐读 WAV 失败，切回名义切点: {Common.Sanitize(ex.Message)}");
             return nominalSec; // WAV 异常/不可读：放弃静音对齐，切回 nominal
         }
     }
@@ -638,7 +640,7 @@ public class MossTranscribeEngine : ISttEngine
             });
             killer?.WaitForExit(5000);
         }
-        catch { /* 尽力而为 */ }
+        catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] MOSS 杀进程失败（尽力而为）: {Common.Sanitize(ex.Message)}"); }
     }
 
     /// <summary>

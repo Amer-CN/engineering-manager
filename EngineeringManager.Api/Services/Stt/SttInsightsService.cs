@@ -125,8 +125,9 @@ public class SttInsightsService
         {
             doc = JsonDocument.Parse(content[start..(end + 1)]);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Console.Error.WriteLine($"[SttInsights] LLM 返回 JSON 解析失败（已向用户返回重试提示）: {ex.Message}");
             return (false, null, "LLM 返回的 JSON 无法解析，请重试");
         }
 
