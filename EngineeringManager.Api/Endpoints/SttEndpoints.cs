@@ -449,9 +449,12 @@ public static class SttEndpoints
         // POST /api/stt/models/{engineId}/download — 启动缺失模型下载（立即返回）
         // 同引擎已有下载在跑 → alreadyRunning（内存闸，防重复触发）
         // ═══════════════════════════════════════════════════════════
-        app.MapPost("/api/stt/models/{engineId}/download", (HttpContext ctx, string engineId) =>
+        app.MapPost("/api/stt/models/{engineId}/download", (HttpContext ctx, IDbConnection db, string engineId) =>
         {
             _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 权限检查：与其它 STT 写端点同口径（门禁5：写端点必须有权限校验）
+            if (!CurrentUser.HasPermission(ctx, db, "voice:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 voice:read" }, statusCode: 403);
             try
             {
                 var spec = SttModelManager.FindEngineSpec(engineId);

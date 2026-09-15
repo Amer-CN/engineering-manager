@@ -27,6 +27,9 @@ vi.mock('@/services/stt-client', () => ({
   cancelSttJob: vi.fn(),
   retrySttJob: vi.fn(),
   deleteSttJob: vi.fn(),
+  getSttModelStatus: vi.fn(),
+  startSttModelDownload: vi.fn(),
+  subscribeSttModelDownload: vi.fn(() => () => {}),
 }))
 
 /** MediaRecorder 测试替身：记录实例，stop() 触发 onstop */
