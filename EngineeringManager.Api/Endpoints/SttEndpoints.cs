@@ -415,6 +415,98 @@ public static class SttEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
+        // GET /api/stt/models/status — 各引擎模型就绪状态（缺哪些文件、多大、能否一键下）
+        // ═══════════════════════════════════════════════════════════
+        app.MapGet("/api/stt/models/status", (HttpContext ctx) =>
+        {
+            _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            try
+            {
+                var engines = SttModelManager.GetModelStatus().Select(e => new
+                {
+                    engineId = e.EngineId,
+                    displayName = e.DisplayName,
+                    ready = e.Ready,
+                    missingBytes = e.MissingBytes,
+                    missingFiles = e.MissingFiles.Select(f => new
+                    {
+                        relPath = f.RelPath,
+                        bytes = f.Bytes,
+                        downloadable = f.Downloadable,
+                    }),
+                    downloading = SttModelManager.IsModelDownloadActive(e.EngineId),
+                });
+
+                return Results.Ok(new { success = true, data = new { engines } });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("查询模型状态", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // POST /api/stt/models/{engineId}/download — 启动缺失模型下载（立即返回）
+        // 同引擎已有下载在跑 → alreadyRunning（内存闸，防重复触发）
+        // ═══════════════════════════════════════════════════════════
+        app.MapPost("/api/stt/models/{engineId}/download", (HttpContext ctx, string engineId) =>
+        {
+            _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            try
+            {
+                var spec = SttModelManager.FindEngineSpec(engineId);
+                if (spec == null)
+                    return Common.Fail($"未知引擎: {engineId}");
+
+                var status = SttModelManager.GetModelStatus()
+                    .First(e => string.Equals(e.EngineId, spec.EngineId, StringComparison.OrdinalIgnoreCase));
+                if (status.Ready)
+                    return Common.Ok(new { accepted = false, alreadyReady = true });
+
+                // 清单里有不可下载项（手动放置）时先拒绝，避免下到一半卡住
+                var manual = status.MissingFiles.Where(f => !f.Downloadable).Select(f => f.RelPath).ToList();
+                if (manual.Count > 0)
+                    return Common.Fail($"{spec.DisplayName} 的 {string.Join("、", manual)} 没有已验证的下载地址，需要手动放置");
+
+                if (!SttModelManager.StartModelDownload(spec.EngineId))
+                    return Common.Ok(new { accepted = true, alreadyRunning = true });
+
+                return Common.Ok(new { accepted = true });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("启动模型下载", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // GET /api/stt/models/download/stream?engineId=xxx — SSE 下载进度
+        // 与 /api/update/download/stream 同套路（轮询 + 终态断流）
+        // ═══════════════════════════════════════════════════════════
+        app.MapGet("/api/stt/models/download/stream", async (HttpContext ctx, string engineId) =>
+        {
+            _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+
+            ctx.Response.ContentType = "text/event-stream";
+            ctx.Response.Headers.Append("Cache-Control", "no-cache");
+            ctx.Response.Headers.Append("Connection", "keep-alive");
+            ctx.Response.Headers.Append("X-Accel-Buffering", "no");
+
+            var ct = ctx.RequestAborted;
+            while (!ct.IsCancellationRequested)
+            {
+                var progress = SttModelManager.GetModelDownloadProgress(engineId);
+                if (progress != null)
+                {
+                    await WriteSttSse(ctx, progress);
+                    if (progress.Phase is "done" or "error")
+                        break;
+                }
+                await Task.Delay(300, ct);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
         // POST /api/stt/jobs/{id}/ingest — 把校对后文本送入知识库
         // 支持可选 SttIngestDto：body 为空时兼容旧行为（使用 job.result_text）
         // body.text 有值时使用校对后文本入库
@@ -848,6 +940,17 @@ public static class SttEndpoints
         var resolved = Path.GetFullPath(fullPath);
         var baseResolved = Path.GetFullPath(allowedBase);
         return resolved.StartsWith(baseResolved, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>SSE 写一帧（与 UpdateEndpoints.WriteSSE 同套路：camelCase + 立即 flush）</summary>
+    private static async Task WriteSttSse(HttpContext ctx, object data)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        });
+        await ctx.Response.WriteAsync($"data: {json}\n\n");
+        await ctx.Response.Body.FlushAsync();
     }
 }
 
