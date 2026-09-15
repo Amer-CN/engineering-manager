@@ -345,13 +345,16 @@ var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, err
                         tcs.TrySetException(new InvalidOperationException(stopReason));
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[SttEngine] 内存监控回调异常（保险丝检查自身失败，不中断转写）: {Common.Sanitize(ex.Message)}");
+                }
             }, null, MemoryCheckInterval, MemoryCheckInterval);
 
             // 注册取消令牌
             await using var ctReg = ct.Register(() =>
             {
-                try { KillProcessTree(process); } catch { }
+                try { KillProcessTree(process); } catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] 取消时杀进程失败（进程可能已退出）: {Common.Sanitize(ex.Message)}"); }
                 tcs.TrySetCanceled(ct);
             });
 
@@ -361,7 +364,7 @@ var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, err
             timeoutCts.CancelAfter(timeout);
             await using var timeoutReg = timeoutCts.Token.Register(() =>
             {
-                try { KillProcessTree(process); } catch { }
+                try { KillProcessTree(process); } catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] 超时杀进程失败（进程可能已退出）: {Common.Sanitize(ex.Message)}"); }
                 tcs.TrySetException(new TimeoutException($"转写超时 ({timeout.TotalMinutes:F0} 分钟, {fileCount} 段)"));
             });
 
@@ -437,7 +440,7 @@ var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, err
             {
                 // 任何阶段抛异常（监控保险丝/GPU 验证/解码失败）都不能让已启动的
                 // 转写进程存活 —— 否则它锁着 latest.log 继续跑，下一个任务也会被拖垮
-                try { if (process != null) KillProcessTree(process); } catch { }
+                try { if (process != null) KillProcessTree(process); } catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] 异常路径杀进程失败（进程可能已退出）: {Common.Sanitize(ex.Message)}"); }
                 throw;
             }
             finally
@@ -668,7 +671,7 @@ var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, err
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[SttEngine] 杀进程树失败: {Common.Sanitize(ex.Message)}");
-            try { process.Kill(entireProcessTree: true); } catch { }
+            try { process.Kill(entireProcessTree: true); } catch (Exception killEx) { Console.Error.WriteLine($"[SttEngine] 兜底 Kill 也失败（进程可能已退出）: {Common.Sanitize(killEx.Message)}"); }
         }
     }
 }

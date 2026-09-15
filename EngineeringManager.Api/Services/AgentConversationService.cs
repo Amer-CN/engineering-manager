@@ -173,8 +173,9 @@ public class AgentConversationService
                 using var doc = JsonDocument.Parse(approvalText);
                 parsedApprovals.Add(doc.RootElement.Clone());
             }
-            catch
+            catch (Exception ex)
             {
+                Console.Error.WriteLine($"[AgentConversationService] 审批 JSON 解析失败，跳过该条: {ex.Message}");
                 parsedApprovals.Add(null); /* 坏 JSON：跳过 */
             }
         }
@@ -194,8 +195,9 @@ public class AgentConversationService
             {
                 parsedToolResults.Add(JsonSerializer.Deserialize<ToolCallResult>((string)row.content));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.Error.WriteLine($"[AgentConversationService] tool 消息 ToolCallResult 解析失败，跳过该条: {ex.Message}");
                 parsedToolResults.Add(null); /* 坏 JSON：跳过 */
             }
         }
@@ -292,7 +294,7 @@ public class AgentConversationService
                 {
                     toolCalls = JsonSerializer.Deserialize<List<ToolCall>>(row.tool_calls);
                 }
-                catch { /* ignore */ }
+                catch (Exception ex) { Console.Error.WriteLine($"[AgentConversationService] tool_calls 解析失败，按空处理: {ex.Message}"); }
             }
 
             // Check if tool_calls is actually tool results (from assistant or tool messages)

@@ -174,12 +174,12 @@ public class AgentToolService
         var projectsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE {companyFilter}", p);
         var membersCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM members WHERE {companyFilter}", p);
         var workersCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM workers WHERE {companyFilter}", p);
-        var invoicesCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM invoices WHERE {projectFilterInvoices}", p);
-        var settlementsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM settlements WHERE {projectFilterSettlements}", p);
+        var invoicesCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM invoices WHERE {projectFilterInvoices} AND deleted_at IS NULL", p);
+        var settlementsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM settlements WHERE {projectFilterSettlements} AND deleted_at IS NULL", p);
         var inProgressProjects = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE status='active' AND {companyFilter}", p);
-        // cost_ledger.amount 库内为分，MoneyUnit 单点换算输出元
-        var totalIncome = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income' AND {projectFilterCostLedger}", p));
-        var totalExpense = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense' AND {projectFilterCostLedger}", p));
+        // cost_ledger.amount 库内为分，MoneyUnit 单点换算输出元；软删除行不计入
+        var totalIncome = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income' AND {projectFilterCostLedger} AND deleted_at IS NULL", p));
+        var totalExpense = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense' AND {projectFilterCostLedger} AND deleted_at IS NULL", p));
 
         var recentProjects = db.Query($@"
             SELECT id, name, status FROM projects
@@ -240,7 +240,7 @@ public class AgentToolService
                    i.project_id, p.name as project_name
             FROM invoices i
             LEFT JOIN projects p ON i.project_id = p.id
-            WHERE {filter}
+            WHERE {filter} AND i.deleted_at IS NULL
             {(projectId.HasValue ? " AND i.project_id = @ProjectId" : "")}
             ORDER BY i.created_at DESC
             LIMIT 30
@@ -256,12 +256,14 @@ public class AgentToolService
     private static Task<object> ExecuteGetPendingInvoices(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
         var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "i.project_id", "i.created_by");
+        // 发票真实状态集里没有 'pending'（UI/入库走 issued/partially_paid/received/cancelled/red_flushed），
+        // 原查询恒空。「待处理」= 未收齐且未作废/红冲的非终态票；软删行一律不可见。
         var invoices = db.Query($@"
             SELECT i.id, i.invoice_no, i.name, i.amount, i.status, i.issue_date,
                    p.name as project_name
             FROM invoices i
             LEFT JOIN projects p ON i.project_id = p.id
-            WHERE i.status = 'pending' AND ({filter})
+            WHERE i.status IN ('issued', 'partially_paid') AND ({filter}) AND i.deleted_at IS NULL
             ORDER BY i.created_at DESC
             LIMIT 30
         ", new { Uid = uid, IsAdmin = 0 }).ToList();
@@ -282,7 +284,7 @@ public class AgentToolService
                    s.project_id, p.name as project_name
             FROM settlements s
             LEFT JOIN projects p ON s.project_id = p.id
-            WHERE {filter}
+            WHERE {filter} AND s.deleted_at IS NULL
             {(projectId.HasValue ? " AND s.project_id = @ProjectId" : "")}
             ORDER BY s.created_at DESC
             LIMIT 30
@@ -303,7 +305,7 @@ public class AgentToolService
                    p.name as project_name
             FROM settlements s
             LEFT JOIN projects p ON s.project_id = p.id
-            WHERE s.status = 'pending' AND ({filter})
+            WHERE s.status = 'pending' AND ({filter}) AND s.deleted_at IS NULL
             ORDER BY s.created_at DESC
             LIMIT 30
         ", new { Uid = uid, IsAdmin = 0 }).ToList();
@@ -414,7 +416,7 @@ public class AgentToolService
         var byCategory = db.Query($@"
             SELECT category, SUM(amount) as total
             FROM cost_ledger
-            WHERE {projectFilter}
+            WHERE {projectFilter} AND deleted_at IS NULL
             GROUP BY category
             ORDER BY total DESC
             LIMIT 20
@@ -424,12 +426,12 @@ public class AgentToolService
         // （与「分域先相减再除 100」数学等价，此处按元直出实现最清晰）
         var totalIncome = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($@"
             SELECT COALESCE(SUM(amount), 0) FROM cost_ledger
-            WHERE direction = 'income' AND {projectFilter}
+            WHERE direction = 'income' AND {projectFilter} AND deleted_at IS NULL
         ", p));
 
         var totalExpense = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($@"
             SELECT COALESCE(SUM(amount), 0) FROM cost_ledger
-            WHERE direction = 'expense' AND {projectFilter}
+            WHERE direction = 'expense' AND {projectFilter} AND deleted_at IS NULL
         ", p));
 
         return Task.FromResult<object>(new
@@ -471,6 +473,7 @@ public class AgentToolService
         }
         catch
         {
+            Console.Error.WriteLine("[AgentToolService] executeSql 调用缺少 sql 参数，已拒绝");
             return new { success = false, error = "缺少 sql 参数" };
         }
 
@@ -525,6 +528,7 @@ public class AgentToolService
         catch (Exception ex)
         {
             var errorMsg = $"查询执行失败: {ex.Message}";
+            Console.Error.WriteLine($"[AgentToolService] executeSql 查询执行失败: {ex.Message}");
             SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, false, errorMsg);
             return new { success = false, error = Common.Sanitize(errorMsg) };
         }
@@ -568,7 +572,7 @@ public class AgentToolService
         int topK = 5;
         if (args.TryGetProperty("topK", out var topKProp) && topKProp.ValueKind == JsonValueKind.Number)
         {
-            try { topK = topKProp.GetInt32(); } catch { /* 非整数用默认值 */ }
+            try { topK = topKProp.GetInt32(); } catch (Exception ex) { Console.Error.WriteLine($"[AgentToolService] topK 参数非整数，用默认值: {ex.Message}"); }
         }
         topK = Math.Clamp(topK, 1, 10);
 
@@ -652,13 +656,13 @@ public class AgentToolService
             throw new InvalidOperationException("参数 invoiceIds 必须为非空整数数组");
 
         // 第一遍：全量预检行归属（与 ProjectWorkerMiscEndpoints PUT /api/invoices/{id}/status 同一形状），
-        // 任何 Denied 直接拒绝 —— 不产生部分执行。
+        // 任何 Denied 直接拒绝 —— 不产生部分执行。软删行视同不存在（对齐既有 status 端点的可见性语义）。
         foreach (var id in invoiceIds)
         {
             var row = db.QueryFirstOrDefault(
-                "SELECT created_by, project_id FROM invoices WHERE id=@Id",
+                "SELECT created_by, project_id FROM invoices WHERE id=@Id AND deleted_at IS NULL",
                 new { Id = id });
-            if (row == null) continue; // 未命中行在执行遍记入 MissingIds，不阻断其余
+            if (row == null) continue; // 未命中行（含软删）在执行遍记入 MissingIds，不阻断其余
             var access = RowWriteGate.Classify(ctx, db, row.created_by as string, row.project_id as long?);
             if (access == RowWriteOutcome.Denied)
                 throw new UnauthorizedAccessException("无权修改该发票");
@@ -671,7 +675,7 @@ public class AgentToolService
         foreach (var id in invoiceIds)
         {
             var row = db.QueryFirstOrDefault(
-                "SELECT created_by, project_id FROM invoices WHERE id=@Id",
+                "SELECT created_by, project_id FROM invoices WHERE id=@Id AND deleted_at IS NULL",
                 new { Id = id });
             if (row == null) { missingIds.Add(id); continue; }
 
@@ -681,7 +685,7 @@ public class AgentToolService
 
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(
-                "UPDATE invoices SET status='received', updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                "UPDATE invoices SET status='received', updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL",
                 new { Now = now, Id = id }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
             {
@@ -705,7 +709,7 @@ public class AgentToolService
             {
                 if (item.ValueKind == JsonValueKind.Number)
                 {
-                    try { ids.Add(item.GetInt64()); } catch { /* 超范围数值跳过 */ }
+                    try { ids.Add(item.GetInt64()); } catch (Exception ex) { Console.Error.WriteLine($"[AgentToolService] invoiceIds 含超范围数值，已跳过: {ex.Message}"); }
                 }
             }
         }

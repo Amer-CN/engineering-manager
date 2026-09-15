@@ -28,6 +28,7 @@ public static class SttEndpoints
     {
         "qwen3-asr-1.7b-gguf",
         MossTranscribeEngine.EngineId,
+        ParaformerEngine.EngineId,
     };
 
     public static void RegisterSttEndpoints(this WebApplication app)
@@ -169,12 +170,14 @@ public static class SttEndpoints
                     return Results.Json(new { success = false, error = $"本地语音转文字不可用: {SttEngineSelector.GetUnavailableReason()}。可使用云端转写（即将推出）。" }, statusCode: 503);
                 }
 
-                // 引擎选择：白名单校验，空/缺省回退现役引擎
-                var engineId = string.IsNullOrWhiteSpace(dto.Engine) ? "qwen3-asr-1.7b-gguf" : dto.Engine!;
+                // 引擎选择：白名单校验，空/缺省回退现役引擎（MOSS：CPU 可跑，方言优先）
+                var engineId = string.IsNullOrWhiteSpace(dto.Engine) ? MossTranscribeEngine.EngineId : dto.Engine!;
                 if (!AllowedEngines.Contains(engineId))
                     return Common.Fail($"不支持的转写引擎: {engineId}，可选: {string.Join(", ", AllowedEngines)}");
                 if (string.Equals(engineId, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase) && !await new MossTranscribeEngine().IsAvailableAsync())
                     return Common.Fail("MOSS 引擎未就绪：asr-engine/moss/ 缺少 moss-transcribe.exe 或 moss-transcribe-q8_0.gguf");
+                if (string.Equals(engineId, ParaformerEngine.EngineId, StringComparison.OrdinalIgnoreCase) && !await new ParaformerEngine().IsAvailableAsync())
+                    return Common.Fail("Paraformer 引擎未就绪：asr-engine/paraformer/ 缺少 model.int8.onnx 或 tokens.txt");
 
                 var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -408,6 +411,98 @@ public static class SttEndpoints
             catch (Exception ex)
             {
                 return Common.ServerError("检测转写能力", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // GET /api/stt/models/status — 各引擎模型就绪状态（缺哪些文件、多大、能否一键下）
+        // ═══════════════════════════════════════════════════════════
+        app.MapGet("/api/stt/models/status", (HttpContext ctx) =>
+        {
+            _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            try
+            {
+                var engines = SttModelManager.GetModelStatus().Select(e => new
+                {
+                    engineId = e.EngineId,
+                    displayName = e.DisplayName,
+                    ready = e.Ready,
+                    missingBytes = e.MissingBytes,
+                    missingFiles = e.MissingFiles.Select(f => new
+                    {
+                        relPath = f.RelPath,
+                        bytes = f.Bytes,
+                        downloadable = f.Downloadable,
+                    }),
+                    downloading = SttModelManager.IsModelDownloadActive(e.EngineId),
+                });
+
+                return Results.Ok(new { success = true, data = new { engines } });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("查询模型状态", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // POST /api/stt/models/{engineId}/download — 启动缺失模型下载（立即返回）
+        // 同引擎已有下载在跑 → alreadyRunning（内存闸，防重复触发）
+        // ═══════════════════════════════════════════════════════════
+        app.MapPost("/api/stt/models/{engineId}/download", (HttpContext ctx, string engineId) =>
+        {
+            _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            try
+            {
+                var spec = SttModelManager.FindEngineSpec(engineId);
+                if (spec == null)
+                    return Common.Fail($"未知引擎: {engineId}");
+
+                var status = SttModelManager.GetModelStatus()
+                    .First(e => string.Equals(e.EngineId, spec.EngineId, StringComparison.OrdinalIgnoreCase));
+                if (status.Ready)
+                    return Common.Ok(new { accepted = false, alreadyReady = true });
+
+                // 清单里有不可下载项（手动放置）时先拒绝，避免下到一半卡住
+                var manual = status.MissingFiles.Where(f => !f.Downloadable).Select(f => f.RelPath).ToList();
+                if (manual.Count > 0)
+                    return Common.Fail($"{spec.DisplayName} 的 {string.Join("、", manual)} 没有已验证的下载地址，需要手动放置");
+
+                if (!SttModelManager.StartModelDownload(spec.EngineId))
+                    return Common.Ok(new { accepted = true, alreadyRunning = true });
+
+                return Common.Ok(new { accepted = true });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("启动模型下载", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // GET /api/stt/models/download/stream?engineId=xxx — SSE 下载进度
+        // 与 /api/update/download/stream 同套路（轮询 + 终态断流）
+        // ═══════════════════════════════════════════════════════════
+        app.MapGet("/api/stt/models/download/stream", async (HttpContext ctx, string engineId) =>
+        {
+            _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+
+            ctx.Response.ContentType = "text/event-stream";
+            ctx.Response.Headers.Append("Cache-Control", "no-cache");
+            ctx.Response.Headers.Append("Connection", "keep-alive");
+            ctx.Response.Headers.Append("X-Accel-Buffering", "no");
+
+            var ct = ctx.RequestAborted;
+            while (!ct.IsCancellationRequested)
+            {
+                var progress = SttModelManager.GetModelDownloadProgress(engineId);
+                if (progress != null)
+                {
+                    await WriteSttSse(ctx, progress);
+                    if (progress.Phase is "done" or "error")
+                        break;
+                }
+                await Task.Delay(300, ct);
             }
         });
 
@@ -704,9 +799,18 @@ public static class SttEndpoints
                 if (status != "failed")
                     return Common.Fail($"任务当前状态为 {status}，只有失败的任务可以重试");
 
+                // 断块续跑 + 估计提示保留：先读现有 error，含"自动估计值"（DiarizationService 爆簇降级
+                // 提示文案的字面量；为保改动范围不跨文件引常量，此处用字面量匹配）则保留不置 NULL，
+                // 否则按原逻辑置 NULL。成功写回侧另有去重（SttWorker），此处保留不会导致重复展示。
+                var existingError = db.ExecuteScalar<string?>(
+                    "SELECT error FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+                var keepEstimate = existingError != null
+                    && existingError.Contains("自动估计值", StringComparison.Ordinal);
+
                 db.Execute(
-                    "UPDATE stt_jobs SET status = 'pending', progress = 0, error = NULL, updated_at = @Now WHERE id = @Id AND created_by = @Uid",
-                    new { Now = Common.NowString(), Id = id, Uid = uid });
+                    "UPDATE stt_jobs SET status = 'pending', progress = 0, error = @Err, updated_at = @Now WHERE id = @Id AND created_by = @Uid",
+                    new { Err = keepEstimate ? existingError : (string?)null, Now = Common.NowString(), Id = id, Uid = uid });
 
                 return Results.Ok(new { success = true, data = new { id, status = "pending" } });
             }
@@ -841,6 +945,17 @@ public static class SttEndpoints
         var baseResolved = Path.GetFullPath(allowedBase);
         return resolved.StartsWith(baseResolved, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>SSE 写一帧（与 UpdateEndpoints.WriteSSE 同套路：camelCase + 立即 flush）</summary>
+    private static async Task WriteSttSse(HttpContext ctx, object data)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        });
+        await ctx.Response.WriteAsync($"data: {json}\n\n");
+        await ctx.Response.Body.FlushAsync();
+    }
 }
 
 /// <summary>STT 转写请求 DTO</summary>
@@ -851,7 +966,7 @@ public class SttTranscribeDto
     public int? NumSpeakers { get; set; }
     public string? Context { get; set; }
 
-    /// <summary>转写引擎（白名单见 AllowedEngines；空值回退 qwen3-asr-1.7b-gguf）</summary>
+    /// <summary>转写引擎（白名单见 AllowedEngines；空值回退 moss-transcribe-0.9b）</summary>
     public string? Engine { get; set; }
 }
 
