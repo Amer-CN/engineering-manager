@@ -30,6 +30,7 @@ interface TranscriptionParamsProps {
 const ENGINE_OPTIONS = [
   { value: 'qwen3-asr-1.7b-gguf', label: 'Qwen3 · 快（GPU）' },
   { value: 'moss-transcribe-0.9b', label: 'MOSS · 方言优先（CPU）' },
+  { value: 'paraformer-zh-int8', label: 'Paraformer · 极速（CPU）' },
 ] as const
 
 /**
@@ -43,6 +44,9 @@ const VERY_LONG_AUDIO_SEC = 20 * 60
 
 function engineGuidance(engine: string, durationSec: number | null): { tone: 'info' | 'warn'; text: string } | null {
   if (durationSec == null) {
+    if (engine === 'paraformer-zh-int8') {
+      return { tone: 'info', text: 'Paraformer 方言极速（CPU）：474 秒方言约 9 秒出文本；时间与说话人来自分离管线（与 Qwen 多人路径一致）。本轮不支持热词，填写也会被忽略。' }
+    }
     if (engine === 'moss-transcribe-0.9b') {
       return { tone: 'info', text: 'MOSS 真实川话实测方言语音最稳（同音词消歧零错、说话人轮次最细）；多人任务的说话人由分离管线先分离、MOSS 转写后按时间重叠回填（较纯转写略增耗时）。细分块推理后长会议也可用（31.6 分钟会议实测约 24.7 分钟完成、约 0.78 倍时长，Vulkan）；追求速度请用 Qwen3。' }
     }
@@ -50,16 +54,25 @@ function engineGuidance(engine: string, durationSec: number | null): { tone: 'in
   }
   const minutes = Math.round(durationSec / 60)
   if (durationSec > VERY_LONG_AUDIO_SEC) {
+    if (engine === 'paraformer-zh-int8') {
+      return { tone: 'info', text: `本音频约 ${minutes} 分钟（长会议）。Paraformer 是速度最快的选择（CPU 短音频实测约 0.02× 时长），时间与说话人由分离管线提供；本轮不支持热词，要热词请用 Qwen3。` }
+    }
     if (engine === 'moss-transcribe-0.9b') {
       return { tone: 'warn', text: `本音频约 ${minutes} 分钟，属于长会议：MOSS 细分块（30s/块）后可用，31.6 分钟会议实测约 24.7 分钟完成（Vulkan，约 0.78× 时长）；追求速度请改用 Qwen3（实测 31 分钟约 14 分钟完成）。` }
     }
     return { tone: 'info', text: `本音频约 ${minutes} 分钟（长会议）。Qwen3 走 GPU 约 0.45× 时长完成、热词提升专有名词识别，是长录音的稳妥默认选择。` }
   }
   if (durationSec > LONG_AUDIO_SEC) {
+    if (engine === 'paraformer-zh-int8') {
+      return { tone: 'info', text: `本音频约 ${minutes} 分钟，Paraformer 是速度最快的选择（CPU 短音频实测约 0.02× 时长）；方言表现好，热词本轮不支持，要热词请用 Qwen3。` }
+    }
     if (engine === 'moss-transcribe-0.9b') {
       return { tone: 'warn', text: `本音频约 ${minutes} 分钟：MOSS 细分块后速度约为音频时长的 0.78 倍左右（31.6 分钟会议实测约 24.7 分钟完成，Vulkan）。追求质量可继续，追求速度建议改用 Qwen3。` }
     }
     return { tone: 'info', text: `本音频约 ${minutes} 分钟，Qwen3 是此长度的稳妥选择（GPU 加速，约 0.45× 时长完成）。` }
+  }
+  if (engine === 'paraformer-zh-int8') {
+    return { tone: 'info', text: `本音频约 ${minutes} 分钟，Paraformer 极速（CPU 短音频实测约 0.02× 时长），方言表现好；要热词请用 Qwen3。` }
   }
   if (engine === 'moss-transcribe-0.9b') {
     return { tone: 'info', text: `本音频约 ${minutes} 分钟，处于 MOSS 甜点区：方言质量最优（同音消歧零错、说话人轮次最细），预计 ${minutes} 分钟左右完成。` }

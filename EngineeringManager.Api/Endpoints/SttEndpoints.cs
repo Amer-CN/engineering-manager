@@ -28,6 +28,7 @@ public static class SttEndpoints
     {
         "qwen3-asr-1.7b-gguf",
         MossTranscribeEngine.EngineId,
+        ParaformerEngine.EngineId,
     };
 
     public static void RegisterSttEndpoints(this WebApplication app)
@@ -175,6 +176,8 @@ public static class SttEndpoints
                     return Common.Fail($"不支持的转写引擎: {engineId}，可选: {string.Join(", ", AllowedEngines)}");
                 if (string.Equals(engineId, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase) && !await new MossTranscribeEngine().IsAvailableAsync())
                     return Common.Fail("MOSS 引擎未就绪：asr-engine/moss/ 缺少 moss-transcribe.exe 或 moss-transcribe-q8_0.gguf");
+                if (string.Equals(engineId, ParaformerEngine.EngineId, StringComparison.OrdinalIgnoreCase) && !await new ParaformerEngine().IsAvailableAsync())
+                    return Common.Fail("Paraformer 引擎未就绪：asr-engine/paraformer/ 缺少 model.int8.onnx 或 tokens.txt");
 
                 var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 

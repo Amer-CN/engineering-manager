@@ -119,10 +119,18 @@ public class SttWorker : IHostedService, IDisposable
             if (!SttEngineSelector.CanUseLocalStt())
                 throw new InvalidOperationException($"本地转写不可用: {SttEngineSelector.GetUnavailableReason()}");
 
-            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；其余走 Qwen3 两段式管线
+            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；Paraformer 与 Qwen3 同走两段式管线
+            //（分离定时间与说话人，引擎只逐段出文字），区别仅在于转写引擎实例。
             var useMoss = string.Equals(job.Engine, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase);
+            var usePara = string.Equals(job.Engine, ParaformerEngine.EngineId, StringComparison.OrdinalIgnoreCase);
             var engine = new LlamaCppGgufEngine();
-            if (!useMoss && !await engine.IsAvailableAsync())
+            var paraEngine = new ParaformerEngine();
+            if (usePara)
+            {
+                if (!await paraEngine.IsAvailableAsync())
+                    throw new InvalidOperationException("Paraformer 模型文件缺失，请检查 asr-engine/paraformer/ 目录");
+            }
+            else if (!useMoss && !await engine.IsAvailableAsync())
                 throw new InvalidOperationException("ASR 模型文件缺失，请检查 asr-engine/model/ 目录");
 
             // 1. 音频预处理
@@ -232,7 +240,9 @@ public class SttWorker : IHostedService, IDisposable
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 var wavPaths = splitFiles.Select(s => s.wavPath).ToList();
-                var texts = await engine.TranscribeBatchAsync(wavPaths, job.Hotwords, default);
+                var texts = usePara
+                    ? await paraEngine.TranscribeBatchAsync(wavPaths, job.Hotwords, default)
+                    : await engine.TranscribeBatchAsync(wavPaths, job.Hotwords, default);
 
                 sw.Stop();
                 Console.WriteLine($"[SttWorker] 批量转写 {splitFiles.Count} 段完成，耗时 {sw.Elapsed.TotalSeconds:F1}s");
@@ -264,14 +274,16 @@ public class SttWorker : IHostedService, IDisposable
                     Segments = allSegments,
                     DurationSec = duration,
                     ElapsedSec = allSegments.Sum(s => 0), // 各段累加复杂，暂不精确
-                    Engine = engine.Name,
+                    Engine = usePara ? paraEngine.Name : engine.Name,
                 };
             }
             else
             {
                 // 单人：直接转写，跳过分离
                 UpdateProgress(db, job.Id, 10, "转写中...");
-                result = await engine.TranscribeAsync(processedWav, job.Hotwords, null, default);
+                result = usePara
+                    ? await paraEngine.TranscribeAsync(processedWav, job.Hotwords, null, default)
+                    : await engine.TranscribeAsync(processedWav, job.Hotwords, null, default);
                 result.DurationSec = duration;
 
                 // 单人：segments 只有一段，Speaker = 1（归一化后 1-based）
