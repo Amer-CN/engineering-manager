@@ -307,6 +307,99 @@ public class SttEndpointsTests : ApiTestBase
     }
 
     // ═══════════════════════════════════════════════════════════
+    // 默认引擎契约（2026-09-16 Qwen3-ASR 模型退役：空 engine 回退 MOSS）
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void SttJob_DefaultEngine_IsMoss()
+    {
+        // SttWorker 从 stt_jobs 轮询出的行若 engine 为空，映射对象的默认值必须是现役 CPU 引擎 MOSS
+        Assert.Equal(MossTranscribeEngine.EngineId, new SttJob().Engine);
+    }
+
+    [Fact]
+    public async Task Transcribe_EmptyEngine_FallsBackToMossEngine()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+
+        // 造一个真实存在的音频文件（端点只校验存在/扩展名/大小，不解析音频内容）
+        var fileName = $"default-engine-{Guid.NewGuid():N}.wav";
+        var sttDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads", "stt", "1");
+        Directory.CreateDirectory(sttDir);
+        var filePath = Path.Combine(sttDir, fileName);
+        File.WriteAllBytes(filePath, new byte[] { 0x52, 0x49, 0x46, 0x46 });
+        try
+        {
+            // 不传 engine → 端点回退默认引擎
+            var resp = await Client.PostAsJsonAsync("/api/stt/transcribe", new
+            {
+                filePath = $"stt/1/{fileName}",
+                isMultiSpeaker = false,
+            });
+            var body = await resp.Content.ReadAsStringAsync();
+
+            // 无 GPU 的机器上端点前置门禁返回 503，回退分支不可达
+            if (resp.StatusCode == HttpStatusCode.ServiceUnavailable) return;
+
+            // MOSS 模型未部署的机器：只有回退到 MOSS 才会出现这条引擎专属提示（回退到 Qwen 不会有）
+            if (resp.StatusCode == HttpStatusCode.BadRequest)
+            {
+                Assert.Contains("MOSS 引擎未就绪", body);
+                return;
+            }
+
+            Assert.True(resp.IsSuccessStatusCode, body);
+            using var doc = JsonDocument.Parse(body);
+            var jobId = doc.RootElement.GetProperty("data").GetProperty("jobId").GetInt64();
+
+            using var conn = new SqliteConnection(ConnectionString);
+            conn.Open();
+            var engine = conn.ExecuteScalar<string>(
+                "SELECT engine FROM stt_jobs WHERE id = @Id", new { Id = jobId });
+            Assert.Equal(MossTranscribeEngine.EngineId, engine);
+        }
+        finally
+        {
+            try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Transcribe_QwenEngine_StillWhitelisted()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+
+        var fileName = $"qwen-whitelist-{Guid.NewGuid():N}.wav";
+        var sttDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads", "stt", "1");
+        Directory.CreateDirectory(sttDir);
+        var filePath = Path.Combine(sttDir, fileName);
+        File.WriteAllBytes(filePath, new byte[] { 0x52, 0x49, 0x46, 0x46 });
+        try
+        {
+            // Qwen 退役的是模型文件，不是白名单：指名它必须仍被放行（任务创建成功），
+            // 缺模型的表现由 worker 侧给出（"ASR 模型文件缺失，请检查 asr-engine/model/ 目录"）
+            var resp = await Client.PostAsJsonAsync("/api/stt/transcribe", new
+            {
+                filePath = $"stt/1/{fileName}",
+                isMultiSpeaker = false,
+                engine = "qwen3-asr-1.7b-gguf",
+            });
+            var body = await resp.Content.ReadAsStringAsync();
+
+            if (resp.StatusCode == HttpStatusCode.ServiceUnavailable) return; // 无 GPU：前置门禁
+
+            Assert.DoesNotContain("不支持的转写引擎", body);
+            Assert.True(resp.IsSuccessStatusCode, body);
+        }
+        finally
+        {
+            try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // cancel / retry / delete 端点测试
     // ═══════════════════════════════════════════════════════════
 
@@ -365,6 +458,15 @@ public class SttEndpointsTests : ApiTestBase
         return conn.QuerySingle<(string?, int, string?)>(
             "SELECT status, progress, error FROM stt_jobs WHERE id = @Id",
             new { Id = jobId });
+    }
+
+    /// <summary>把指定 job 的 error 改写成给定值（retry 保留估计提示测试用）</summary>
+    private void SetJobError(long jobId, string? error)
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        conn.Execute("UPDATE stt_jobs SET error = @Err WHERE id = @Id",
+            new { Err = error, Id = jobId });
     }
 
     [Fact]
@@ -443,6 +545,43 @@ public class SttEndpointsTests : ApiTestBase
 
         var (status, _, _) = GetJobRow(jobId);
         Assert.Equal("pending", status);
+    }
+
+    [Fact]
+    public async Task Retry_FailedJob_KeepsEstimateWarning()
+    {
+        // 断块续跑：含"自动估计值"（DiarizationService 爆簇降级提示）的 error 在 retry 时保留，
+        // 成功写回侧另有去重（SttWorker），保留不会导致重复展示
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("failed");
+        var estimate = "说话人人数为自动估计值（保守估计 5 人）。转写结果正常。";
+        SetJobError(jobId, estimate);
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/retry", null);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var (status, progress, error) = GetJobRow(jobId);
+        Assert.Equal("pending", status);
+        Assert.Equal(0, progress);
+        Assert.Equal(estimate, error);
+    }
+
+    [Fact]
+    public async Task Retry_FailedJob_ClearsNonEstimateError()
+    {
+        // 普通失败信息（含保险丝"已留存 X/N 块"提示）仍按原逻辑置 NULL，避免旧失败文案污染下一次跑
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("failed");
+        SetJobError(jobId, "被资源保险丝终止；已留存 12/107 块，点重试可接着跑");
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/retry", null);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var (status, _, error) = GetJobRow(jobId);
+        Assert.Equal("pending", status);
+        Assert.Null(error);
     }
 
     [Fact]

@@ -130,8 +130,9 @@ public static class AgentEndpoints
                             {
                                 args = JsonDocument.Parse(tc.Function.Arguments).RootElement;
                             }
-                            catch
+                            catch (Exception ex)
                             {
+                                Console.Error.WriteLine($"[AgentEndpoints] 工具 {tc.Function.Name} 参数解析失败，按空对象执行: {ex.Message}");
                                 args = JsonDocument.Parse("{}").RootElement;
                             }
 
@@ -344,8 +345,9 @@ public static class AgentEndpoints
                             {
                                 args = JsonDocument.Parse(tc.Function.Arguments).RootElement;
                             }
-                            catch
+                            catch (Exception ex)
                             {
+                                Console.Error.WriteLine($"[AgentEndpoints] 工具 {tc.Function.Name} 参数解析失败，按空对象执行: {ex.Message}");
                                 args = JsonDocument.Parse("{}").RootElement;
                             }
 
@@ -425,15 +427,17 @@ public static class AgentEndpoints
                                     }
                                 }
                             }
-                            catch
+                            catch (Exception ex)
                             {
                                 // 忽略解析错误的 chunk
+                                Console.Error.WriteLine($"[AgentEndpoints] SSE chunk 解析失败已跳过: {ex.Message}");
                             }
                         }
                     }
                     catch (Exception) when (ctx.RequestAborted.IsCancellationRequested)
                     {
                         // 客户端断开：SSE 写出抛出取消——半截正文仍要在下方落库，不再随断开丢弃
+                        Console.Error.WriteLine("[AgentEndpoints] 客户端断开，流式写入中止（半截正文照常落库）");
                         clientGone = true;
                     }
 
@@ -491,7 +495,8 @@ public static class AgentEndpoints
             }
             catch (Exception) when (ctx.RequestAborted.IsCancellationRequested)
             {
-                // 客户端断开（工具轮/早期阶段）：静默结束——错误流写不出去；半截正文已在流式段落库
+                // 客户端断开（工具轮/早期阶段）：错误流写不出去；半截正文已在流式段落库
+                Console.Error.WriteLine("[AgentEndpoints] 客户端断开（工具轮/早期阶段），流式会话中止");
             }
             catch (Exception ex)
             {
@@ -677,7 +682,7 @@ public static class AgentEndpoints
                             break;
                         }
                     }
-                    catch { /* 坏 JSON 跳过 */ }
+                    catch (Exception ex) { Console.Error.WriteLine($"[AgentEndpoints] 审批卡片消息 JSON 解析失败已跳过（messageId={targetMessageId}）: {ex.Message}"); }
                 }
                 if (approvalText == null)
                     return Common.NotFound("未找到该确认请求");
@@ -688,8 +693,9 @@ public static class AgentEndpoints
                 {
                     approvalNode = JsonNode.Parse(approvalText)!;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.Error.WriteLine($"[AgentEndpoints] 确认请求 JSON 损坏（messageId={targetMessageId}）: {ex.Message}");
                     return Common.NotFound("确认请求数据损坏");
                 }
                 if (approvalNode["resolution"] is JsonNode existingResolution)
@@ -719,7 +725,7 @@ public static class AgentEndpoints
                     if (action?["args"] != null)
                         executeArgs = JsonDocument.Parse(action["args"]!.ToJsonString()).RootElement;
                 }
-                catch { /* 坏结构按“缺少绑定动作”处理 */ }
+                catch (Exception ex) { Console.Error.WriteLine($"[AgentEndpoints] 审批卡片动作结构异常，按缺少绑定动作处理（messageId={targetMessageId}）: {ex.Message}"); }
                 if (executeToolName == null || executeArgs == null)
                     return Common.Fail("确认请求缺少绑定的执行动作，无法执行");
 
@@ -753,10 +759,12 @@ public static class AgentEndpoints
                     }
                     catch (UnauthorizedAccessException)
                     {
+                        Console.Error.WriteLine("[AgentEndpoints] 确认执行被拒：无权修改目标发票（403）");
                         return Common.Fail("无权修改目标发票", 403);
                     }
                     catch (InvalidOperationException ioex)
                     {
+                        Console.Error.WriteLine($"[AgentEndpoints] 确认执行失败: {ioex.Message}");
                         return Common.Fail(ioex.Message);
                     }
 

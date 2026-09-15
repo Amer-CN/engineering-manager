@@ -295,7 +295,8 @@ public class ReportGenerationService
             ? CurrentUser.DataScope.All
             : CurrentUser.DataScope.AuthorizedProjects;
         // 第三参必须带表前缀：查询②④ JOIN projects/members，裸 created_by 会二义性报错（对照 WageEndpoints.cs:372）
-        var permFilter = CurrentUser.UserFilterWithAuthorizedProjects(dataScope, "w.project_id", "w.created_by");
+        // B1 门禁：userFilter 是 check-backend-rules 白名单变量名；条件必须内联进各查询，不得引入中间 where 变量（否则插值漏配即 HARD FAIL）
+        var userFilter = CurrentUser.UserFilterWithAuthorizedProjects(dataScope, "w.project_id", "w.created_by");
         var param = new DynamicParameters();
         param.Add("Uid", userId);
 
@@ -306,27 +307,25 @@ public class ReportGenerationService
         param.Add("StartYm", startYm);
         param.Add("EndYm", endYm);
 
-        var baseWhere = $" WHERE {permFilter} AND [w].[deleted_at] IS NULL";
-        var currentWhere = $"{baseWhere} AND [w].[year_month] BETWEEN @StartYm AND @EndYm";
-
         // ① 当期总额与笔数
         aggregate.TotalWageYuan = ToYuan(await db.ExecuteScalarAsync<long>(
-            $"SELECT COALESCE(SUM([w].[actual_wage]), 0) FROM [wages] w{currentWhere}", param));
+            $"SELECT COALESCE(SUM([w].[actual_wage]), 0) FROM [wages] w WHERE {userFilter} AND [w].[deleted_at] IS NULL AND [w].[year_month] BETWEEN @StartYm AND @EndYm", param));
         aggregate.TotalCount = await db.ExecuteScalarAsync<int>(
-            $"SELECT COUNT(*) FROM [wages] w{currentWhere}", param);
+            $"SELECT COUNT(*) FROM [wages] w WHERE {userFilter} AND [w].[deleted_at] IS NULL AND [w].[year_month] BETWEEN @StartYm AND @EndYm", param);
 
         // ② 按项目分布 TOP8（金额降序）
         aggregate.ProjectRows = (await db.QueryAsync(
             "SELECT [w].[project_id] AS [project_id], [p].[name] AS [project_name], " +
             "SUM([w].[actual_wage]) AS [total_fen], COUNT(*) AS [count] " +
             "FROM [wages] w LEFT JOIN [projects] p ON [w].[project_id] = [p].[id]" +
-            $"{currentWhere} GROUP BY [w].[project_id], [p].[name] ORDER BY [total_fen] DESC LIMIT 8",
+            $" WHERE {userFilter} AND [w].[deleted_at] IS NULL AND [w].[year_month] BETWEEN @StartYm AND @EndYm " +
+            "GROUP BY [w].[project_id], [p].[name] ORDER BY [total_fen] DESC LIMIT 8",
             param)).ToList();
 
         // ③ 近 6 期走势（期间止月向前取 6 期，升序输出）
         var trendRows = (await db.QueryAsync(
             "SELECT [w].[year_month] AS [ym], SUM([w].[actual_wage]) AS [total_fen], COUNT(*) AS [count] " +
-            $"FROM [wages] w{baseWhere} AND [w].[year_month] <= @EndYm " +
+            $"FROM [wages] w WHERE {userFilter} AND [w].[deleted_at] IS NULL AND [w].[year_month] <= @EndYm " +
             "GROUP BY [w].[year_month] ORDER BY [w].[year_month] DESC LIMIT 6",
             param)).ToList();
         trendRows.Reverse();
@@ -337,7 +336,8 @@ public class ReportGenerationService
             "SELECT COALESCE(NULLIF([m].[role], ''), '未标注') AS [role_name], " +
             "SUM([w].[actual_wage]) AS [total_fen], COUNT(*) AS [count] " +
             "FROM [wages] w LEFT JOIN [members] m ON [w].[member_id] = [m].[id]" +
-            $"{currentWhere} GROUP BY COALESCE(NULLIF([m].[role], ''), '未标注') " +
+            $" WHERE {userFilter} AND [w].[deleted_at] IS NULL AND [w].[year_month] BETWEEN @StartYm AND @EndYm " +
+            "GROUP BY COALESCE(NULLIF([m].[role], ''), '未标注') " +
             "ORDER BY [total_fen] DESC LIMIT 6",
             param)).ToList();
 

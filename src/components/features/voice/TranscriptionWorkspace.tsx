@@ -35,7 +35,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [recordingType, setRecordingType] = useState<RecordingType>('single')
   const [numSpeakers, setNumSpeakers] = useState<number>(0) // 0=自动估计，不硬指定人数
   const [hotwords, setHotwords] = useState('')
-  const [engine, setEngine] = useState('qwen3-asr-1.7b-gguf') // 转写引擎：qwen3=GPU 快；MOSS=方言优先 CPU
+  const [engine, setEngine] = useState('moss-transcribe-0.9b') // 转写引擎：MOSS=方言优先 CPU（默认）；Paraformer=极速 CPU
   const [audioDurationSec, setAudioDurationSec] = useState<number | null>(null) // 已选音频时长（秒），用于引擎选择引导
 
   // 读取已选音频时长（Audio 元素 metadata，不依赖后端）

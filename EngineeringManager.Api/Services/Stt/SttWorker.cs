@@ -140,10 +140,18 @@ public class SttWorker : IHostedService, IDisposable
             if (!SttEngineSelector.CanUseLocalStt())
                 throw new InvalidOperationException($"本地转写不可用: {SttEngineSelector.GetUnavailableReason()}");
 
-            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；其余走 Qwen3 两段式管线
+            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；Paraformer 与 Qwen3 同走两段式管线
+            //（分离定时间与说话人，引擎只逐段出文字），区别仅在于转写引擎实例。
             var useMoss = string.Equals(job.Engine, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase);
+            var usePara = string.Equals(job.Engine, ParaformerEngine.EngineId, StringComparison.OrdinalIgnoreCase);
             var engine = new LlamaCppGgufEngine();
-            if (!useMoss && !await engine.IsAvailableAsync())
+            var paraEngine = new ParaformerEngine();
+            if (usePara)
+            {
+                if (!await paraEngine.IsAvailableAsync())
+                    throw new InvalidOperationException("Paraformer 模型文件缺失，请检查 asr-engine/paraformer/ 目录");
+            }
+            else if (!useMoss && !await engine.IsAvailableAsync())
                 throw new InvalidOperationException("ASR 模型文件缺失，请检查 asr-engine/model/ 目录");
 
             // 1. 音频预处理
@@ -206,7 +214,7 @@ public class SttWorker : IHostedService, IDisposable
                 var mossEngine = new MossTranscribeEngine();
                 var progressRelay = new Progress<int>(p =>
                     UpdateProgress(db, job.Id, Math.Max(15, Math.Min(90, 15 + p * 75 / 100)), null));
-                result = await mossEngine.TranscribeAsync(processedWav, job.Hotwords, progressRelay, ct: default);
+                result = await mossEngine.TranscribeAsync(processedWav, job.Hotwords, progressRelay, ct: default, checkpointKey: job.Id.ToString());
                 result.DurationSec = duration;
 
                 // 分离段非空 → 按时间重叠回填说话人（纯函数，只改 Speaker，文本与时间戳不动）
@@ -253,7 +261,9 @@ public class SttWorker : IHostedService, IDisposable
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 var wavPaths = splitFiles.Select(s => s.wavPath).ToList();
-                var texts = await engine.TranscribeBatchAsync(wavPaths, job.Hotwords, ct);
+                var texts = usePara
+                    ? await paraEngine.TranscribeBatchAsync(wavPaths, job.Hotwords, ct)
+                    : await engine.TranscribeBatchAsync(wavPaths, job.Hotwords, ct);
 
                 sw.Stop();
                 Console.WriteLine($"[SttWorker] 批量转写 {splitFiles.Count} 段完成，耗时 {sw.Elapsed.TotalSeconds:F1}s");
@@ -285,14 +295,16 @@ public class SttWorker : IHostedService, IDisposable
                     Segments = allSegments,
                     DurationSec = duration,
                     ElapsedSec = allSegments.Sum(s => 0), // 各段累加复杂，暂不精确
-                    Engine = engine.Name,
+                    Engine = usePara ? paraEngine.Name : engine.Name,
                 };
             }
             else
             {
                 // 单人：直接转写，跳过分离
                 UpdateProgress(db, job.Id, 10, "转写中...");
-                result = await engine.TranscribeAsync(processedWav, job.Hotwords, null, ct);
+                result = usePara
+                    ? await paraEngine.TranscribeAsync(processedWav, job.Hotwords, null, ct)
+                    : await engine.TranscribeAsync(processedWav, job.Hotwords, null, ct);
                 result.DurationSec = duration;
 
                 // 单人：segments 只有一段，Speaker = 1（归一化后 1-based）
@@ -315,7 +327,11 @@ public class SttWorker : IHostedService, IDisposable
 
             // F4: 写回带 processing 守卫——转写期间被取消的任务不得覆盖回 completed（原取消是幻觉）
             // diarizationWarning 非空=自动模式人数是估计值 → 写进 error 字段展示给用户（status 仍 completed，
-            // SttJobList 对 error 的渲染不区分状态）；无提示时为 null，等价于改动前的 error = NULL
+            // SttJobList 对 error 的渲染不区分状态）；无提示时为 null，等价于改动前的 error = NULL。
+            // 断块续跑去重：重试保留了旧 error（见 retry 端点），成功写回前先读现有 error——
+            // 已含相同提示则沿用（不重复写），否则按现逻辑写
+            var existingError = db.ExecuteScalar<string?>(
+                "SELECT error FROM stt_jobs WHERE id = @Id", new { job.Id });
             var written = db.Execute(@"
                 UPDATE stt_jobs SET
                     status = 'completed', progress = 100,
@@ -328,7 +344,10 @@ public class SttWorker : IHostedService, IDisposable
                     Text = result.Text,
                     Json = resultJson,
                     Elapsed = result.ElapsedSec,
-                    Err = diarizationWarning,
+                    Err = diarizationWarning != null
+                        && !string.IsNullOrEmpty(existingError)
+                        && existingError.Contains(diarizationWarning, StringComparison.Ordinal)
+                        ? existingError : diarizationWarning,
                     Now = now(),
                     job.Id,
                 });
@@ -377,7 +396,7 @@ public class SttJob
     public string Source_File { get; set; } = "";
     public string Source_Path { get; set; } = "";
     public string Source_Type { get; set; } = "audio";
-    public string Engine { get; set; } = "qwen3-asr-1.7b-gguf";
+    public string Engine { get; set; } = MossTranscribeEngine.EngineId;
     public string Status { get; set; } = "pending";
     public int Progress { get; set; }
     public int Is_Multi_Speaker { get; set; }

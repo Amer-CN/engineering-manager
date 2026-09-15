@@ -126,6 +126,35 @@ export interface SttInsights {
   chapters: SttInsightChapter[]
 }
 
+/** 模型清单里缺失的一个文件 */
+export interface SttMissingFile {
+  relPath: string
+  bytes: number
+  /** false = 无已验证地址，需手动放置 */
+  downloadable: boolean
+}
+
+/** 单个引擎的模型就绪状态 */
+export interface SttEngineModelStatus {
+  engineId: string
+  displayName: string
+  ready: boolean
+  missingBytes: number
+  missingFiles: SttMissingFile[]
+  downloading: boolean
+}
+
+/** SSE 推送的模型下载进度 */
+export interface SttModelDownloadProgress {
+  engineId: string
+  phase: 'idle' | 'downloading' | 'extracting' | 'done' | 'error'
+  file?: string | null
+  bytesReceived: number
+  totalBytes: number
+  percent?: number | null
+  error?: string | null
+}
+
 interface ApiResponse<T> {
   success: boolean
   data?: T
@@ -226,7 +255,7 @@ export async function createSttJob(input: {
   isMultiSpeaker: boolean
   numSpeakers?: number
   context?: string
-  /** 转写引擎（后端白名单校验；空值回退 qwen3-asr-1.7b-gguf） */
+  /** 转写引擎（后端白名单校验；空值回退 moss-transcribe-0.9b） */
   engine?: string
 }): Promise<ApiResponse<{ jobId: number; status: string }>> {
   try {
@@ -497,9 +526,107 @@ export async function deleteSttJob(id: number): Promise<ApiResponse<{ id: number
   }
 }
 
+/** GET /api/stt/models/status — 各引擎模型就绪状态（缺哪些文件/多大/能否一键下） */
+export async function getSttModelStatus(): Promise<ApiResponse<{ engines: SttEngineModelStatus[] }>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/models/status`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[STT] getSttModelStatus 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
+/** POST /api/stt/models/{engineId}/download — 启动某引擎缺失模型下载（立即返回） */
+export async function startSttModelDownload(
+  engineId: string,
+): Promise<ApiResponse<{ accepted: boolean; alreadyRunning?: boolean; alreadyReady?: boolean }>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/models/${encodeURIComponent(engineId)}/download`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[STT] startSttModelDownload 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
+/**
+ * 订阅某引擎的模型下载进度（SSE，带 Bearer token —— EventSource 不能带 header，故用 fetch 流）。
+ * 返回一个 abort 函数，调用方在组件卸载时执行。
+ */
+export function subscribeSttModelDownload(
+  engineId: string,
+  onProgress: (p: SttModelDownloadProgress) => void,
+): () => void {
+  const ctrl = new AbortController()
+  void (async () => {
+    try {
+      const token = getToken()
+      const resp = await fetch(
+        `${API_BASE}/api/stt/models/download/stream?engineId=${encodeURIComponent(engineId)}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: ctrl.signal,
+        },
+      )
+      if (!resp.ok || !resp.body) return
+      const reader = resp.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let idx: number
+        while ((idx = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, idx).trim()
+          buffer = buffer.slice(idx + 1)
+          if (!line.startsWith('data: ')) continue
+          try {
+            onProgress(JSON.parse(line.slice(6)) as SttModelDownloadProgress)
+          } catch { /* 忽略坏帧 */ }
+        }
+      }
+    } catch { /* 取消/网络错误：静默结束，调用方靠状态刷新兜底 */ }
+  })()
+  return () => ctrl.abort()
+}
+
 /** 导出统一的 sttClient */
 export const sttClient = {
   getSttStatus,
+  getSttModelStatus,
+  startSttModelDownload,
+  subscribeSttModelDownload,
   uploadSttAudio,
   createSttJob,
   getSttJob,

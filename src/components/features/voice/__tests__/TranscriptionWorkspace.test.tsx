@@ -30,6 +30,9 @@ const { mockSttClient } = vi.hoisted(() => ({
 
 vi.mock('@/services/stt-client', () => ({
   sttClient: mockSttClient,
+  getSttModelStatus: vi.fn(async () => ({ success: true, data: { engines: [] } })),
+  startSttModelDownload: vi.fn(async () => ({ success: true })),
+  subscribeSttModelDownload: vi.fn(() => () => {}),
 }))
 
 vi.mock('@/hooks/useToast', () => ({
