@@ -367,6 +367,15 @@ public class SttEndpointsTests : ApiTestBase
             new { Id = jobId });
     }
 
+    /// <summary>把指定 job 的 error 改写成给定值（retry 保留估计提示测试用）</summary>
+    private void SetJobError(long jobId, string? error)
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        conn.Execute("UPDATE stt_jobs SET error = @Err WHERE id = @Id",
+            new { Err = error, Id = jobId });
+    }
+
     [Fact]
     public async Task Cancel_PendingJob_SetsCancelled()
     {
@@ -443,6 +452,43 @@ public class SttEndpointsTests : ApiTestBase
 
         var (status, _, _) = GetJobRow(jobId);
         Assert.Equal("pending", status);
+    }
+
+    [Fact]
+    public async Task Retry_FailedJob_KeepsEstimateWarning()
+    {
+        // 断块续跑：含"自动估计值"（DiarizationService 爆簇降级提示）的 error 在 retry 时保留，
+        // 成功写回侧另有去重（SttWorker），保留不会导致重复展示
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("failed");
+        var estimate = "说话人人数为自动估计值（保守估计 5 人）。转写结果正常。";
+        SetJobError(jobId, estimate);
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/retry", null);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var (status, progress, error) = GetJobRow(jobId);
+        Assert.Equal("pending", status);
+        Assert.Equal(0, progress);
+        Assert.Equal(estimate, error);
+    }
+
+    [Fact]
+    public async Task Retry_FailedJob_ClearsNonEstimateError()
+    {
+        // 普通失败信息（含保险丝"已留存 X/N 块"提示）仍按原逻辑置 NULL，避免旧失败文案污染下一次跑
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("failed");
+        SetJobError(jobId, "被资源保险丝终止；已留存 12/107 块，点重试可接着跑");
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/retry", null);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var (status, _, error) = GetJobRow(jobId);
+        Assert.Equal("pending", status);
+        Assert.Null(error);
     }
 
     [Fact]

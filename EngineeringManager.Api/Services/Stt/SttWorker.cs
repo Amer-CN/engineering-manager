@@ -185,7 +185,7 @@ public class SttWorker : IHostedService, IDisposable
                 var mossEngine = new MossTranscribeEngine();
                 var progressRelay = new Progress<int>(p =>
                     UpdateProgress(db, job.Id, Math.Max(15, Math.Min(90, 15 + p * 75 / 100)), null));
-                result = await mossEngine.TranscribeAsync(processedWav, job.Hotwords, progressRelay, ct: default);
+                result = await mossEngine.TranscribeAsync(processedWav, job.Hotwords, progressRelay, ct: default, checkpointKey: job.Id.ToString());
                 result.DurationSec = duration;
 
                 // 分离段非空 → 按时间重叠回填说话人（纯函数，只改 Speaker，文本与时间戳不动）
@@ -293,7 +293,11 @@ public class SttWorker : IHostedService, IDisposable
                 result.Segments.Select(s => new { speaker = s.Speaker, start = s.Start, end = s.End, text = s.Text }));
 
             // diarizationWarning 非空=自动模式人数是估计值 → 写进 error 字段展示给用户（status 仍 completed，
-            // SttJobList 对 error 的渲染不区分状态）；无提示时为 null，等价于改动前的 error = NULL
+            // SttJobList 对 error 的渲染不区分状态）；无提示时为 null，等价于改动前的 error = NULL。
+            // 断块续跑去重：重试保留了旧 error（见 retry 端点），成功写回前先读现有 error——
+            // 已含相同提示则沿用（不重复写），否则按现逻辑写
+            var existingError = db.ExecuteScalar<string?>(
+                "SELECT error FROM stt_jobs WHERE id = @Id", new { job.Id });
             db.Execute(@"
                 UPDATE stt_jobs SET
                     status = 'completed', progress = 100,
@@ -306,7 +310,10 @@ public class SttWorker : IHostedService, IDisposable
                     Text = result.Text,
                     Json = resultJson,
                     Elapsed = result.ElapsedSec,
-                    Err = diarizationWarning,
+                    Err = diarizationWarning != null
+                        && !string.IsNullOrEmpty(existingError)
+                        && existingError.Contains(diarizationWarning, StringComparison.Ordinal)
+                        ? existingError : diarizationWarning,
                     Now = now(),
                     job.Id,
                 });

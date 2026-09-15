@@ -700,9 +700,18 @@ public static class SttEndpoints
                 if (status != "failed")
                     return Common.Fail($"任务当前状态为 {status}，只有失败的任务可以重试");
 
+                // 断块续跑 + 估计提示保留：先读现有 error，含"自动估计值"（DiarizationService 爆簇降级
+                // 提示文案的字面量；为保改动范围不跨文件引常量，此处用字面量匹配）则保留不置 NULL，
+                // 否则按原逻辑置 NULL。成功写回侧另有去重（SttWorker），此处保留不会导致重复展示。
+                var existingError = db.ExecuteScalar<string?>(
+                    "SELECT error FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+                var keepEstimate = existingError != null
+                    && existingError.Contains("自动估计值", StringComparison.Ordinal);
+
                 db.Execute(
-                    "UPDATE stt_jobs SET status = 'pending', progress = 0, error = NULL, updated_at = @Now WHERE id = @Id AND created_by = @Uid",
-                    new { Now = Common.NowString(), Id = id, Uid = uid });
+                    "UPDATE stt_jobs SET status = 'pending', progress = 0, error = @Err, updated_at = @Now WHERE id = @Id AND created_by = @Uid",
+                    new { Err = keepEstimate ? existingError : (string?)null, Now = Common.NowString(), Id = id, Uid = uid });
 
                 return Results.Ok(new { success = true, data = new { id, status = "pending" } });
             }

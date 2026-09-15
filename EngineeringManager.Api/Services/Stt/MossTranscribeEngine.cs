@@ -134,11 +134,18 @@ public class MossTranscribeEngine : ISttEngine
             && File.Exists(Path.Combine(dir, "moss-transcribe-q8_0.gguf")));
     }
 
+    /// <summary>显式接口实现：4 参签名精确匹配 ISttEngine（可选参数不参与隐式实现匹配，
+    /// 无 checkpoint 续跑，语义与历史一致）。</summary>
+    Task<SttResult> ISttEngine.TranscribeAsync(string wavPath, string? context,
+        IProgress<int>? progress, CancellationToken ct)
+        => TranscribeAsync(wavPath, context, progress, ct, checkpointKey: null);
+
     public async Task<SttResult> TranscribeAsync(
         string wavPath,
         string? context,
         IProgress<int>? progress,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? checkpointKey = null)
     {
         if (!await IsAvailableAsync())
             throw new InvalidOperationException($"MOSS 模型文件缺失，请检查 {EngineId} 所需的 asr-engine/moss/ 目录");
@@ -159,7 +166,7 @@ public class MossTranscribeEngine : ISttEngine
 
         var durationSec = await AudioPreprocessor.GetDurationAsync(wavPath);
 
-        // ≤CHUNK_SEC 单次直跑；超长切块（临时文件放 Path.GetTempPath 下的独立目录）
+        // ≤CHUNK_SEC 单次直跑（不设 checkpoint）；超长切块（临时文件放 Path.GetTempPath 下的独立目录）
         var chunks = new List<(string path, double offsetSec)>();
         if (IsSingleChunk(durationSec))
         {
@@ -167,11 +174,29 @@ public class MossTranscribeEngine : ISttEngine
         }
         else
         {
+            // 断块续跑：plan 物化一次（与原来内联求值语义一致），指纹据此 + durationSec + hotwords 生成；
+            // 音频换了/切法变了/热词变了 → 指纹对不上 → 旧账作废重跑（慢但不错）
+            var plan = BuildChunkPlan(durationSec, nominal => SnapCutToSilence(wavPath, nominal));
+            var checkpointDir = ResolveCheckpointDir(checkpointKey);
+            string? fingerprint = null;
+            if (checkpointDir != null)
+            {
+                try
+                {
+                    fingerprint = BuildCheckpointFingerprint(plan, durationSec, hotwords);
+                }
+                catch (Exception ex)
+                {
+                    // checkpoint 基建失败不阻断转写：降级为无 checkpoint 跑完本次
+                    Console.Error.WriteLine($"[SttEngine] MOSS checkpoint 指纹生成失败，本次不续跑: {Common.Sanitize(ex.Message)}");
+                    checkpointDir = null;
+                }
+            }
             var tempDir = Path.Combine(Path.GetTempPath(), $"stt_moss_{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDir);
             try
             {
-                foreach (var (offset, len) in BuildChunkPlan(durationSec, nominal => SnapCutToSilence(wavPath, nominal)))
+                foreach (var (offset, len) in plan)
                 {
                     ct.ThrowIfCancellationRequested();
                     var chunkPath = Path.Combine(tempDir, $"chunk_{(int)offset:000000}.wav");
@@ -179,8 +204,9 @@ public class MossTranscribeEngine : ISttEngine
                     chunks.Add((chunkPath, offset));
                 }
 
-                var all = await RunChunksAsync(chunks, durationSec, hotwords, progress, ct);
-                return all;
+                return await RunChunksCoreAsync(chunks, durationSec, hotwords, progress, ct,
+                    (chunk, index, token) => RunSingleAsync(chunk.path, hotwords, token),
+                    checkpointDir, fingerprint);
             }
             finally
             {
@@ -198,21 +224,98 @@ public class MossTranscribeEngine : ISttEngine
         IProgress<int>? progress,
         CancellationToken ct)
     {
+        return await RunChunksCoreAsync(chunks, durationSec, hotwords, progress, ct,
+            (chunk, index, token) => RunSingleAsync(chunk.path, hotwords, token),
+            checkpointDir: null, fingerprint: null);
+    }
+
+    /// <summary>
+    /// 断块续跑核心：逐块循环（RunChunksAsync 的生产入口 + 单测 stub 入口共用）。
+    /// checkpointDir == null → 与历史行为一致，每块都跑 runner；非空时：
+    /// - 启动先对 plan 指纹：对不上（音频换了/切法变了/热词变了）→ 清目录重跑（慢但不错）；
+    /// - 有效落盘块（非空 + ParseSegmentsJson 能解析，空数组也算有效）→ 跳过 runner；
+    /// - 无效落盘（解析抛错/空文件）→ 删文件重跑该块；
+    /// - 全部块合并成功 → 删目录；失败保留；取消原样抛出并删目录（用户主动取消=不要续跑）。
+    /// runner 委托接收 (块, 块下标, token)，返回子进程 stdout 原文。
+    /// </summary>
+    internal async Task<SttResult> RunChunksCoreAsync(
+        List<(string path, double offsetSec)> chunks,
+        double durationSec,
+        string? hotwords,
+        IProgress<int>? progress,
+        CancellationToken ct,
+        Func<(string path, double offsetSec), int, CancellationToken, Task<string>> runner,
+        string? checkpointDir,
+        string? fingerprint)
+    {
         var sw = Stopwatch.StartNew();
         var allSegments = new List<SttSegment>();
+        var perChunkJson = new string?[chunks.Count];
 
-        for (var i = 0; i < chunks.Count; i++)
+        // checkpoint 目录首次落盘时写 plan 指纹；重试认旧账的前置对账
+        var doneCount = 0;
+        if (checkpointDir != null)
         {
-            ct.ThrowIfCancellationRequested();
-            var (path, offset) = chunks[i];
-            var json = await RunSingleAsync(path, hotwords, ct);
-            // 切口对齐静音后块间严格无缝不重叠：全部段直接合并，无需任何去重。
-            // offset 为该块在原音频中的起点，ParseSegmentsJson 已据此换算为全局时间。
-            foreach (var seg in ParseSegmentsJson(json, offset))
-                allSegments.Add(seg);
-            progress?.Report((i + 1) * 100 / chunks.Count);
+            AlignCheckpointDir(checkpointDir, fingerprint);
+            for (var i = 0; i < chunks.Count; i++)
+            {
+                if (TryReadCheckpoint(checkpointDir, chunks[i].offsetSec, i, out var cached))
+                {
+                    perChunkJson[i] = cached;
+                    doneCount++;
+                }
+            }
+            if (doneCount > 0)
+                progress?.Report(doneCount * 100 / chunks.Count);
         }
 
+        try
+        {
+            for (var i = 0; i < chunks.Count; i++)
+            {
+                if (perChunkJson[i] != null)
+                    continue; // 认旧账：跳过已完成块
+                ct.ThrowIfCancellationRequested();
+                var (path, offset) = chunks[i];
+                string json;
+                try
+                {
+                    json = await runner((path, offset), i, ct);
+                }
+                catch (MossFuseException ex)
+                {
+                    // 保险丝终止：失败信息追加已留存块数（供重试接着跑提示），类型必须保持
+                    // MossFuseException（ShouldFallbackToCpu 靠它排除 CPU 回退，类型变了会误重跑）
+                    throw new MossFuseException(
+                        $"{ex.Message}；已留存 {CountCheckpoints(checkpointDir, chunks)}/{chunks.Count} 块，点重试可接着跑");
+                }
+                perChunkJson[i] = json;
+                if (checkpointDir != null)
+                    WriteCheckpoint(checkpointDir, fingerprint, offset, i, json);
+                progress?.Report(++doneCount * 100 / chunks.Count);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户主动取消=不要续跑：删目录，原样抛出（不追加提示语）
+            DeleteCheckpointDir(checkpointDir);
+            throw;
+        }
+        catch
+        {
+            // 失败（含保险丝 kill）保留 checkpoint 供重试认旧账
+            throw;
+        }
+
+        // 切口对齐静音后块间严格无缝不重叠：全部段直接合并，无需任何去重。
+        // offset 为该块在原音频中的起点，ParseSegmentsJson 已据此换算为全局时间。
+        // 合并时顺带校验内存里的 json（无效则抛，保留 checkpoint 排查；走不到此处的 fuse 已在块循环内追加提示）
+        foreach (var (json, idx) in perChunkJson.Select((j, idx) => (j, idx)))
+            foreach (var seg in ParseSegmentsJson(json!, chunks[idx].offsetSec))
+                allSegments.Add(seg);
+        progress?.Report(100);
+
+        DeleteCheckpointDir(checkpointDir); // 成功后清理
         return new SttResult
         {
             Text = string.Join("", allSegments.Select(s => s.Text)),
@@ -221,6 +324,135 @@ public class MossTranscribeEngine : ISttEngine
             ElapsedSec = sw.Elapsed.TotalSeconds,
             Engine = EngineId,
         };
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // checkpoint 存取（断块续跑基建）
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>checkpoint 目录：%TEMP%/stt_moss_ckpt_{key}，key 仅允许字母数字/_/-（其余过滤掉，为空则本次不设 checkpoint）。</summary>
+    internal static string? ResolveCheckpointDir(string? checkpointKey)
+    {
+        if (string.IsNullOrEmpty(checkpointKey)) return null;
+        var safe = new string(checkpointKey.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-').ToArray());
+        if (string.IsNullOrEmpty(safe)) return null;
+        return Path.Combine(Path.GetTempPath(), $"stt_moss_ckpt_{safe}");
+    }
+
+    /// <summary>plan 指纹 = 各块(offset,len)+durationSec+hotwords。热词 null 与空串视为同一指纹（归一化后都走无热词路径）。</summary>
+    internal static string BuildCheckpointFingerprint(
+        List<(double offsetSec, double lenSec)> plan, double durationSec, string? hotwords)
+    {
+        var sb = new StringBuilder();
+        foreach (var (offset, len) in plan)
+            sb.Append($"{offset:0.###},{len:0.###};");
+        sb.Append($"|dur={durationSec:0.###}|hw={hotwords ?? ""}");
+        return sb.ToString();
+    }
+
+    internal static string CheckpointFilePath(string dir, double offsetSec, int index) =>
+        Path.Combine(dir, $"chunk_{(int)offsetSec:000000}.json");
+
+    private const string FingerprintFileName = "plan.json";
+
+    /// <summary>
+    /// 对账：目录不存在/指纹一致 → 建目录并确保指纹文件存在；指纹不一致（音频换了/切法变了/热词变了）
+    /// → 清目录重跑。checkpoint 基建异常不阻断转写：调用方在 TranscribeAsync 侧 try 兜底，
+    /// 此处的 IO 一律吞掉落日志（本次降级为无 checkpoint）。
+    /// </summary>
+    private static void AlignCheckpointDir(string checkpointDir, string? fingerprint)
+    {
+        try
+        {
+            if (!Directory.Exists(checkpointDir))
+            {
+                Directory.CreateDirectory(checkpointDir);
+                if (fingerprint != null)
+                    File.WriteAllText(Path.Combine(checkpointDir, FingerprintFileName), fingerprint);
+                return;
+            }
+            var fpPath = Path.Combine(checkpointDir, FingerprintFileName);
+            var existing = File.Exists(fpPath) ? File.ReadAllText(fpPath) : null;
+            if (fingerprint != null && existing == fingerprint)
+                return; // 认旧账
+            foreach (var f in Directory.GetFiles(checkpointDir))
+            {
+                try { File.Delete(f); } catch { /* 逐个尽力删 */ }
+            }
+            if (fingerprint != null)
+                File.WriteAllText(fpPath, fingerprint);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[SttEngine] MOSS checkpoint 对账失败（本次不续跑）: {Common.Sanitize(ex.Message)}");
+        }
+    }
+
+    /// <summary>读盘有效性：文件非空且 ParseSegmentsJson 能解析（空数组也算有效，静音块合法）；无效（解析抛错/空文件）→ 删文件重跑该块。</summary>
+    private static bool TryReadCheckpoint(string dir, double offsetSec, int index, out string? json)
+    {
+        json = null;
+        try
+        {
+            var path = CheckpointFilePath(dir, offsetSec, index);
+            if (!File.Exists(path) || new FileInfo(path).Length == 0)
+            {
+                try { if (File.Exists(path)) File.Delete(path); } catch { }
+                return false;
+            }
+            var text = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                try { File.Delete(path); } catch { }
+                return false;
+            }
+            ParseSegmentsJson(text, offsetSec); // 仅校验可解析性，合并时再按全局 offset 正式解析
+            json = text;
+            return true;
+        }
+        catch (Exception)
+        {
+            try { File.Delete(CheckpointFilePath(dir, offsetSec, index)); } catch { }
+            return false;
+        }
+    }
+
+    private static void WriteCheckpoint(string dir, string? fingerprint, double offsetSec, int index, string json)
+    {
+        try
+        {
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+                if (fingerprint != null)
+                    File.WriteAllText(Path.Combine(dir, FingerprintFileName), fingerprint);
+            }
+            File.WriteAllText(CheckpointFilePath(dir, offsetSec, index), json);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[SttEngine] MOSS checkpoint 落盘失败（不致命，本块结果仍在内存）: {Common.Sanitize(ex.Message)}");
+        }
+    }
+
+    /// <summary>与当前 plan 对得上的有效 checkpoint 数（fuse 提示语的 done；目录不存在/指纹不对 → 0）。</summary>
+    private static int CountCheckpoints(string? checkpointDir, List<(string path, double offsetSec)> chunks)
+    {
+        if (checkpointDir == null || !Directory.Exists(checkpointDir)) return 0;
+        var n = 0;
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            if (TryReadCheckpoint(checkpointDir, chunks[i].offsetSec, i, out _))
+                n++;
+        }
+        return n;
+    }
+
+    private static void DeleteCheckpointDir(string? checkpointDir)
+    {
+        if (checkpointDir == null) return;
+        try { if (Directory.Exists(checkpointDir)) Directory.Delete(checkpointDir, true); }
+        catch (Exception ex) { Console.Error.WriteLine($"[SttEngine] MOSS checkpoint 清理失败（不致命）: {Common.Sanitize(ex.Message)}"); }
     }
 
     /// <summary>单块推理：OS Mutex + PreJob 门 + 运行时保险丝（共享单实例纪律）。

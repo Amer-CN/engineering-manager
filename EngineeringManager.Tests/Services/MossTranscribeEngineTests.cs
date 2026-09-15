@@ -339,4 +339,267 @@ public class MossTranscribeEngineTests
         Assert.False(MossTranscribeEngine.IsSingleChunk(31.01));
         Assert.False(MossTranscribeEngine.IsSingleChunk(32));
     }
+
+    // ═══════════ 断块续跑 checkpoint（任务书task-moss-resume：落盘/跳过/指纹/清理）═══════════
+    // 纯逻辑，不起真实子进程：runner 传入计数 stub
+
+    private static List<(string path, double offsetSec)> ThreeChunks() =>
+        new() { ("a.wav", 0), ("b.wav", 30), ("c.wav", 60) };
+
+    private static string SegJson(string text) =>
+        "[{\"id\":\"s\",\"start\":0,\"end\":1,\"speaker\":\"S01\",\"text\":\"" + text + "\"}]";
+
+    private static string NewCkptDir()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"moss_ckpt_ut_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    [Fact]
+    public void ResolveCheckpointDir_SanitizesKey()
+    {
+        Assert.Null(MossTranscribeEngine.ResolveCheckpointDir(null));
+        Assert.Null(MossTranscribeEngine.ResolveCheckpointDir(""));
+        Assert.Null(MossTranscribeEngine.ResolveCheckpointDir("...///"));  // 全过滤掉 → 本次不设 checkpoint
+        var dir = MossTranscribeEngine.ResolveCheckpointDir("42")!;
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "stt_moss_ckpt_42"), dir);
+        var traversal = MossTranscribeEngine.ResolveCheckpointDir("..\\..\\x")!;
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "stt_moss_ckpt_x"), traversal); // 路径穿越字符被过滤
+    }
+
+    [Fact]
+    public void BuildCheckpointFingerprint_DistinguishesPlanDurationHotwords()
+    {
+        var plan = new List<(double, double)> { (0, 30), (30, 30) };
+        var a = MossTranscribeEngine.BuildCheckpointFingerprint(plan, 60, "谭俊");
+        var b = MossTranscribeEngine.BuildCheckpointFingerprint(plan, 60, "谭俊");
+        var c = MossTranscribeEngine.BuildCheckpointFingerprint(plan, 61, "谭俊");   // 时长变了
+        var d = MossTranscribeEngine.BuildCheckpointFingerprint(plan, 60, "陈泽伟"); // 热词变了
+        var e = MossTranscribeEngine.BuildCheckpointFingerprint(
+            new List<(double, double)> { (0, 29), (29, 31) }, 60, "谭俊");            // 切法变了
+        Assert.Equal(a, b);
+        Assert.NotEqual(a, c);
+        Assert.NotEqual(a, d);
+        Assert.NotEqual(a, e);
+    }
+
+    [Fact]
+    public async Task RunChunksCore_CheckpointHit_SkipsFinishedChunks()
+    {
+        var engine = new MossTranscribeEngine();
+        var chunks = ThreeChunks();
+        var dir = NewCkptDir();
+        try
+        {
+            // 预置第 0 块落盘（含空数组有效形态覆盖：第 1 块为静音块 "[]"）
+            File.WriteAllText(Path.Combine(dir, "plan.json"),
+                MossTranscribeEngine.BuildCheckpointFingerprint(
+                    new List<(double, double)> { (0, 30), (30, 30), (60, 30) }, 90, null));
+            File.WriteAllText(Path.Combine(dir, "chunk_000000.json"), SegJson("甲"));
+            File.WriteAllText(Path.Combine(dir, "chunk_000030.json"), "[]"); // 静音块：空数组也算有效
+            var ran = new List<int>();
+            Task<string> Stub((string path, double offsetSec) c, int i, CancellationToken t)
+            {
+                ran.Add(i);
+                return Task.FromResult(SegJson("新" + i));
+            }
+            var fp = MossTranscribeEngine.BuildCheckpointFingerprint(
+                new List<(double, double)> { (0, 30), (30, 30), (60, 30) }, 90, null);
+            var result = await engine.RunChunksCoreAsync(chunks, 90, null, null, CancellationToken.None, Stub, dir, fp);
+
+            Assert.Equal(new[] { 2 }, ran);                       // 只跑剩余块
+            Assert.Contains("甲", result.Text);                   // 落盘块参与合并
+            Assert.Equal(2, result.Segments.Count);               // 静音块 0 段 + 甲 + 新2
+            Assert.False(Directory.Exists(dir));                  // 成功后目录被删
+        }
+        finally
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RunChunksCore_FingerprintMismatch_InvalidatesAndReruns()
+    {
+        var engine = new MossTranscribeEngine();
+        var chunks = ThreeChunks();
+        var dir = NewCkptDir();
+        try
+        {
+            // 旧指纹（热词不同）+ 旧落盘块 → 必须作废重跑（慢但不错）
+            File.WriteAllText(Path.Combine(dir, "plan.json"), "STALE-FINGERPRINT");
+            File.WriteAllText(Path.Combine(dir, "chunk_000000.json"), SegJson("旧块"));
+            var ran = new List<int>();
+            Task<string> Stub((string path, double offsetSec) c, int i, CancellationToken t)
+            {
+                ran.Add(i);
+                return Task.FromResult(SegJson("新" + i));
+            }
+            var fp = MossTranscribeEngine.BuildCheckpointFingerprint(
+                new List<(double, double)> { (0, 30), (30, 30), (60, 30) }, 90, "新热词");
+            var result = await engine.RunChunksCoreAsync(chunks, 90, "新热词", null, CancellationToken.None, Stub, dir, fp);
+
+            Assert.Equal(new[] { 0, 1, 2 }, ran);                 // 全部重跑
+            Assert.DoesNotContain("旧块", result.Text);
+            Assert.False(Directory.Exists(dir));
+        }
+        finally
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RunChunksCore_InvalidCheckpointFile_DeletedAndRerun()
+    {
+        var engine = new MossTranscribeEngine();
+        var chunks = ThreeChunks();
+        var dir = NewCkptDir();
+        try
+        {
+            var fp = MossTranscribeEngine.BuildCheckpointFingerprint(
+                new List<(double, double)> { (0, 30), (30, 30), (60, 30) }, 90, null);
+            File.WriteAllText(Path.Combine(dir, "plan.json"), fp);
+            File.WriteAllText(Path.Combine(dir, "chunk_000000.json"), "NOT-JSON{{"); // 解析抛错 → 删文件重跑
+            File.WriteAllText(Path.Combine(dir, "chunk_000030.json"), "");           // 空文件 → 删文件重跑
+            var ran = new List<int>();
+            Task<string> Stub((string path, double offsetSec) c, int i, CancellationToken t)
+            {
+                ran.Add(i);
+                return Task.FromResult(SegJson("新" + i));
+            }
+            await engine.RunChunksCoreAsync(chunks, 90, null, null, CancellationToken.None, Stub, dir, fp);
+
+            Assert.Equal(new[] { 0, 1, 2 }, ran);
+        }
+        finally
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RunChunksCore_Failure_KeepsCheckpointFiles()
+    {
+        var engine = new MossTranscribeEngine();
+        var chunks = ThreeChunks();
+        var dir = NewCkptDir();
+        try
+        {
+            var fp = MossTranscribeEngine.BuildCheckpointFingerprint(
+                new List<(double, double)> { (0, 30), (30, 30), (60, 30) }, 90, null);
+            Task<string> Stub((string path, double offsetSec) c, int i, CancellationToken t) =>
+                i == 1
+                    ? Task.FromException<string>(new InvalidOperationException("boom"))
+                    : Task.FromResult(SegJson("新" + i));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                engine.RunChunksCoreAsync(chunks, 90, null, null, CancellationToken.None, Stub, dir, fp));
+
+            Assert.True(Directory.Exists(dir));                                     // 失败保留
+            Assert.True(File.Exists(Path.Combine(dir, "chunk_000000.json")));       // 第 0 块落盘仍在
+            Assert.Equal(SegJson("新0"), File.ReadAllText(Path.Combine(dir, "chunk_000000.json")));
+        }
+        finally
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RunChunksCore_Cancel_DeletesCheckpointAndRethrows()
+    {
+        var engine = new MossTranscribeEngine();
+        var chunks = ThreeChunks();
+        var dir = NewCkptDir();
+        try
+        {
+            var fp = MossTranscribeEngine.BuildCheckpointFingerprint(
+                new List<(double, double)> { (0, 30), (30, 30), (60, 30) }, 90, null);
+            using var cts = new CancellationTokenSource();
+            Task<string> Stub((string path, double offsetSec) c, int i, CancellationToken t)
+            {
+                if (i == 1)
+                {
+                    cts.Cancel();
+                    return Task.FromException<string>(new OperationCanceledException(cts.Token));
+                }
+                return Task.FromResult(SegJson("新" + i));
+            }
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                engine.RunChunksCoreAsync(chunks, 90, null, null, cts.Token, Stub, dir, fp));
+
+            Assert.False(Directory.Exists(dir)); // 用户主动取消=不要续跑
+        }
+        finally
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RunChunksCore_FuseError_AppendsResumeHintAndKeepsType()
+    {
+        // 保险丝终止的失败文案含"已留存 X/N 块，点重试可接着跑"，且类型仍被 ShouldFallbackToCpu 排除
+        var engine = new MossTranscribeEngine();
+        var chunks = ThreeChunks();
+        var dir = NewCkptDir();
+        try
+        {
+            var fp = MossTranscribeEngine.BuildCheckpointFingerprint(
+                new List<(double, double)> { (0, 30), (30, 30), (60, 30) }, 90, null);
+            Task<string> Stub((string path, double offsetSec) c, int i, CancellationToken t) =>
+                i == 1
+                    ? Task.FromException<string>(MossTranscribeEngine.CreateFuseExceptionForTest("被资源保险丝终止"))
+                    : Task.FromResult(SegJson("新" + i));
+            // ThrowsAsync 要求精确类型、不能用基类接派生类，此处用 try/catch 直接捕获
+            Exception? caught = null;
+            try
+            {
+                await engine.RunChunksCoreAsync(chunks, 90, null, null, CancellationToken.None, Stub, dir, fp);
+            }
+            catch (Exception ex)
+            {
+                caught = ex;
+            }
+
+            Assert.NotNull(caught);
+            Assert.Contains("已留存 1/3 块，点重试可接着跑", caught!.Message);
+            Assert.True(MossTranscribeEngine.IsFallbackExcluded(caught!)); // 仍是 MossFuseException 类型
+            Assert.True(Directory.Exists(dir));                       // fuse 失败保留 checkpoint
+        }
+        finally
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RunChunksCore_NoCheckpoint_RunsAllAndReportsProgress()
+    {
+        // checkpointDir == null → 与历史行为一致：每块都跑，进度 0→100 单调
+        var engine = new MossTranscribeEngine();
+        var chunks = ThreeChunks();
+        var ran = new List<int>();
+        var prog = new SyncProgress();
+        Task<string> Stub((string path, double offsetSec) c, int i, CancellationToken t)
+        {
+            ran.Add(i);
+            return Task.FromResult(SegJson("新" + i));
+        }
+        var result = await engine.RunChunksCoreAsync(
+            chunks, 90, null, prog, CancellationToken.None, Stub, null, null);
+
+        Assert.Equal(new[] { 0, 1, 2 }, ran);
+        Assert.Equal(3, result.Segments.Count);
+        Assert.Equal(100, prog.Values[^1]);
+    }
+
+    /// <summary>同步 IProgress：Progress&lt;T&gt; 无 SynchronizationContext 时走线程池投递，
+    /// 单测断言会竞态；此处用同步实现保证确定性。</summary>
+    private sealed class SyncProgress : IProgress<int>
+    {
+        public readonly List<int> Values = new();
+        public void Report(int value) => Values.Add(value);
+    }
 }
