@@ -38,7 +38,7 @@ const SttCapabilityCard: React.FC<SttCapabilityCardProps> = ({ capLoading, canTr
     <Card padding="sm" className="bg-success-50 border-success-200">
       <div className="flex items-center gap-2 text-sm">
         <Icon name="CheckCircle" size={16} className="text-success-500" />
-        <span className="text-success-800 font-medium">Qwen3-ASR-1.7B 本地模型已就绪</span>
+        <span className="text-success-800 font-medium">本地转写已就绪</span>
         {!canDiarize && (
           <Badge variant="warning" size="sm">说话人分离模型未就绪</Badge>
         )}

@@ -368,7 +368,7 @@ public class SttJob
     public string Source_File { get; set; } = "";
     public string Source_Path { get; set; } = "";
     public string Source_Type { get; set; } = "audio";
-    public string Engine { get; set; } = "qwen3-asr-1.7b-gguf";
+    public string Engine { get; set; } = MossTranscribeEngine.EngineId;
     public string Status { get; set; } = "pending";
     public int Progress { get; set; }
     public int Is_Multi_Speaker { get; set; }

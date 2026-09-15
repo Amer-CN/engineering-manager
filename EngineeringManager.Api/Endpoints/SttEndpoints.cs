@@ -170,8 +170,8 @@ public static class SttEndpoints
                     return Results.Json(new { success = false, error = $"本地语音转文字不可用: {SttEngineSelector.GetUnavailableReason()}。可使用云端转写（即将推出）。" }, statusCode: 503);
                 }
 
-                // 引擎选择：白名单校验，空/缺省回退现役引擎
-                var engineId = string.IsNullOrWhiteSpace(dto.Engine) ? "qwen3-asr-1.7b-gguf" : dto.Engine!;
+                // 引擎选择：白名单校验，空/缺省回退现役引擎（MOSS：CPU 可跑，方言优先）
+                var engineId = string.IsNullOrWhiteSpace(dto.Engine) ? MossTranscribeEngine.EngineId : dto.Engine!;
                 if (!AllowedEngines.Contains(engineId))
                     return Common.Fail($"不支持的转写引擎: {engineId}，可选: {string.Join(", ", AllowedEngines)}");
                 if (string.Equals(engineId, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase) && !await new MossTranscribeEngine().IsAvailableAsync())
@@ -859,7 +859,7 @@ public class SttTranscribeDto
     public int? NumSpeakers { get; set; }
     public string? Context { get; set; }
 
-    /// <summary>转写引擎（白名单见 AllowedEngines；空值回退 qwen3-asr-1.7b-gguf）</summary>
+    /// <summary>转写引擎（白名单见 AllowedEngines；空值回退 moss-transcribe-0.9b）</summary>
     public string? Engine { get; set; }
 }
 
