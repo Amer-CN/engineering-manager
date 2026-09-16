@@ -2,6 +2,9 @@
 
 > 本文档包含各业务模块的详细设计说明，AGENTS.md 只保留模块索引。
 > 最后同步：2026-07-23（对齐 v0.82.1；逐版本增量见 CHANGELOG.md）
+>
+> AI 对话窗口（agent 目录 31 组件）的前端清单见 [FRONTEND-COMPONENTS-INVENTORY.md](FRONTEND-COMPONENTS-INVENTORY.md)「Agent AI 助手」节；
+> 行动确认卡后端对接指南见 [AGENT-APPROVAL-CARD-INTEGRATION.md](AGENT-APPROVAL-CARD-INTEGRATION.md)。
 
 ---
 

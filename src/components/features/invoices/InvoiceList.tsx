@@ -109,8 +109,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <div className="mt-0.5">
               <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}>
                 <div
-                  className="h-full rounded-full transition-[width,background-color]"
-                  style={{ width: `${Math.min(item.receivedAmount / item.amount * 100, 100)}%`, background: item.receivedAmount >= item.amount ? 'var(--success)' : 'var(--warning)' }}
+                  className="h-full rounded-full transition-[transform,background-color] duration-300"
+                  style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${Math.min(item.receivedAmount / item.amount * 100, 100) / 100})`, background: item.receivedAmount >= item.amount ? 'var(--success)' : 'var(--warning)' }}
                 />
               </div>
               <div className="text-xs mt-0.5 tabular-nums" style={{ color: 'var(--muted)' }}>

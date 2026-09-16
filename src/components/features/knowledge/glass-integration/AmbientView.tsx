@@ -112,7 +112,7 @@ export const AmbientView: React.FC<AmbientViewProps> = ({
       {/* --- BOTTOM ACTION BAR & ACTIVE FOLDER PREVIEW SUMMARY --- */}
       <footer className="relative z-30 px-6 sm:px-12 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/10 backdrop-blur-md">
         <div className="flex items-center gap-4">
-          <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse" />
+          <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
           <div className="text-xs">
             <span className="text-zinc-400">当前聚焦: </span>
             <span className="font-bold text-sm ml-1">{selectedFolder.title}</span>

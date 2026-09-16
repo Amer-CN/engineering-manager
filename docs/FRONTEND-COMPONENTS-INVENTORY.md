@@ -100,25 +100,43 @@ src/components/
 
 ## 功能模块组件（321 个 / 20 模块）
 
-### Agent AI 助手（15 个）
+### Agent AI 助手（31 个 · 2026-09-06 与代码实盘对齐；原表 15 个中 AgentWelcome 已无对应文件）
 
 | 组件 | 说明 |
 |------|------|
 | AgentDashboard | Agent 主面板 |
-| AgentComposer | 消息输入框 |
-| AgentWelcome | 欢迎页 |
+| AgentComposer | 消息输入框（含 @ 菜单、/ 菜单、附件、听写） |
 | AgentTopBar | 顶部栏 |
 | AgentOverlays | 覆盖层 |
-| AgentSearch | 搜索功能 |
-| ConversationHistory | 对话历史侧栏 |
+| AgentSearch | 对话内搜索 |
+| AgentStreamTail | 流式尾部组合件（PixelLoader + ToolCallChips） |
+| ConversationHistory | 对话历史侧栏（归档/删除已合并为单一删除，见 39da68f6） |
 | ConversationHistoryItem | 历史条目 |
-| MessageBubble | 消息气泡 |
+| ConversationListBody | 历史列表体 |
+| BatchActionBar | 历史批量操作条 |
+| MessageBubble | 消息气泡（含 ApprovalCard 挂点） |
 | MessageActions | 消息操作栏 |
 | MarkdownRenderer | Markdown 渲染器 |
-| RichToolResult | 工具结果展示 |
+| RichToolResult | 工具结果展示（形状驱动 + 排序/筛选/合计；STATUS_LABELS / FIELD_LABELS 驼峰双拼写） |
+| DataTable | 富表格（agent 目录自有实现） |
 | KnowledgeSourceCard | 知识来源卡片 |
 | SuggestionChips | 建议词芯片 |
 | Mascot | 吉祥物 |
+| AtSourceMenu | 输入框 @ 数据来源菜单 |
+| SlashMenu | 输入框 / 命令菜单 |
+| DocAttachmentChips | 附件芯片 |
+| DictationButton | 听写按钮（STT 批量管线） |
+| ModelPicker | 模型选择器 |
+| ContextMeter | 上下文水位 |
+| PixelLoader | 思考中加载（loading-state 移植） |
+| ThinkingTrace | 思考过程折叠（Reasoning 形态，max-h-64） |
+| ToolCallChips | 工具调用 chips（运行中/完成/失败三态） |
+| RecoveryCard | 错误恢复卡（recommendation-card 改造成出错恢复场景） |
+| ApprovalCard | 行动确认卡（前端已就绪；后端对接指南见 docs/AGENT-APPROVAL-CARD-INTEGRATION.md） |
+| CodeBlockCard | 代码块卡片（语言标签/行号/复制，未闭合禁复制） |
+| SelectionAiBar | 选中文字 AI 操作条（走 useAgentPrefill 预填通道，替换语义） |
+
+> 另：`src/hooks/useSlidePill.ts`（动效批 1 滑动胶囊 hook，Sidebar/ContractPage/LaborWorkerList/SettingsNav 四处接入）。图标门禁 check-icon-refs.cjs 已升级覆盖动态引用（三元/leftIcon 结果臂字面量 + 变量引用基线化统计）。
 
 ### 审计日志（1 个）
 

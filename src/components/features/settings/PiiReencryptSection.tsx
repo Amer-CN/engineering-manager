@@ -45,8 +45,8 @@ export function PiiReencryptSection({ reencryptStatus, progressPct, reencrypting
           </div>
           <div className="w-full bg-[color:var(--panel-2)] rounded-full h-2">
             <div
-              className={`h-2 rounded-full transition-[width,background-color] ${reencryptStatus.status === 'completed' ? 'bg-success-500' : reencryptStatus.status === 'completed_with_errors' ? 'bg-warning-500' : 'bg-[color:var(--accent)]'}`}
-              style={{ width: `${progressPct}%` }}
+              className={`h-2 rounded-full transition-[transform,background-color] duration-300 ${reencryptStatus.status === 'completed' ? 'bg-success-500' : reencryptStatus.status === 'completed_with_errors' ? 'bg-warning-500' : 'bg-[color:var(--accent)]'}`}
+              style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${progressPct / 100})` }}
             />
           </div>
           <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-[color:var(--muted)]">

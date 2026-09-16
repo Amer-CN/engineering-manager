@@ -77,7 +77,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 initial={{ opacity: 0, x: 24, scale: 0.96 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 24, scale: 0.96 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25, delay: _i * 0.05 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className="bg-[color:var(--card)] border border-[color:var(--border)] text-[color:var(--fg)] px-4 py-3 rounded-xl shadow-lift pointer-events-auto min-w-[240px] max-w-[360px]"
                 role="alert"
                 onClick={() => removeToast(toast.id)}

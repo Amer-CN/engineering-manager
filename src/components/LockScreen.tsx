@@ -46,8 +46,8 @@ const LockScreen: React.FC = () => {
         {/* Avatar + Name */}
         <div className="text-center mb-8">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
             className="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-3xl font-semibold shadow-lg mb-4"
             style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}

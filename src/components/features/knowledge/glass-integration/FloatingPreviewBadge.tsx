@@ -38,8 +38,6 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
         }
       `}
     >
-      <style>{`@keyframes gcLampBreathe { 0%,100% { opacity: .35; transform: scale(.85) } 50% { opacity: 1; transform: scale(1.15) } }`}</style>
-
       {/* Top Gloss Highlight */}
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent rounded-t-2xl" />
 
@@ -83,7 +81,7 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
               className="absolute w-4 h-4 rounded-full"
               style={{
                 background: 'var(--gc-icon-a50)',
-                animation: 'gcLampBreathe 2.4s ease-in-out infinite',
+                opacity: 0.35,
               }}
             />
           )}

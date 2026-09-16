@@ -17,17 +17,17 @@ interface TitleBarProps {
 
 const THEME_INTERACTION = {
   white: {
-    hoverScale: 1.12, tapScale: 0.88,
+    hoverScale: 1.05, tapScale: 0.94,
     hoverBg: 'var(--panel-2)', hoverIconColor: 'var(--accent)',
     transition: { type: 'spring', stiffness: 400, damping: 20 },
   },
   graphite: {
-    hoverScale: 1.15, tapScale: 0.85,
+    hoverScale: 1.06, tapScale: 0.93,
     hoverBg: 'rgba(255, 255, 255, 0.12)', hoverIconColor: 'var(--accent)',
     transition: { type: 'spring', stiffness: 500, damping: 15 },
   },
   sandstone: {
-    hoverScale: 1.08, tapScale: 0.92,
+    hoverScale: 1.04, tapScale: 0.95,
     hoverBg: 'rgba(0, 0, 0, 0.08)', hoverIconColor: 'var(--warning)',
     transition: { type: 'spring', stiffness: 300, damping: 25 },
   },

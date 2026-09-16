@@ -41,7 +41,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       className={`
         relative group cursor-pointer select-none
         w-[230px] sm:w-[245px] h-[305px] sm:h-[320px]
-        flex-shrink-0 hover:scale-[1.015] transition-transform duration-75 ease-out
+        flex-shrink-0
       `}
       style={{
         transformStyle: 'preserve-3d',
