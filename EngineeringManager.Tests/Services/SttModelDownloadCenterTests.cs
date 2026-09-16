@@ -36,13 +36,12 @@ public class SttModelDownloadCenterTests : IDisposable
     // ═══════════════════════════════════════════════════════════
 
     [Fact]
-    public void Manifest_CoversThreeEngines_WithExpectedIds()
+    public void Manifest_CoversTwoEngines_WithExpectedIds()
     {
         var ids = SttModelManager.ModelManifest.Select(m => m.EngineId).ToList();
-        Assert.Contains(SttModelManager.QwenEngineId, ids);
         Assert.Contains(MossTranscribeEngine.EngineId, ids);
         Assert.Contains(ParaformerEngine.EngineId, ids);
-        Assert.Equal(3, SttModelManager.ModelManifest.Count);
+        Assert.Equal(2, SttModelManager.ModelManifest.Count);
     }
 
     [Fact]
@@ -84,19 +83,6 @@ public class SttModelDownloadCenterTests : IDisposable
     }
 
     [Fact]
-    public void Manifest_QwenFilesComeFromVerifiedArchive()
-    {
-        // Qwen 三件套的包内清单经 zip 中央目录 Range 解析确认（名称 + 解压后大小）
-        var qwen = SttModelManager.FindEngineSpec(SttModelManager.QwenEngineId)!;
-        Assert.Equal(3, qwen.Files.Count);
-        Assert.Equal(1410584479L, qwen.ArchiveBytes);
-        Assert.All(qwen.Files, f => Assert.NotNull(f.ZipEntry));
-        Assert.Contains(qwen.Files, f => f.ZipEntry == "qwen3_asr_llm.q4_k.gguf");
-        Assert.Contains(qwen.Files, f => f.ZipEntry == "qwen3_asr_encoder_backend.int4.onnx");
-        Assert.Contains(qwen.Files, f => f.ZipEntry == "qwen3_asr_encoder_frontend.int4.onnx");
-    }
-
-    [Fact]
     public void Manifest_ParaformerHasTwoDownloadableFiles()
     {
         var para = SttModelManager.FindEngineSpec(ParaformerEngine.EngineId)!;
@@ -127,7 +113,7 @@ public class SttModelDownloadCenterTests : IDisposable
     [Fact]
     public void FindEngineSpec_IsCaseInsensitive()
     {
-        Assert.NotNull(SttModelManager.FindEngineSpec(SttModelManager.QwenEngineId.ToUpperInvariant()));
+        Assert.NotNull(SttModelManager.FindEngineSpec(MossTranscribeEngine.EngineId.ToUpperInvariant()));
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -139,16 +125,16 @@ public class SttModelDownloadCenterTests : IDisposable
     {
         var status = SttModelManager.GetModelStatus();
 
-        Assert.Equal(3, status.Count);
+        Assert.Equal(2, status.Count);
         Assert.All(status, s => Assert.False(s.Ready));
 
         var para = status.First(s => s.EngineId == ParaformerEngine.EngineId);
         Assert.Equal(2, para.MissingFiles.Count);
         Assert.Equal(238429929L + 75756L, para.MissingBytes);
 
-        var qwen = status.First(s => s.EngineId == SttModelManager.QwenEngineId);
-        Assert.Equal(3, qwen.MissingFiles.Count);
-        Assert.Equal(1282434624L + 164740452L + 20876699L, qwen.MissingBytes);
+        var moss = status.First(s => s.EngineId == MossTranscribeEngine.EngineId);
+        Assert.Single(moss.MissingFiles);
+        Assert.Equal(986881024L, moss.MissingBytes);
     }
 
     [Fact]
@@ -416,7 +402,7 @@ public class SttModelDownloadCenterTests : IDisposable
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 五、包内解压（Qwen zip 路径）
+    // 五、包内解压（归档包路径）
     // ═══════════════════════════════════════════════════════════
 
     [Fact]
@@ -497,11 +483,22 @@ public class SttModelDownloadCenterTests : IDisposable
     [Fact]
     public void ExtractZip_IsWiredIntoDownloadPath()
     {
-        // Qwen 清单必须走 ArchiveUrl（包内解压），不得出现"没有地址"的 Qwen 文件
-        var qwen = SttModelManager.FindEngineSpec(SttModelManager.QwenEngineId)!;
-        Assert.NotNull(qwen.ArchiveUrl);
-        Assert.NotNull(qwen.ArchiveName);
-        Assert.All(qwen.Files, f => Assert.True(f.Downloadable));
+        // 清单纪律：现役清单的每个文件都必须可下载（有直链或归档包内条目），
+        // 否则模型缺了只能手动拷、一键下载会在编排里报"没有已验证的下载地址"；
+        // 带 ZipEntry 的文件还必须有归档包地址与包大小（下载编排按包下再解压）
+        foreach (var spec in SttModelManager.ModelManifest)
+        {
+            foreach (var f in spec.Files)
+            {
+                Assert.True(f.Downloadable, $"{spec.EngineId}/{f.RelPath} 缺少下载地址");
+                if (f.ZipEntry != null)
+                {
+                    Assert.NotNull(spec.ArchiveUrl);
+                    Assert.NotNull(spec.ArchiveName);
+                    Assert.True(spec.ArchiveBytes > 0);
+                }
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════

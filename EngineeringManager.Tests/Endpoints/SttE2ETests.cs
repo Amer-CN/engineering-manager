@@ -9,7 +9,7 @@ namespace EngineeringManager.Tests.Endpoints;
 /// - 单人录音转写文本
 /// - 多人录音：分离段合并前后对比 + 带说话人标签的转写文本
 /// 
-/// 注意：此测试需要模型和音频文件，运行时间约 3-5 分钟（transcribe.exe 异常时可能挂起 10 分钟+）
+/// 注意：此测试需要模型和音频文件，运行时间约 3-5 分钟（ASR 推理异常时可能挂起 10 分钟+）
 /// 默认以 Skipped 状态跳过（测试报告如实显示 642 passed + 2 skipped，不计入通过数）。手动运行：
 ///   $env:RUN_STT_E2E='1'; dotnet test --filter FullyQualifiedName~SttE2E
 /// </summary>
@@ -24,7 +24,7 @@ public class SttE2ETests
         public SttE2EFactAttribute()
         {
             if (Environment.GetEnvironmentVariable("RUN_STT_E2E") != "1")
-                Skip = "未设置 RUN_STT_E2E=1，跳过重型 STT E2E（transcribe.exe 挂起会拖死整个测试套件）";
+                Skip = "未设置 RUN_STT_E2E=1，跳过重型 STT E2E（引擎挂起会拖死整个测试套件）";
         }
     }
 
@@ -87,9 +87,9 @@ public class SttE2ETests
         var splitFiles = await diarization.SplitAudioBySpeakersAsync(processedWav, mergedSegments);
         Console.WriteLine($"[E2E] 切分出 {splitFiles.Count} 个音频段");
 
-        // 4. 批量转写：一次 transcribe.exe 调用处理所有段（模型只加载一次）
+        // 4. 批量转写：一个 recognizer 实例顺序处理所有段（模型只加载一次）
         Console.WriteLine("\n[E2E] Step 4: 批量转写（模型只加载一次）...");
-        var engine = new LlamaCppGgufEngine();
+        var engine = new ParaformerEngine();
         var context = "工程管理、建筑工地、合同、付款、验收、工伤保险、方量、甲方乙方";
 
         var sw = Stopwatch.StartNew();
@@ -157,8 +157,8 @@ public class SttE2ETests
         var duration = await AudioPreprocessor.GetDurationAsync(processedWav);
         Console.WriteLine($"[E2E-Single] 预处理完成: 时长 {duration:F1}s");
 
-        // 直接转写（跳过分离）— hotwords.txt 会自动被 BuildContext 读取
-        var engine = new LlamaCppGgufEngine();
+        // 直接转写（跳过分离）— 热词由引擎侧 BuildContext/context 参数处理；Paraformer 本轮忽略热词
+        var engine = new ParaformerEngine();
         var context = "工程管理、建筑工地、合同、付款";
 
         Console.WriteLine("[E2E-Single] 开始转写...");
