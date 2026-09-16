@@ -9,9 +9,8 @@ echo.
 
 pushd "%~dp0"
 
-:: Read version from package.json
-for /f "tokens=2 delims=:, " %%a in ('findstr /C:"version" package.json') do set VERSION=%%~a
-set VERSION=%VERSION:"=%
+:: Read version from package.json (node for reliable parsing)
+for /f "delims=" %%a in ('node -p "require('./package.json').version"') do set VERSION=%%a
 echo   Version: %VERSION%
 
 :: Auto-set EM_RELEASE_BASE
@@ -53,6 +52,12 @@ if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 xcopy /E /I /Q /Y dist "%APP_DIR%\dist" >nul
 copy /Y public\ocr-config.json "%APP_DIR%\ocr-config.json" >nul
 copy /Y public\seed-data.json "%APP_DIR%\seed-data.json" >nul
+
+:: 4c. Bundle MOSS engine exes (models stay out - download center handles them)
+if not exist "%APP_DIR%\asr-engine\moss" mkdir "%APP_DIR%\asr-engine\moss"
+copy /Y asr-engine\moss\moss-transcribe.exe "%APP_DIR%\asr-engine\moss\"
+copy /Y asr-engine\moss\moss-transcribe-vk.exe "%APP_DIR%\asr-engine\moss\"
+copy /Y asr-engine\moss\moss-transcribe-hotwords.exe "%APP_DIR%\asr-engine\moss\"
 echo    OK
 
 :: 4b. Build & stage uninstaller (frontend + single-file exe) -> app-files\uninstall\
