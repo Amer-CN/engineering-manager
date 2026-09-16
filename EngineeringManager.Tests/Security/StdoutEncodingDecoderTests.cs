@@ -24,7 +24,7 @@ namespace EngineeringManager.Tests.Security;
 /// 7. 解码→序列化→读取 一致性（无 U+FFFD）
 /// 8. GBK 歧义字节：同时是合法 UTF-8 时按 UTF-8 解码
 /// 9. 显式 GBK 模式（仅在确认来源时使用）
-/// 10. 生产接线：模拟 LlamaCppGgufEngine 的原始字节读取→解码→序列化路径
+/// 10. 生产接线：模拟 ASR 子进程的原始字节读取→解码→序列化路径
 /// </summary>
 public class StdoutEncodingDecoderTests
 {
@@ -333,13 +333,13 @@ public class StdoutEncodingDecoderTests
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 10. 生产接线：模拟 LlamaCppGgufEngine 的原始字节读取→解码→序列化路径
+    // 10. 生产接线：模拟 ASR 子进程的原始字节读取→解码→序列化路径
     // ═══════════════════════════════════════════════════════════
 
     [Fact]
     public async Task ProductionWiring_RawStreamToDecodeToJson_NoFffd()
     {
-        // 模拟 LlamaCppGgufEngine 的 stdout 读取流程：
+        // 模拟 ASR 子进程的 stdout 读取流程：
         // 1. 从 BaseStream 读取原始字节到 MemoryStream
         // 2. 进程结束后用 StdoutEncodingDecoder.Decode() 解码
         // 3. 解码结果序列化为 JSON（模拟落库）
@@ -351,7 +351,7 @@ public class StdoutEncodingDecoderTests
         var rawStdoutStream = new MemoryStream();
         var buffer = new byte[8192];
 
-        // 模拟 LlamaCppGgufEngine 中的读取循环
+        // 模拟引擎侧的 stdout 读取循环
         int bytesRead;
         while ((bytesRead = await fakeBaseStream.ReadAsync(buffer)) > 0)
         {

@@ -68,7 +68,7 @@ public class SttModelDownloadEndpointsTests : ApiTestBase, IDisposable
     }
 
     [Fact]
-    public async Task ModelsStatus_ReturnsThreeEnginesWithMissingFiles()
+    public async Task ModelsStatus_ReturnsTwoEnginesWithMissingFiles()
     {
         SetAuth(await LoginAdminAsync());
         var resp = await Client.GetAsync("/api/stt/models/status");
@@ -79,7 +79,7 @@ public class SttModelDownloadEndpointsTests : ApiTestBase, IDisposable
         Assert.True(root.GetProperty("success").GetBoolean());
 
         var engines = root.GetProperty("data").GetProperty("engines").EnumerateArray().ToList();
-        Assert.Equal(3, engines.Count);
+        Assert.Equal(2, engines.Count);
 
         foreach (var e in engines)
         {
@@ -92,7 +92,7 @@ public class SttModelDownloadEndpointsTests : ApiTestBase, IDisposable
             {
                 Assert.False(string.IsNullOrWhiteSpace(f.GetProperty("relPath").GetString()));
                 Assert.True(f.GetProperty("bytes").GetInt64() > 0);
-                Assert.True(f.GetProperty("downloadable").GetBoolean()); // 当前三引擎全部有已验证地址
+                Assert.True(f.GetProperty("downloadable").GetBoolean()); // 当前两个现役引擎的清单文件全部有已验证地址
             }
         }
     }
@@ -201,7 +201,7 @@ public class SttModelDownloadEndpointsTests : ApiTestBase, IDisposable
         var spec = new SttModelManager.SttModelFileSpec { RelPath = "manual/x.bin", Bytes = 1 };
         Assert.False(spec.Downloadable);
 
-        // 三个现役引擎当前均无可下载项（地址全部经验证）
+        // 两个现役引擎当前均无可下载项（地址全部经验证）
         foreach (var s in SttModelManager.ModelManifest)
             Assert.All(s.Files, f => Assert.True(f.Downloadable, $"{s.EngineId} 的 {f.RelPath} 无地址"));
     }

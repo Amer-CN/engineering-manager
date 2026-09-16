@@ -17,12 +17,12 @@ public class SttModelManager
 {
     // 防止并发重复下载
     private static readonly SemaphoreSlim EmbeddingDownloadLock = new(1, 1);
-    private static readonly string[] AsrModelFiles = new[]
-    {
-        "model/qwen3_asr_llm.q4_k.gguf",
-        "model/qwen3_asr_encoder_backend.int4.onnx",
-        "model/qwen3_asr_encoder_frontend.int4.onnx",
-    };
+
+    // 现役引擎文件名的唯一真源（清单 RelPath 的相对部分 + 引擎目录哨兵共用）
+    private const string MossCpuExeName = "moss-transcribe.exe";
+    private const string MossGgufName = "moss-transcribe-q8_0.gguf";
+    private const string ParaformerModelName = "model.int8.onnx";
+    private const string ParaformerTokensName = "tokens.txt";
 
     // 说话人分离模型
     public const string SegmentationModelDir = "diarization/sherpa-onnx-pyannote-segmentation-3-0";
@@ -58,6 +58,9 @@ public class SttModelManager
     /// <summary>
     /// 获取 ASR 引擎根目录（asr-engine/）
     /// 查找顺序：项目根目录 → 数据存储路径
+    /// 哨兵（2026-09-16 起）：认「任一现役引擎齐备」（MOSS 或 Paraformer）或分离模型目录，
+    /// 不再以已被删除的 Qwen 运行时为哨兵——否则该文件一删，
+    /// 分离模型与文本嵌入模型的路径解析会全部落空。
     /// </summary>
     public static string GetEngineDir()
     {
@@ -67,7 +70,7 @@ public class SttModelManager
         for (int i = 0; i < 8; i++)
         {
             var candidate = Path.Combine(dir, "asr-engine");
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "transcribe.exe")))
+            if (Directory.Exists(candidate) && IsEngineRoot(candidate))
             {
                 return candidate;
             }
@@ -79,7 +82,7 @@ public class SttModelManager
         // 2. 数据存储路径（生产环境 - 首次启动下载后存放位置）
         var dataPath = ApiConfig.ResolveDataPath();
         var dataCandidate = Path.Combine(dataPath, "asr-engine");
-        if (Directory.Exists(dataCandidate) && File.Exists(Path.Combine(dataCandidate, "transcribe.exe")))
+        if (Directory.Exists(dataCandidate) && IsEngineRoot(dataCandidate))
         {
             return dataCandidate;
         }
@@ -88,21 +91,40 @@ public class SttModelManager
         return Path.Combine(dir, "asr-engine");
     }
 
-    /// <summary>transcribe.exe 完整路径</summary>
-    public static string GetTranscribeExePath() =>
-        Path.Combine(GetEngineDir(), "transcribe.exe");
+    /// <summary>
+    /// 引擎根目录哨兵：任一现役引擎（MOSS：exe+gguf / Paraformer：onnx+tokens）齐备，
+    /// 或分离模型目录已存在（仅分离能力可用时仍需能解析出路径）。
+    /// </summary>
+    private static bool IsEngineRoot(string engineRoot) =>
+        MossEngineReady(engineRoot)
+        || ParaformerEngineReady(engineRoot)
+        || Directory.Exists(Path.Combine(engineRoot, "diarization"));
 
-    /// <summary>ASR 模型是否齐全</summary>
-    public static bool IsAsrModelAvailable()
+    private static bool MossEngineReady(string engineRoot)
     {
-        var dir = GetEngineDir();
-        if (!File.Exists(Path.Combine(dir, "transcribe.exe"))) return false;
-        foreach (var f in AsrModelFiles)
-        {
-            if (!File.Exists(Path.Combine(dir, f))) return false;
-        }
-        return true;
+        var mossDir = Path.Combine(engineRoot, "moss");
+        return Directory.Exists(mossDir)
+            && File.Exists(Path.Combine(mossDir, MossCpuExeName))
+            && File.Exists(Path.Combine(mossDir, MossGgufName));
     }
+
+    private static bool ParaformerEngineReady(string engineRoot)
+    {
+        var paraDir = Path.Combine(engineRoot, "paraformer");
+        return Directory.Exists(paraDir)
+            && File.Exists(Path.Combine(paraDir, ParaformerModelName))
+            && File.Exists(Path.Combine(paraDir, ParaformerTokensName));
+    }
+
+    /// <summary>
+    /// ASR 模型是否完备（任一现役引擎齐备即真）。
+    /// **不变式**：两个引擎的 IsAvailableAsync 都是纯文件存在性检查的
+    /// Task.FromResult 包装（无 IO、无子进程、无等待），故此处可安全同步取结果；
+    /// 若今后引擎把可用性判断改成真异步（探活/握手），必须改回 async 链。
+    /// </summary>
+    public static bool IsAsrModelAvailable() =>
+        new MossTranscribeEngine().IsAvailableAsync().GetAwaiter().GetResult()
+        || new ParaformerEngine().IsAvailableAsync().GetAwaiter().GetResult();
 
     /// <summary>说话人分离模型是否齐全</summary>
     public static bool IsDiarizationModelAvailable()
@@ -422,12 +444,6 @@ public class SttModelManager
     }
 
     // ── 已验证地址（2026-09-15 真实 GET/HEAD 验证：状态码 + 字节数 + 首尾字节比对）──
-    // Qwen 三件套：GitHub release 包内清单经 zip 中央目录 Range 解析确认（3 条目，名称与解压后大小均对上）
-    private const string QwenArchiveUrl =
-        "https://github.com/HaujetZhao/Qwen3-ASR-GGUF/releases/download/models/Qwen3-ASR-1.7B-gguf.zip";
-    private const long QwenArchiveBytes = 1410584479L;
-    private const string QwenArchiveName = "Qwen3-ASR-1.7B-gguf.zip";
-
     // MOSS gguf：魔搭优先（国内直连），HF 直链 fallback；两者首 16 字节与本地逐字节一致
     private const string MossGgufModelScopeUrl =
         "https://www.modelscope.cn/models/mudler/moss-transcribe.cpp-gguf/resolve/master/moss-transcribe-q8_0.gguf";
@@ -438,9 +454,6 @@ public class SttModelManager
     private const string ParaformerHfBase =
         "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-int8-2025-10-07/resolve/main";
 
-    /// <summary>引擎 ID：Qwen3-ASR-1.7B GGUF（与 SttEndpoints.AllowedEngines 同字面量）。</summary>
-    public const string QwenEngineId = "qwen3-asr-1.7b-gguf";
-
     /// <summary>
     /// 模型清单（每引擎所需文件 + 大小 + 下载地址）。
     /// 无验证地址的文件 Urls 为空 → 手动放置。引擎可执行文件（moss-transcribe.exe 等）
@@ -450,27 +463,13 @@ public class SttModelManager
     {
         new SttEngineModelSpec
         {
-            EngineId = QwenEngineId,
-            DisplayName = "Qwen3-ASR-1.7B GGUF",
-            ArchiveUrl = QwenArchiveUrl,
-            ArchiveBytes = QwenArchiveBytes,
-            ArchiveName = QwenArchiveName,
-            Files = new[]
-            {
-                new SttModelFileSpec { RelPath = "model/qwen3_asr_llm.q4_k.gguf", Bytes = 1282434624L, ZipEntry = "qwen3_asr_llm.q4_k.gguf" },
-                new SttModelFileSpec { RelPath = "model/qwen3_asr_encoder_backend.int4.onnx", Bytes = 164740452L, ZipEntry = "qwen3_asr_encoder_backend.int4.onnx" },
-                new SttModelFileSpec { RelPath = "model/qwen3_asr_encoder_frontend.int4.onnx", Bytes = 20876699L, ZipEntry = "qwen3_asr_encoder_frontend.int4.onnx" },
-            },
-        },
-        new SttEngineModelSpec
-        {
             EngineId = MossTranscribeEngine.EngineId,
             DisplayName = "MOSS-Transcribe-0.9B GGUF",
             Files = new[]
             {
                 new SttModelFileSpec
                 {
-                    RelPath = "moss/moss-transcribe-q8_0.gguf",
+                    RelPath = $"moss/{MossGgufName}",
                     Bytes = 986881024L,
                     Urls = new[] { MossGgufModelScopeUrl, MossGgufHfUrl },
                 },
@@ -484,13 +483,13 @@ public class SttModelManager
             {
                 new SttModelFileSpec
                 {
-                    RelPath = "paraformer/model.int8.onnx",
+                    RelPath = $"paraformer/{ParaformerModelName}",
                     Bytes = 238429929L,
                     Urls = new[] { $"{ParaformerHfBase}/model.int8.onnx" },
                 },
                 new SttModelFileSpec
                 {
-                    RelPath = "paraformer/tokens.txt",
+                    RelPath = $"paraformer/{ParaformerTokensName}",
                     Bytes = 75756L,
                     Urls = new[] { $"{ParaformerHfBase}/tokens.txt" },
                 },
@@ -651,7 +650,7 @@ public class SttModelManager
             progress.BytesReceived = done + currentFileBytes;
         }
 
-        // 1. 包内文件（Qwen 三件套）：下包一次 → 解压各项 → 删包
+        // 1. 包内文件（清单里带 ZipEntry 的文件）：下包一次 → 解压各项 → 删包
         var zipFiles = missing.Where(f => f.ZipEntry != null).ToList();
         if (zipFiles.Count > 0)
         {

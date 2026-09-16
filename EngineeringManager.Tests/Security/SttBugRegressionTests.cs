@@ -516,7 +516,8 @@ load_tensors: offloaded 29/29 layers to GPU";
     [Fact]
     public void CheckPreJobResources_AvailableMemoryUnder2_5GB_Fail()
     {
-        // 门控从 4GB 降至 2.5GB：Qwen3-ASR-1.7B q4 实测加载峰值约 1.1GB 系统内存，4GB 会在常规后台应用运行时误拒
+        // 门控从 4GB 降至 2.5GB：现役 CPU 引擎短音频推理的系统内存占用远低于此，
+        // 4GB 会在常规后台应用运行时误拒
         var result = SttSafetyChecker.CheckPreJobResources(
             ramUsagePercent: 50.0,
             commitBytes: 8L * 1024 * 1024 * 1024,
@@ -819,7 +820,7 @@ load_tensors: offloaded 29/29 layers to GPU";
     [Fact]
     public void RecoverOrphanJobs_OnlyProcessingResetToPending_OthersUntouched()
     {
-        // 表结构与 Migrations/Scripts/028_AddSpeechToText.sql 一致
+        // 表结构与 Migrations/Scripts/028_AddSpeechToText.sql（+ 054 改默认值）一致
         using var conn = new SqliteConnection("Data Source=:memory:");
         conn.Open();
         conn.Execute(@"
@@ -828,7 +829,7 @@ load_tensors: offloaded 29/29 layers to GPU";
                 source_file TEXT NOT NULL,
                 source_path TEXT NOT NULL,
                 source_type TEXT NOT NULL DEFAULT 'audio',
-                engine TEXT NOT NULL DEFAULT 'qwen3-asr-1.7b-gguf',
+                engine TEXT NOT NULL DEFAULT 'moss-transcribe-0.9b',
                 status TEXT NOT NULL DEFAULT 'pending',
                 progress INTEGER NOT NULL DEFAULT 0,
                 is_multi_speaker INTEGER NOT NULL DEFAULT 0,

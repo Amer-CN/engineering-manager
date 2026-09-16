@@ -6,6 +6,9 @@ namespace EngineeringManager.Api.Services.Stt;
 
 /// <summary>
 /// GPU 检测与 STT 引擎选择器。
+/// 2026-09-16 Qwen3-ASR（独显/Vulkan 路线）退役后，本类的 GPU 检测只用于
+/// 诊断展示（/api/stt/status 的 gpu 字段与日志），**不再作为本地转写门槛**：
+/// 可用性判定见 CanUseLocalStt（机内任一现役 CPU 引擎模型齐备即可）。
 /// VRAM 检测：仅使用注册表 qwMemorySize（可靠），禁止型号推断。
 /// 适配器绑定：通过 DriverDesc 匹配 WMI GPU 名称，确保 VRAM 属于同一适配器。
 /// fail-closed：无同一适配器匹配时返回 (0, "unknown")，绝不回退到其他适配器。
@@ -269,21 +272,23 @@ public static class SttEngineSelector
     }
 
     /// <summary>
-    /// 检查 ggml-vulkan.dll 是否存在于 inference/bin 目录。
+    /// 检查 MOSS Vulkan 版可执行文件是否存在（asr-engine/moss/moss-transcribe-vk.exe）。
+    /// 2026-09-16 Qwen3-ASR 退役后：ggml-vulkan.dll 随 Qwen 运行时一起删除，
+    /// Vulkan 能力改以 MOSS 的 Vulkan 后端 exe 是否部署为准。
     /// </summary>
     private static bool CheckVulkanDll()
     {
         try
         {
             var engineDir = SttModelManager.GetEngineDir();
-            var vulkanDll = Path.Combine(engineDir, "qwen_asr_gguf", "inference", "bin", "ggml-vulkan.dll");
-            var exists = File.Exists(vulkanDll);
-            Console.WriteLine($"[SttEngineSelector] Vulkan DLL 检查: {vulkanDll} → {(exists ? "存在" : "不存在")}");
+            var vulkanExe = Path.Combine(engineDir, "moss", MossTranscribeEngine.VulkanExeName);
+            var exists = File.Exists(vulkanExe);
+            Console.WriteLine($"[SttEngineSelector] MOSS Vulkan 后端检查: {vulkanExe} → {(exists ? "存在" : "不存在")}");
             return exists;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[SttEngineSelector] Vulkan DLL 检查失败: {Common.Sanitize(ex.Message)}");
+            Console.Error.WriteLine($"[SttEngineSelector] MOSS Vulkan 后端检查失败: {Common.Sanitize(ex.Message)}");
             return false;
         }
     }
@@ -395,33 +400,18 @@ public static class SttEngineSelector
 
     // ═══════════════════════════════════════════════════════════
     // 本地 STT 可用性检查
+    //
+    // 2026-09-16 门槛新语义：MOSS 与 Paraformer 都是纯 CPU 引擎，
+    // 本地转写可用 = 任一现役引擎模型齐备；不再要求独显 / Vulkan / 显存。
+    // 同步实现说明：IsAsrModelAvailable() 只做文件存在性判断（引擎的
+    // IsAvailableAsync 是 Task.FromResult 纯包装），故无需把本方法改成异步。
     // ═══════════════════════════════════════════════════════════
 
     public static bool CanUseLocalStt()
     {
-        var gpu = Detect();
-
-        if (!gpu.HasDiscreteGpu)
+        if (!SttModelManager.IsAsrModelAvailable())
         {
-            Console.WriteLine("[SttEngineSelector] 拒绝启动：未检测到独显");
-            return false;
-        }
-
-        if (!gpu.SupportsVulkan)
-        {
-            Console.WriteLine("[SttEngineSelector] 拒绝启动：Vulkan 不可用");
-            return false;
-        }
-
-        if (gpu.VramMb < SttSafetyChecker.MinVramMb)
-        {
-            Console.WriteLine($"[SttEngineSelector] 拒绝启动：显存不足 ({gpu.VramMb}MB < {SttSafetyChecker.MinVramMb}MB)");
-            return false;
-        }
-
-        if (!SttSafetyChecker.IsVramDetectionReliable(gpu.VramDetectionMethod))
-        {
-            Console.WriteLine($"[SttEngineSelector] 拒绝启动：VRAM 检测方式不可靠 ({gpu.VramDetectionMethod})，需要 registry 或 dxgi");
+            Console.WriteLine("[SttEngineSelector] 拒绝启动：无可用引擎（MOSS / Paraformer 模型缺失）");
             return false;
         }
 
@@ -430,21 +420,10 @@ public static class SttEngineSelector
 
     public static string GetSttStatus()
     {
-        var gpu = Detect();
+        if (!SttModelManager.IsAsrModelAvailable())
+            return "无可用引擎：MOSS/Paraformer 模型缺失，可在下载中心获取";
 
-        if (!gpu.HasDiscreteGpu)
-            return "未检测到独显，无法使用本地转写";
-
-        if (!gpu.SupportsVulkan)
-            return $"Vulkan 不可用（ggml-vulkan.dll 未找到），GPU: {gpu.GpuName}";
-
-        if (gpu.VramMb < SttSafetyChecker.MinVramMb)
-            return $"显存不足: {gpu.VramMb}MB (需要 ≥{SttSafetyChecker.MinVramMb}MB)，GPU: {gpu.GpuName}";
-
-        if (!SttSafetyChecker.IsVramDetectionReliable(gpu.VramDetectionMethod))
-            return $"显存检测方式不可靠（{gpu.VramDetectionMethod}），需要注册表或 DXGI 检测，禁止型号推断";
-
-        return $"可用: {gpu.GpuName}, VRAM={gpu.VramMb}MB (via {gpu.VramDetectionMethod}), Vulkan=支持";
+        return "可用: 本地转写引擎就绪（纯 CPU 运行，无需独立显卡）";
     }
 
     /// <summary>
@@ -452,21 +431,10 @@ public static class SttEngineSelector
     /// </summary>
     public static string GetUnavailableReason()
     {
-        var gpu = Detect();
+        if (!SttModelManager.IsAsrModelAvailable())
+            return "无可用引擎：MOSS/Paraformer 模型缺失，可在下载中心获取";
 
-        if (!gpu.HasDiscreteGpu)
-            return "未检测到独显";
-
-        if (!gpu.SupportsVulkan)
-            return $"Vulkan 不可用（ggml-vulkan.dll 未找到），GPU: {gpu.GpuName}";
-
-        if (gpu.VramMb < SttSafetyChecker.MinVramMb)
-            return $"显存不足: {gpu.VramMb}MB (需要 ≥{SttSafetyChecker.MinVramMb}MB)";
-
-        if (!SttSafetyChecker.IsVramDetectionReliable(gpu.VramDetectionMethod))
-            return $"显存检测方式不可靠（{gpu.VramDetectionMethod}），需要注册表或 DXGI 检测";
-
-        // 全部检查通过 → 本地 STT 可用，无不可用原因（空串约定见 CanUseLocalStt 一致性）
+        // 引擎齐备 → 本地 STT 可用，无不可用原因（空串约定见 CanUseLocalStt 一致性）
         return "";
     }
 }
