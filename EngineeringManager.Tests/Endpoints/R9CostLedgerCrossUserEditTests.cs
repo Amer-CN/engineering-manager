@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
+using EngineeringManager.Api;
 
 namespace EngineeringManager.Tests.Endpoints;
 
@@ -137,7 +138,7 @@ public class R9CostLedgerCrossUserEditTests : ApiTestBase
         var resp = await PutCostLedgerAsync(clId, 2000);
         // 目标态：授权项目跨人可改（A 桶现状 200）+ 库值已改（1000 → 2000）
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Equal(2000.0, GetAmount(clId));
+        Assert.Equal(MoneyUnit.ToFen(2000.0), GetAmount(clId));
         // 且 audit_logs 增一行（cross_user_edit、resource=cost_ledger、resource_id=该行、user_id=B）
         Assert.Equal(1L, CountAuditForCostLedger(clId, AccUid));
     }
@@ -166,7 +167,7 @@ public class R9CostLedgerCrossUserEditTests : ApiTestBase
 
         var resp = await PutCostLedgerAsync(clId, 2000);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Equal(2000.0, GetAmount(clId));    // 库值改写
+        Assert.Equal(MoneyUnit.ToFen(2000.0), GetAmount(clId));    // 库值改写
         Assert.Equal(0L, CountAuditForCostLedger(clId, AccUid)); // 本人修改不落审计
     }
 
@@ -179,7 +180,7 @@ public class R9CostLedgerCrossUserEditTests : ApiTestBase
 
         var resp = await PutCostLedgerAsync(clId, 2000);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Equal(2000.0, GetAmount(clId));
+        Assert.Equal(MoneyUnit.ToFen(2000.0), GetAmount(clId));
     }
 
     // ── Pin4：B + 双种子 PUT 不存在的 id → 403（现状 Forbid 语义钉住，不要预期 404）──

@@ -128,8 +128,9 @@ export function useProjects() {
 
 ## 已踩坑清单（写入文档，勿再犯）
 
-- **单位换算的边界是「写入路径的集合」，不是「表或列的集合」**。判据：该列的所有写入路径是否已统一走换算（如 `project_workers.daily_wage` 写入侧仍元直通，则读出侧不得 ÷100；`wages` 写入侧已走 ToFen，读出侧才 ToYuan）。
-- **唯一没有测试覆盖的分支，就是唯一错的分支**。team-wages 的 `pw.daily_wage` 曾因「003 声明该列为分」而反向 ÷100（日薪 200 显示成 2），而 D-4/D-5 的测试恰好都没覆盖它。
+- **【2026-09 分制贯彻：历史单位撕裂已终结】**全库金额列=分（整数值）、API=元，换算只允许 `MoneyUnit.ToFen/ToYuan` 单点（`Services/MoneyUnit.cs`）；历史元数据由迁移 053 一次性 ×100（原编 051，让位给并行线 AgentApproval 迁移防撞号）（`ROUND` 防丢分——003 的 CAST 截断教训；wages 带日薪 >5000 量级守卫，保护 v0.93+ ToFen 时代行不被二次转换；执行时序=启动早期、端点监听前，故不存在"新分制行被再 ×100"窗口）。**例外**：wage_history 保持元值（生产库旧 schema 与 014 产物列不相交，无法安全迁移，休眠读端点直读直出）；JSON 块（payment_records.invoice_details / settlements.items / files）为前端直读块，豁免分制恒为元；税率/天数/数量列豁免。此前「规范声明分、22/23 模块元直通、仅 wages 走 ToFen」的双轨是报表 KPI 100 倍虚高与 team-wages 日薪 100 倍（下条）的共同根因。
+- **单位换算的边界是「写入路径的集合」，不是「表或列的集合」**。判据：该列的所有写入路径是否已统一走换算（如 `project_workers.daily_wage` 写入侧仍元直通，则读出侧不得 ÷100；`wages` 写入侧已走 ToFen，读出侧才 ToYuan）。**2026-09 起：所有金额列写入路径已统一走 MoneyUnit.ToFen，读出侧统一 ToYuan——此判据成为"新增端点必须走 MoneyUnit"的硬约束。**
+- **唯一没有测试覆盖的分支，就是唯一错的分支**。team-wages 的 `pw.daily_wage` 曾因「003 声明该列为分」而反向 ÷100（日薪 200 显示成 2），而 D-4/D-5 的测试恰好都没覆盖它。（2026-09 起双表同为分制，此矛盾消解。）
 - **校验必须直接 `return Results.BadRequest(...)`，不能抛异常**。`Program.cs:330` 的全局 `UseExceptionHandler` 会把一切未处理异常包成 500 + 通用消息「服务器内部错误」，异常里的 400 状态码与字段名全部丢失。
 - **`schema_versions` 表存的是嵌入资源全名**（如 `EngineeringManager.Api.Migrations.Scripts.003_MoneyRealToInteger.sql`），不是文件名；查迁移应用状态时按此匹配。
 - **Dapper dynamic + LEFT JOIN 未命中 = DBNull，不是 null，`?? 0` 兜不住**。`Convert.ToDouble(row.col)` 对 DBNull 抛 InvalidCastException → 500；`?? 0` 只在值是 null 时兜底。兜底必须在 SQL 侧 `COALESCE(col, 0)`（窗口 D generate 端点实测复现）。
@@ -143,3 +144,4 @@ export function useProjects() {
 - **门禁/守卫类改动任务书必须含「既有测试影响面扫描」（纪律，R9-4 W2 登记）**——新增/收紧安全门（权限门、项目级写入门、行级守卫等）会遮蔽或改变既有测试的场景：非 admin 调用方若未配项目/授权种子，会被新门提前 403 拦下，导致既有「行级守卫 skipped/saved」类用例变红（红在门而非守卫）。任务书必做两件事：① grep 受影响端点的既有测试调用点、枚举非 admin 调用方；② 验收靶子必须列出受影响既有测试的处置（补种子适配或改断言，二选一）。出处：R9-3 Y1b / R9-4 WritePermissionB2Tests 两次纪律 17 停手，均为任务书规格缺口。
 - **测试项目 NuGet 包禁止对运行时敏感依赖使用浮动版本（如 10.\*）**——必须与被测项目钉死同一精确版本。出处：R9-10 Z0，Tests 的 `Microsoft.Data.Sqlite 10.*` 在新 worktree 拉到 10.4，暴露 012 迁移双引号字符串被解析为列名，全量测试 1ms 全挂；同提交旧 worktree（仍 resolve 到 10.0.8）全绿。CI 全新 restore 同风险。
 - **改动 E2E 测试类名/方法名前缀必须同步 CI filter（M-FIX12 W5(c) 纪律）**——CI filter 靠子串命中排除类（`BgeE2ETests` 命中 `BgeE2ETestsV2`、`M2FourthRoundTests.Model_` 命中方法名前缀），改名即 filter 静默失效 → 被排除测试重进 CI 跑真实模型必红 + 13 常数口径破坏。改任何 E2E 类名/方法名前缀前：同步改 test.yml 的 `--filter` 与 docs/ci/CI-EXCLUSIONS.md，并重测两口径四数（全量 vs filter，差额必须仍为 13）。
+- **Windows 能检出的超长 CJK 文件名，Linux CI 检出直接失败（2026-09-14 PR #131 实测）**——docs/knowledge 语料曾用整段视频标题当文件名（最长 304 字节），Windows NTFS 按字符计数无感，Linux ext4 单文件名分量 255 字节上限，ubuntu runner 三个 Node 任务全挂在 checkout。判据：入库长文件名（尤其 CJK/emoji）前先算 UTF-8 字节数；单分量超 250 字节即改短（日期+短标题），内容不动。

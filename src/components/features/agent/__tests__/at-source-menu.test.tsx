@@ -27,6 +27,9 @@ vi.mock('@/services/stt-client', () => ({
   cancelSttJob: vi.fn(),
   retrySttJob: vi.fn(),
   deleteSttJob: vi.fn(),
+  getSttModelStatus: vi.fn(),
+  startSttModelDownload: vi.fn(),
+  subscribeSttModelDownload: vi.fn(() => () => {}),
 }))
 // agent-client：Composer 顶层 import recognizeReceiptText
 vi.mock('@/services/agent-client', () => ({

@@ -138,12 +138,12 @@ public class AgentToolSoftDeleteTests
         var result = await CallAsync("ExecuteGetCostSummary", (IDbConnection)db,
             args.RootElement, "u1", Scope);
 
-        // income 500000（可见）- expense 80000（软删）= net 500000；byCategory 只剩工程款
+        // income 500000 分（可见）- expense 80000 分（软删）= net 500000 分 → 输出元：5000；byCategory 只剩工程款
         var totalIncome = Convert.ToDouble(result.GetType().GetProperty("totalIncome")!.GetValue(result)!);
         var totalExpense = Convert.ToDouble(result.GetType().GetProperty("totalExpense")!.GetValue(result)!);
         var byCategory = (IEnumerable<object>)result.GetType().GetProperty("byCategory")!.GetValue(result)!;
 
-        Assert.Equal(500000d, totalIncome);
+        Assert.Equal(5000d, totalIncome);
         Assert.Equal(0d, totalExpense);
         Assert.Single(byCategory);
     }
@@ -161,7 +161,7 @@ public class AgentToolSoftDeleteTests
 
         Assert.Equal(2, invoicesCount);  // 3 张 - 1 软删
         Assert.Equal(1, settlementsCount); // 2 条 - 1 软删
-        Assert.Equal(500000d, totalIncome);
+        Assert.Equal(5000d, totalIncome);  // 500000 分输出为元
         Assert.Equal(0d, totalExpense);   // 80000 的软删支出不计
     }
 

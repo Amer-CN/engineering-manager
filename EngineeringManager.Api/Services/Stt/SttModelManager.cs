@@ -850,12 +850,12 @@ public class SttModelManager
 
     private static void TryDelete(string path)
     {
-        try { if (File.Exists(path)) File.Delete(path); } catch { /* 清理失败不致命 */ }
+        try { if (File.Exists(path)) File.Delete(path); } catch (Exception ex) { Console.Error.WriteLine($"[SttModelManager] 临时文件清理失败（不致命）: {Common.Sanitize(ex.Message)}"); }
     }
 
     private static void TryDeleteDir(string path)
     {
-        try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { /* 清理失败不致命 */ }
+        try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch (Exception ex) { Console.Error.WriteLine($"[SttModelManager] 临时目录清理失败（不致命）: {Common.Sanitize(ex.Message)}"); }
     }
 
     private static string ShortUrl(string url) => url.Length > 90 ? url[..90] + "..." : url;

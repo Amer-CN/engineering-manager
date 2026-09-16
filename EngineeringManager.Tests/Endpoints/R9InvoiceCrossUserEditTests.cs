@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
+using EngineeringManager.Api;
 
 namespace EngineeringManager.Tests.Endpoints;
 
@@ -25,7 +26,7 @@ namespace EngineeringManager.Tests.Endpoints;
 /// 行为人：B = accountant（uid='r9-12-acc'，默认集含 invoices:update，禁止 UPDATE roles）；
 /// 项目行（id 9109，created_by='1'）+ 按用例需要 project_authorizations（9109→B，
 /// granted_by='1'）——双种子形态照 R9-9/R9-11 既有写法。
-/// 发票金额用「元」：invoices.amount 不是分（API 直传直存，无 ToFen），断言 name/amount/status。
+/// 发票金额分制（2026-09 契约：API 元 → ToFen 落库分），断言 name/amount/status（库断言用 MoneyUnit.ToFen 换算期望）。
 ///
 /// 10 条（无 409 档）：B13 6 条（Red1 授权跨人改 → 200 + audit、Pin1 无授权 403、Pin2 本人 200
 /// 无 audit、Pin3 admin 200、Pin4 不存在 403、Pin5 项目创建者改他人行 403）+ B37 4 条
@@ -90,7 +91,7 @@ public class R9InvoiceCrossUserEditTests : ApiTestBase
             new { P = TestProjectId, By = AccUid, Now });
     }
 
-    /// <summary>seed 一条发票行（金额用元：invoices.amount 不是分），返回 invoices.id</summary>
+    /// <summary>seed 一条发票行（直插库，金额即分制存储值），返回 invoices.id</summary>
     private long SeedInvoice(string name, double amount, string createdBy, string status = "pending")
     {
         using var conn = new SqliteConnection(ConnectionString);
@@ -144,7 +145,7 @@ public class R9InvoiceCrossUserEditTests : ApiTestBase
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var row = QueryInvoice(invId)!;
         Assert.Equal("新票", (string)row.name);
-        Assert.Equal(2000.0, (double)row.amount);
+        Assert.Equal(MoneyUnit.ToFen(2000.0), (double)row.amount); // PUT 2000 元 → 200000 分
         // 且 audit_logs 增一行（cross_user_edit、resource=invoices、resource_id=该行、user_id=B）
         Assert.Equal(1L, CountAuditForInvoice(invId, AccUid));
     }
@@ -177,7 +178,7 @@ public class R9InvoiceCrossUserEditTests : ApiTestBase
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var row = QueryInvoice(invId)!;
         Assert.Equal("新票", (string)row.name);   // 库值改写
-        Assert.Equal(2000.0, (double)row.amount);
+        Assert.Equal(MoneyUnit.ToFen(2000.0), (double)row.amount); // PUT 2000 元 → 200000 分
         Assert.Equal(0L, CountAuditForInvoice(invId, AccUid)); // 本人修改不落审计
     }
 
@@ -192,7 +193,7 @@ public class R9InvoiceCrossUserEditTests : ApiTestBase
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var row = QueryInvoice(invId)!;
         Assert.Equal("新票", (string)row.name);
-        Assert.Equal(2000.0, (double)row.amount);
+        Assert.Equal(MoneyUnit.ToFen(2000.0), (double)row.amount); // PUT 2000 元 → 200000 分
     }
 
     // ── Pin4：B + 双种子 PUT 不存在的 id → 403（现状语义钉住，不要预期 404）──

@@ -449,9 +449,12 @@ public static class SttEndpoints
         // POST /api/stt/models/{engineId}/download — 启动缺失模型下载（立即返回）
         // 同引擎已有下载在跑 → alreadyRunning（内存闸，防重复触发）
         // ═══════════════════════════════════════════════════════════
-        app.MapPost("/api/stt/models/{engineId}/download", (HttpContext ctx, string engineId) =>
+        app.MapPost("/api/stt/models/{engineId}/download", (HttpContext ctx, IDbConnection db, string engineId) =>
         {
             _ = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 权限检查：与其它 STT 写端点同口径（门禁5：写端点必须有权限校验）
+            if (!CurrentUser.HasPermission(ctx, db, "voice:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 voice:read" }, statusCode: 403);
             try
             {
                 var spec = SttModelManager.FindEngineSpec(engineId);
@@ -764,6 +767,10 @@ public static class SttEndpoints
                 db.Execute(
                     "UPDATE stt_jobs SET status = 'cancelled', updated_at = @Now WHERE id = @Id AND created_by = @Uid",
                     new { Now = Common.NowString(), Id = id, Uid = uid });
+
+                // F4(审计): 库内状态之外，同时触发在途转写的真实取消（引擎/预处理收到令牌即中止），
+                // worker 完成后的写回也带 processing 守卫，不会再把 cancelled 覆盖回 completed
+                EngineeringManager.Api.Services.Stt.SttWorker.TryCancel(id);
 
                 return Results.Ok(new { success = true, data = new { id, status = "cancelled" } });
             }
