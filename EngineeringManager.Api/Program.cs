@@ -475,6 +475,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         // 工资 + 考勤 + 薪资历史
         app.RegisterWageEndpoints();
 
+        // 个税引擎 Wave-T1（累计预扣 + 专项扣除 + 年终奖择优 + 城市费率表，纯后端）
+        app.RegisterWageTaxEndpoints();
+
         // 成本台账
         app.RegisterCostLedgerEndpoints();
 
@@ -667,6 +670,10 @@ CREATE TABLE IF NOT EXISTS project_members (id INTEGER PRIMARY KEY AUTOINCREMENT
 CREATE TABLE IF NOT EXISTS regions (id INTEGER PRIMARY KEY AUTOINCREMENT, province TEXT, city TEXT, district TEXT);
 CREATE TABLE IF NOT EXISTS drawings (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT, file_url TEXT, file_name TEXT, file_type TEXT, drawing_type TEXT, scale TEXT, notes TEXT, remark TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, content TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS wage_tax_ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, person_key TEXT NOT NULL, tax_year TEXT NOT NULL, year_month TEXT NOT NULL, gross_fen INTEGER NOT NULL DEFAULT 0, social_fen INTEGER NOT NULL DEFAULT 0, housing_fen INTEGER NOT NULL DEFAULT 0, extra_1 INTEGER NOT NULL DEFAULT 0, extra_2 INTEGER NOT NULL DEFAULT 0, extra_3 INTEGER NOT NULL DEFAULT 0, extra_4 INTEGER NOT NULL DEFAULT 0, extra_5 INTEGER NOT NULL DEFAULT 0, extra_6 INTEGER NOT NULL DEFAULT 0, extra_7 INTEGER NOT NULL DEFAULT 0, extra_total_fen INTEGER NOT NULL DEFAULT 0, extra_json TEXT, threshold_fen INTEGER NOT NULL DEFAULT 500000, cum_taxable_fen INTEGER NOT NULL DEFAULT 0, cum_tax_fen INTEGER NOT NULL DEFAULT 0, paid_tax_fen INTEGER NOT NULL DEFAULT 0, bonus_mode TEXT, bonus_fen INTEGER NOT NULL DEFAULT 0, city_code TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_person_month ON wage_tax_ledger(person_key, year_month);
+CREATE INDEX IF NOT EXISTS idx_ledger_person_year ON wage_tax_ledger(person_key, tax_year);
+CREATE TABLE IF NOT EXISTS city_insurance_rates (city_code TEXT PRIMARY KEY, city_name TEXT NOT NULL, pension_corp REAL, pension_personal REAL, medical_corp REAL, medical_personal REAL, unemp_corp REAL, unemp_personal REAL, injury_corp REAL, injury_personal REAL, maternity_corp REAL, injury_note TEXT, maternity_note TEXT, base_min_fen INTEGER, base_max_fen INTEGER, medical_base_min_fen INTEGER, medical_base_max_fen INTEGER, unemp_base_min_fen INTEGER, unemp_base_max_fen INTEGER, housing_min_rate REAL, housing_max_rate REAL, housing_base_min_fen INTEGER, housing_base_max_fen INTEGER, effective_year TEXT, source_note TEXT, status TEXT);
 ");
 
             // invoices 表迁移：添加缺失列
@@ -690,6 +697,61 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
             try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN created_by INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates created_by: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN version INTEGER DEFAULT 1"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates version: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN last_modified_at TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates last_modified_at: {ex.Message}"); }
+
+            // 059 双写自愈：wage_tax_ledger / city_insurance_rates 增量列自愈
+            // （与 059_TaxLedgerAndCityRates.sql 双路径一致；wages增量列无自愈是历史教训，此处全列自愈）
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN person_key TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger person_key: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN tax_year TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger tax_year: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN year_month TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger year_month: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN gross_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger gross_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN social_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger social_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN housing_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger housing_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_1 INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_1: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_2 INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_2: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_3 INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_3: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_4 INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_4: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_5 INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_5: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_6 INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_6: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_7 INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_7: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_total_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_total_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN extra_json TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger extra_json: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN threshold_fen INTEGER NOT NULL DEFAULT 500000"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger threshold_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN cum_taxable_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger cum_taxable_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN cum_tax_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger cum_tax_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN paid_tax_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger paid_tax_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN bonus_mode TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger bonus_mode: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN bonus_fen INTEGER NOT NULL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger bonus_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN city_code TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger city_code: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN created_by TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger created_by: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN created_at TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger created_at: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE wage_tax_ledger ADD COLUMN updated_at TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] wage_tax_ledger updated_at: {ex.Message}"); }
+            try { db.Execute(@"CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_person_month ON wage_tax_ledger(person_key, year_month)"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] ux_ledger_person_month: {ex.Message}"); }
+            try { db.Execute(@"CREATE INDEX IF NOT EXISTS idx_ledger_person_year ON wage_tax_ledger(person_key, tax_year)"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] idx_ledger_person_year: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN city_name TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates city_name: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN pension_corp REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates pension_corp: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN pension_personal REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates pension_personal: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN medical_corp REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates medical_corp: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN medical_personal REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates medical_personal: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN unemp_corp REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates unemp_corp: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN unemp_personal REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates unemp_personal: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN injury_corp REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates injury_corp: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN injury_personal REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates injury_personal: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN maternity_corp REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates maternity_corp: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN injury_note TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates injury_note: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN maternity_note TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates maternity_note: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN base_min_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates base_min_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN base_max_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates base_max_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN medical_base_min_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates medical_base_min_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN medical_base_max_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates medical_base_max_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN unemp_base_min_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates unemp_base_min_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN unemp_base_max_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates unemp_base_max_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN housing_min_rate REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates housing_min_rate: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN housing_max_rate REAL"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates housing_max_rate: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN housing_base_min_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates housing_base_min_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN housing_base_max_fen INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates housing_base_max_fen: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN effective_year TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates effective_year: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN source_note TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates source_note: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE city_insurance_rates ADD COLUMN status TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] city_insurance_rates status: {ex.Message}"); }
 
             // payment_records 表迁移
             try
