@@ -94,39 +94,43 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
 }) => (
   <Card title="转写参数" padding="md" shadow="sm">
     <div className="space-y-4">
-      <div>
-        <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">录音类型</label>
-        <div className="flex gap-2">
-          {RECORDING_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onRecordingTypeChange(opt.value)}
-              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                recordingType === opt.value
-                  ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)] text-[color:var(--accent)]'
-                  : 'bg-[color:var(--card)] border-[color:var(--border)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+      <div className="flex gap-4">
+        <div className="flex-1 min-w-0">
+          <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">录音类型</label>
+          <div className="flex gap-2">
+            {RECORDING_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onRecordingTypeChange(opt.value)}
+                className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                  recordingType === opt.value
+                    ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)] text-[color:var(--accent)]'
+                    : 'bg-[color:var(--card)] border-[color:var(--border)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {recordingType === 'multi' && (
-        <div>
-          <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">说话人数量（可选，留空自动估计）</label>
-          <Input
-            type="number"
-            min={2}
-            max={10}
-            value={numSpeakers || ''}
-            onChange={(e) => onNumSpeakersChange(e.target.value ? parseInt(e.target.value) : 0)}
-            placeholder="自动估计"
-          />
-        </div>
-      )}
+        {recordingType === 'multi' && (
+          <div className="w-36 shrink-0">
+            <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">说话人数量（可选）</label>
+            <Input
+              type="number"
+              size="sm"
+              min={2}
+              max={10}
+              value={numSpeakers || ''}
+              onChange={(e) => onNumSpeakersChange(e.target.value ? parseInt(e.target.value) : 0)}
+              placeholder="自动估计"
+              style={{ height: 30, fontSize: 12, lineHeight: '16px' }}
+            />
+          </div>
+        )}
+      </div>
 
       <div>
         <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">转写引擎</label>
