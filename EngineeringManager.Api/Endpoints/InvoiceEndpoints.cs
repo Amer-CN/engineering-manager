@@ -43,6 +43,9 @@ public static class InvoiceEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B4: 发票写操作 → invoices:create
             if (!CurrentUser.HasPermission(ctx, db, "invoices:create")) return Results.Forbid();
+            // FP02：无发票代码时发票号码必须为 20 位纯数字（新版数电票）；有码旧票与空值放行
+            if (!IsInvoiceNoValid(dto.InvoiceNo, dto.InvoiceCode))
+                return Common.Fail("新版数电票发票号码为20位数字；旧版8位号码请一并填写发票代码", 400);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices (project_id,seller_id,buyer_id,contract_id,settlement_id,type,invoice_kind,invoice_no,invoice_code,name,
                  amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
                         @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now,@Now, @Now);
@@ -75,6 +78,9 @@ public static class InvoiceEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B4: 发票写操作 → invoices:update
             if (!CurrentUser.HasPermission(ctx, db, "invoices:update")) return Results.Forbid();
+            // FP02：无发票代码时发票号码必须为 20 位纯数字（新版数电票）；有码旧票与空值放行
+            if (!IsInvoiceNoValid(dto.InvoiceNo, dto.InvoiceCode))
+                return Common.Fail("新版数电票发票号码为20位数字；旧版8位号码请一并填写发票代码", 400);
             // R9-12 方案丙更新侧：授权项目跨人可改 + audit（B13）
             // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
             // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
@@ -170,7 +176,7 @@ public static class InvoiceEndpoints
                 var dict = (IDictionary<string, object>)record;
                 // 金额列分→元（amount）；invoice_details JSON 豁免分制恒为元（契约见 MoneyUnit）
                 if (dict.TryGetValue("amount", out var amtObj) && amtObj != null && !(amtObj is DBNull))
-                    dict["amount"] = Convert.ToDouble(amtObj) / 100.0;
+                    dict["amount"] = MoneyUnit.ToYuanFromDb(amtObj);
                 var invoiceDetailsStr = dict.ContainsKey("invoice_details") ? dict["invoice_details"]?.ToString() : "[]";
                 var invoiceInfos = new List<object>();
                 try
@@ -291,6 +297,18 @@ public static class InvoiceEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("UPDATE payment_records SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
+    }
+
+    /// <summary>
+    /// FP02 后端校验（与前端 validateInvoiceNumber 同规则）：
+    /// 无发票代码且发票号码非空时，号码必须为 20 位纯数字；有码旧票与空值放行。
+    /// </summary>
+    private static bool IsInvoiceNoValid(string? invoiceNo, string? invoiceCode)
+    {
+        if (!string.IsNullOrWhiteSpace(invoiceCode)) return true;
+        if (string.IsNullOrWhiteSpace(invoiceNo)) return true;
+        var no = invoiceNo.Trim();
+        return no.Length == 20 && no.All(char.IsDigit);
     }
 }
 

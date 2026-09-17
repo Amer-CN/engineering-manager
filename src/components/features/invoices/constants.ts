@@ -2,6 +2,8 @@ import type { InvoiceType, InvoiceTaxRate, InvoiceKind, Invoice, PaymentRecord }
 import type { InvoiceFormData } from './InvoiceForm'
 import type { PaymentFormData } from './PaymentForm'
 
+// 税率口径（增值税法）：第十条 13%/9%/6%/零税率，第十一条 3% 征收率；
+// 2026-01-01 前历史口径（旧税制过渡期税率）另见历史档案，新增选项前先对齐法条。
 export const taxRateOptions: { value: InvoiceTaxRate; label: string }[] = [
   { value: 0, label: '不征税' },
   { value: 0.01, label: '1%' },

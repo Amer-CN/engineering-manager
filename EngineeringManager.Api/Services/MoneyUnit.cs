@@ -4,7 +4,7 @@ namespace EngineeringManager.Api;
 /// 金额单位换算单点（2026-09 分制契约）：
 ///   · DB = 分（整数值）；API = 元（double，前端契约不变）
 ///   · 全项目禁止在本类之外散写 ×100 / ÷100（含 SQL 表达式）
-///   · 历史 ToFen 实验（v0.93~0.96 仅 wages 模块执行）造成的分制行由迁移 051 按行修复
+///   · 历史 ToFen 实验（v0.93~0.96 仅 wages 模块执行）造成的分制行由迁移 053 按行修复
 /// </summary>
 public static class MoneyUnit
 {

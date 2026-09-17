@@ -111,6 +111,7 @@ public static class OcrEndpoints
                 if (invoiceDate.Contains("年"))
                     invoiceDate = invoiceDate.Replace("年", "-").Replace("月", "-").Replace("日", "");
 
+                // FP03 待复核注意点：数电票是否取消校验码/收款人/复核人未定，checkCode 暂收（仅透传不校验）
                 var result = new
                 {
                     success = true,

@@ -7,7 +7,7 @@ using EngineeringManager.Api.Services.Stt;
 using Microsoft.Extensions.DependencyInjection;
 
 // ═══════════════════════════════════════════════════════════════
-// wages 单位契约（2026-09 分制贯彻后全库统一，迁移 051 起历史元数据已转换）：
+// wages 单位契约（2026-09 分制贯彻后全库统一，迁移 053 起历史元数据已转换）：
 //   · 库内一律「分」：金额列整数值（开发者历史库列亲和性可能仍为 REAL，
 //     但值已全部为分），含 wages 表金额列（daily_wage / bonus / deduction /
 //     actual_wage / paid_amount）与 project_workers.daily_wage
@@ -1168,7 +1168,7 @@ public static class WageEndpoints
             {
                 worker_name = (string)d.worker_name,
                 // project_workers.daily_wage：2026-09 分制契约起写入侧 MoneyUnit.ToFen、
-                // 读出侧 ToYuan（迁移 051 已把历史元值 ×100），按契约换算输出元
+                // 读出侧 ToYuan（迁移 053 已把历史元值 ×100），按契约换算输出元
                 daily_wage = MoneyUnit.ToYuanFromDb(d.daily_wage),
                 months = d.months,
                 work_days = d.work_days,
@@ -1199,7 +1199,8 @@ public static class WageEndpoints
 
     // 分→元（API 响应侧，与 ToFen 配对；委托 MoneyUnit 单点）
     private static decimal ToYuan(long fen) => MoneyUnit.ToYuanDecimal(fen);
-    private static decimal ToYuan(decimal fen) => fen / 100m;
+    // decimal 重载：调用点传入的均为整数分值（SUM 聚合/整数列），截断即等价，委托 MoneyUnit 单点
+    private static decimal ToYuan(decimal fen) => MoneyUnit.ToYuanDecimal((long)fen);
 
     // 批量查询行：把 wages 金额列（分）转成元后输出；work_days 为天数不转。
     // 仅用于 SELECT w.* 类端点（GET /api/wages、payment-records、overdue-list）
