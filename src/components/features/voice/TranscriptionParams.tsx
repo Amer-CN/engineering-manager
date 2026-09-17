@@ -28,56 +28,48 @@ interface TranscriptionParamsProps {
 
 /** 引擎选项（与后端 AllowedEngines 白名单一致） */
 const ENGINE_OPTIONS = [
-  { value: 'qwen3-asr-1.7b-gguf', label: 'Qwen3 · 需 GPU 与模型文件' },
-  { value: 'moss-transcribe-0.9b', label: 'MOSS · 方言优先（CPU）' },
-  { value: 'paraformer-zh-int8', label: 'Paraformer · 极速（CPU）' },
+  { value: 'moss-transcribe-0.9b', label: 'MOSS（CPU）' },
+  { value: 'paraformer-zh-int8', label: 'Paraformer · 川渝方言（CPU）' },
 ] as const
 
 /**
- * 引擎引导（分界线来自 2026-09-09 真实录音实测；MOSS 已改 30s 细分块，切口对齐静音点）：
- * - 默认推荐 MOSS（CPU 可跑、方言优先）：≤10 分钟是其甜点区（质量最优：同音消歧零错、说话人轮次最细）
- * - 长会议：MOSS 细分块（30s/块）后可用——31.6 分钟会议实测约 24.7 分钟完成（Vulkan，约 0.78× 时长）
- * - Qwen3 需 GPU 与模型文件（GPU 约 14 分钟，约 0.45× 时长）
+ * 引擎引导（数字为我们自己用真实录音测的，仅作参考）：
+ * - MOSS（纯 CPU，默认）：一步成段，自带说话人编号；支持热词（人名、地名）。
+ *   多人任务的说话人由分离管线先分离、按时间重叠回填。31.6 分钟会议实测约 24.7 分钟完成。
+ * - Paraformer（纯 CPU）：川渝方言专用模型；模型只出文字，
+ *   时间戳与说话人全部来自分离管线；本轮不支持热词（填写会被忽略）。
+ *   我们实测：474 秒音频全链路约 17 秒完成。
  */
 const LONG_AUDIO_SEC = 10 * 60
 const VERY_LONG_AUDIO_SEC = 20 * 60
 
+/** 时长前缀（未选文件时为空） */
+const durationPrefix = (durationSec: number | null) =>
+  durationSec == null ? '' : `本音频约 ${Math.round(durationSec / 60)} 分钟，`
+
 function engineGuidance(engine: string, durationSec: number | null): { tone: 'info' | 'warn'; text: string } | null {
-  if (durationSec == null) {
-    if (engine === 'paraformer-zh-int8') {
-      return { tone: 'info', text: 'Paraformer 方言极速（CPU）：474 秒方言约 9 秒出文本；时间与说话人来自分离管线（与 Qwen 多人路径一致）。本轮不支持热词，填写也会被忽略。' }
-    }
-    if (engine === 'moss-transcribe-0.9b') {
-      return { tone: 'info', text: 'MOSS 真实川话实测方言语音最稳（同音词消歧零错、说话人轮次最细）；多人任务的说话人由分离管线先分离、MOSS 转写后按时间重叠回填（较纯转写略增耗时）。细分块推理后长会议也可用（31.6 分钟会议实测约 24.7 分钟完成、约 0.78 倍时长，Vulkan）。' }
-    }
-    return { tone: 'info', text: 'Qwen3 需 GPU 与模型文件（31 分钟会议约 14 分钟完成），支持热词提升人名地名准确率。默认推荐 MOSS：10 分钟以内的川话短音频方言质量更优（同音消歧、说话人轮次最细）。' }
-  }
-  const minutes = Math.round(durationSec / 60)
-  if (durationSec > VERY_LONG_AUDIO_SEC) {
-    if (engine === 'paraformer-zh-int8') {
-      return { tone: 'info', text: `本音频约 ${minutes} 分钟（长会议）。Paraformer 是速度最快的选择（CPU 短音频实测约 0.02× 时长），时间与说话人由分离管线提供；本轮不支持热词，要热词请用 Qwen3（需 GPU 与模型文件）。` }
-    }
-    if (engine === 'moss-transcribe-0.9b') {
-      return { tone: 'warn', text: `本音频约 ${minutes} 分钟，属于长会议：MOSS 细分块（30s/块）后可用，31.6 分钟会议实测约 24.7 分钟完成（Vulkan，约 0.78× 时长）；追求速度请改用 Paraformer（CPU 极速）。` }
-    }
-    return { tone: 'info', text: `本音频约 ${minutes} 分钟（长会议）。Qwen3 需 GPU 与模型文件，走 GPU 约 0.45× 时长完成、热词提升专有名词识别；本机/低端机无 GPU 时请用 MOSS。` }
-  }
-  if (durationSec > LONG_AUDIO_SEC) {
-    if (engine === 'paraformer-zh-int8') {
-      return { tone: 'info', text: `本音频约 ${minutes} 分钟，Paraformer 是速度最快的选择（CPU 短音频实测约 0.02× 时长）；方言表现好，热词本轮不支持，要热词请用 Qwen3（需 GPU 与模型文件）。` }
-    }
-    if (engine === 'moss-transcribe-0.9b') {
-      return { tone: 'warn', text: `本音频约 ${minutes} 分钟：MOSS 细分块后速度约为音频时长的 0.78 倍左右（31.6 分钟会议实测约 24.7 分钟完成，Vulkan）。追求质量可继续，追求速度建议改用 Paraformer。` }
-    }
-    return { tone: 'info', text: `本音频约 ${minutes} 分钟，Qwen3 需 GPU 与模型文件（GPU 加速，约 0.45× 时长完成）；无 GPU 时请用 MOSS。` }
-  }
+  const prefix = durationPrefix(durationSec)
+
   if (engine === 'paraformer-zh-int8') {
-    return { tone: 'info', text: `本音频约 ${minutes} 分钟，Paraformer 极速（CPU 短音频实测约 0.02× 时长），方言表现好；要热词请用 Qwen3（需 GPU 与模型文件）。` }
+    const base = 'Paraformer（纯 CPU，川渝方言专用模型）：模型只出文字，时间与说话人由分离管线提供；本轮不支持热词，填写会被忽略。'
+    if (durationSec != null && durationSec > VERY_LONG_AUDIO_SEC) {
+      return { tone: 'info', text: `${prefix}长会议音频：分离 + 逐段转写耗时随段数增加（我们实测 474 秒音频全链路约 17 秒完成，纯 CPU）。${base}` }
+    }
+    return { tone: 'info', text: `${prefix}我们实测 474 秒音频全链路约 17 秒完成（CPU）。${base}` }
   }
+
   if (engine === 'moss-transcribe-0.9b') {
-    return { tone: 'info', text: `本音频约 ${minutes} 分钟，处于 MOSS 甜点区（默认推荐）：方言质量最优（同音消歧零错、说话人轮次最细），预计 ${minutes} 分钟左右完成。` }
+    const base = 'MOSS（纯 CPU）：热词经 --hotwords 传入，用于提升人名、地名等专有名词的识别。'
+    if (durationSec != null && durationSec > VERY_LONG_AUDIO_SEC) {
+      return { tone: 'warn', text: `${prefix}属长会议：MOSS 按 30 秒细分块顺序推理，实测 31.6 分钟会议约 24.7 分钟完成（Vulkan，约 0.78 倍时长）；多人任务的说话人另由分离管线分离后按时间重叠回填。${base}` }
+    }
+    if (durationSec != null && durationSec > LONG_AUDIO_SEC) {
+      return { tone: 'warn', text: `${prefix}MOSS 按 30 秒细分块顺序推理，实测 31.6 分钟会议约 24.7 分钟完成（Vulkan，约 0.78 倍时长）。${base}` }
+    }
+    return { tone: 'info', text: `${prefix}MOSS 一步成段，自带说话人编号。${base}` }
   }
-  return { tone: 'info', text: `本音频约 ${minutes} 分钟。此长度 MOSS 的方言质量更优（川话同音消歧、说话人轮次），是默认推荐；Qwen3 需 GPU 与模型文件。` }
+
+  return { tone: 'info', text: '默认引擎为 MOSS（纯 CPU，支持热词）；Paraformer 为川渝方言专用模型，不支持热词。' }
 }
 
 const RECORDING_OPTIONS = [
