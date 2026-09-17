@@ -457,8 +457,8 @@ public static class ContractEndpoints
                         WHERE (s.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=s.project_id AND user_id=@Uid)) AND s.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND s.project_id=@ProjectId";
             sql += " ORDER BY s.created_at DESC";
-            // items JSON 为前端直读块，豁免分制恒为元（契约见 MoneyUnit）；amount 列分→元
-            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount"));
+            // items JSON 为前端直读块，豁免分制恒为元（契约见 MoneyUnit）；amount/retention_amount 列分→元
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount", "retention_amount"));
         });
 
         app.MapPost("/api/settlements", async (HttpContext ctx, IDbConnection db) =>
@@ -470,7 +470,7 @@ public static class ContractEndpoints
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO settlements (project_id,contract_id,partner_id,type,sub_type,status,settlement_no,name,amount,settlement_date,remarks,items,files,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@ContractId,@PartnerId,@Type,@SubType,'pending',@SettlementNo,@Name,@Amount,@SettlementDate,@Remarks,@Items,@Files,@CreatedBy,@Now,@Now, @Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO settlements (project_id,contract_id,partner_id,type,sub_type,status,settlement_no,name,amount,settlement_date,remarks,items,files,retention_amount,retention_due_date,retention_status,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@ContractId,@PartnerId,@Type,@SubType,'pending',@SettlementNo,@Name,@Amount,@SettlementDate,@Remarks,@Items,@Files,@RetentionAmount,@RetentionDueDate,@RetentionStatus,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new {
                     ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
@@ -485,6 +485,9 @@ public static class ContractEndpoints
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",
                     Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]",
+                    RetentionAmount = MoneyUnit.ToFen(body.TryGetProperty("retentionAmount", out var ra) && ra.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)ra.GetDouble() : null),
+                    RetentionDueDate = body.TryGetProperty("retentionDueDate", out var rdd) ? rdd.GetString() : null,
+                    RetentionStatus = body.TryGetProperty("retentionStatus", out var rs) ? rs.GetString() : null,
                     CreatedBy = uid, Now = now()
                 });
             // fire-and-forget: upsert 实体到知识库种子表
@@ -537,7 +540,7 @@ public static class ContractEndpoints
 
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id + 软删兜底
             using var tx = db.BeginTransaction();
-            var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,settlement_date=@SettlementDate,remarks=@Remarks,items=@Items,files=@Files,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL",
+            var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,settlement_date=@SettlementDate,remarks=@Remarks,items=@Items,files=@Files,retention_amount=@RetentionAmount,retention_due_date=@RetentionDueDate,retention_status=@RetentionStatus,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL",
                 new { Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
@@ -546,7 +549,10 @@ public static class ContractEndpoints
                     SettlementDate = body.TryGetProperty("settlementDate", out var sd) ? sd.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",
-                    Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]"
+                    Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]",
+                    RetentionAmount = MoneyUnit.ToFen(body.TryGetProperty("retentionAmount", out var ra) && ra.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)ra.GetDouble() : null),
+                    RetentionDueDate = body.TryGetProperty("retentionDueDate", out var rdd) ? rdd.GetString() : null,
+                    RetentionStatus = body.TryGetProperty("retentionStatus", out var rs) ? rs.GetString() : null
                 }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
             {

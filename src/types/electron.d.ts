@@ -536,6 +536,8 @@ export interface DashboardStats {
 export type SettlementStatus = 'draft' | 'pending' | 'completed' | 'archived'
 export type SettlementType = 'income' | 'expense'  // 收入结算/支出结算
 export type SettlementSubType = 'material' | 'subcontract' | 'labor' | 'machinery' | 'service' | 'other'
+// JS03 质保金状态机（业务口径）：NULL/缺省=无质保；到期派生放前端 util，released 显式写；不得复用 status 归档位
+export type RetentionStatus = 'in_warranty' | 'due_to_collect' | 'released'
 
 export interface Settlement {
   id: number
@@ -549,6 +551,9 @@ export interface Settlement {
   name: string                   // 结算名称
   amount: number                 // 结算金额
   settlementDate?: string       // 结算日期
+  retentionAmount?: number      // 质保金金额（元，前端契约；库内分，MoneyUnit 口径）
+  retentionDueDate?: string     // 质保到期日（YYYY-MM-DD）
+  retentionStatus?: RetentionStatus // 质保状态（缺省=NULL=无质保）
   periodStart?: string           // 结算周期开始（废弃，保留兼容）
   periodEnd?: string             // 结算周期结束（废弃，保留兼容）
   submittedBy: string           // 提交人

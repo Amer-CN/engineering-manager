@@ -5,6 +5,7 @@ import { statusConfig, typeConfig, subTypeConfig } from './config'
 import { Icon } from '../../ui/Icon'
 import { Tooltip } from '../../ui/Tooltip/Tooltip'
 import { formatMoney } from '@/utils/format'
+import { getRetentionDisplayStatus, retentionStatusLabel } from '@/utils/settlementRetention'
 import { Button } from '../../ui/Button'
 
 interface SettlementListProps {
@@ -43,9 +44,24 @@ export const SettlementList: React.FC<SettlementListProps> = ({
       filterable: 'select',
       filterOptions: Object.entries(subTypeConfig).map(([k, v]) => ({ label: v.label, value: k })),
       filterAccessor: (item: any) => item.subType || '',
-      render: (item) => (
-      <span className="text-sm" style={{ color: 'var(--fg-2)' }}>{item.subType ? subTypeConfig[item.subType]?.label : '-'}</span>
-    )},
+      render: (item) => {
+      const retentionDisplay = getRetentionDisplayStatus(item.retentionStatus, item.retentionDueDate)
+      return (
+      <div className="flex flex-col gap-1">
+        <span className="text-sm" style={{ color: 'var(--fg-2)' }}>{item.subType ? subTypeConfig[item.subType]?.label : '-'}</span>
+        {retentionDisplay && (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-medium border w-fit ${
+            retentionDisplay === 'released'
+              ? 'bg-success-500/10 text-success-600 border-success-500/20'
+              : retentionDisplay === 'due_to_collect'
+                ? 'bg-danger-500/10 text-danger-600 border-danger-500/20'
+                : 'bg-warning-500/10 text-warning-600 border-warning-500/20'
+          }`}>
+            质保·{retentionStatusLabel[retentionDisplay]}{item.retentionAmount ? ` ¥${formatMoney(item.retentionAmount)}` : ''}
+          </span>
+        )}
+      </div>
+      )}},
     { key: 'partnerName', title: '单位', render: (item) => <span className="text-sm" style={{ color: 'var(--fg-2)' }}>{item.partnerName || '-'}</span> },
     { key: 'amount', title: '结算金额 (¥)', align: 'right', sortable: true,
       sorter: (a, b) => ((a.amount || 0) - (b.amount || 0)),

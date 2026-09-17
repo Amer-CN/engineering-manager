@@ -39,6 +39,9 @@ const defaultFormData = {
   name: '',
   amount: 0,
   settlementDate: '',
+  retentionAmount: 0,
+  retentionDueDate: '',
+  retentionStatus: '' as string,
   remarks: '',
   files: [] as { url: string; name: string; type: 'pdf' | 'image' | 'excel' }[],
   items: [] as { description: string; spec: string; quantity: number; unit: string; unitPrice: number; amount: number; remarks: string }[]
@@ -68,6 +71,9 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
         name: settlement.name,
         amount: settlement.amount,
         settlementDate: settlement.settlementDate || settlement.periodStart || '',
+        retentionAmount: settlement.retentionAmount ?? 0,
+        retentionDueDate: settlement.retentionDueDate || '',
+        retentionStatus: settlement.retentionStatus || '',
         remarks: settlement.remarks || '',
         files: (settlement.files?.length ?? 0) > 0 ? settlement.files!
           : settlement.fileUrl ? [{ url: settlement.fileUrl, name: settlement.fileName || '凭证', type: settlement.fileType || 'image' as const }] : [],
@@ -236,6 +242,32 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
         </div>
         <div>
           <Input label="结算日期" type="date" value={formData.settlementDate} onChange={e => setFormData({ ...formData, settlementDate: e.target.value })} size="sm" />
+        </div>
+        {/* JS03 质保金（可选，无质保留空；到期派生见 settlementRetention util，released 显式写） */}
+        <div className="col-span-2 text-xs font-bold uppercase tracking-wider text-[color:var(--muted)] pt-2">
+          质保金（可选）
+        </div>
+        <div>
+          <Input label="质保金金额 (¥)" type="number" value={formData.retentionAmount || ''} onChange={e => setFormData({ ...formData, retentionAmount: parseFloat(e.target.value) || 0 })} size="sm" placeholder="无质保留空" />
+        </div>
+        <div>
+          <Input label="质保到期日" type="date" value={formData.retentionDueDate} onChange={e => setFormData({ ...formData, retentionDueDate: e.target.value })} size="sm" />
+        </div>
+        <div>
+          <label className="label">质保状态</label>
+          <select
+            value={formData.retentionStatus}
+            onChange={e => setFormData({ ...formData, retentionStatus: e.target.value })}
+            className="input"
+          >
+            <option value="">无质保</option>
+            <option value="in_warranty">质保期内</option>
+            <option value="due_to_collect">已到期待收</option>
+            <option value="released">已释放</option>
+          </select>
+        </div>
+        <div className="text-xs text-[color:var(--muted)]">
+          到期未释放将自动派生为“已到期待收”；释放时请手动改为“已释放”。
         </div>
       </div>
       )}
