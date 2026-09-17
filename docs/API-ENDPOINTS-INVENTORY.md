@@ -472,7 +472,7 @@ R9 系列改造引入的行级写权限裁决机制，用于处理「授权项�
 
 ### 5.17 语音转文字（STT）
 
-**文件**：`SttEndpoints.cs` · **引擎**：qwen3-asr-1.7b-gguf（本地 GGUF）
+**文件**：`SttEndpoints.cs` · **引擎**：moss-transcribe-0.9b（默认）/ paraformer-zh-int8（纯 CPU；Qwen 已退役）
 
 | # | 方法 | 路由 | 权限 | 说明 |
 |---|------|------|------|------|

@@ -345,7 +345,8 @@ LLM 聊天服务接口：
 | 文件 | 职责 |
 |------|------|
 | `ISttEngine.cs` | STT 引擎接口 |
-| `LlamaCppGgufEngine.cs` | llama.cpp GGUF 引擎（本地推理） |
+| `MossTranscribeEngine.cs` | MOSS 一步成段引擎（本地推理，默认） |
+| `ParaformerEngine.cs` | Paraformer 川渝方言引擎（CPU） |
 | `SttEngineSelector.cs` | 引擎选择 + GPU 检测 |
 | `SttModelManager.cs` | 模型下载与管理 |
 | `SttWorker.cs` | 后台转写 worker（进程管理） |
