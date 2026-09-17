@@ -84,8 +84,9 @@ safety_training=COALESCE(@SafetyTraining, safety_training),work_section=COALESCE
             // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
             // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
             // invoices 无锁列，故无 409 档；预读不加 deleted_at，与现状 WHERE 一致（Pin8 钉住）。
+            // FP06 快捷路径门控需库内 status + invoice_kind（Wave 1B-1 第 2 轮，同查预读）。
             var row = db.QueryFirstOrDefault(
-                "SELECT created_by, project_id FROM invoices WHERE id=@Id",
+                "SELECT created_by, project_id, status, invoice_kind FROM invoices WHERE id=@Id",
                 new { Id = id });
             // 行不存在 → 维持现状「不存在=403」语义（Pin8 钉住，未改 WriteResult 的 404）
             if (row == null) return Results.Forbid();
@@ -94,6 +95,19 @@ safety_training=COALESCE(@SafetyTraining, safety_training),work_section=COALESCE
             var projectId = row.project_id as long?;
             var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
             if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // FP06 快捷路径门控（Wave 1B-1 第 2 轮）：该 DTO 仅含 Status，天然无法携带
+            // 原蓝票关联；生效 kind 取库内值、空 kind 放行（与全量路径同口径）。
+            var targetStatus = (dto.Status ?? "").Trim();
+            var currentStatus = ((row.status as string) ?? "").Trim();
+            // 幂等：目标值==当前值直接 Ok
+            if (string.Equals(targetStatus, currentStatus, StringComparison.Ordinal))
+                return Common.Ok();
+            if (string.Equals(targetStatus, "cancelled", StringComparison.Ordinal)
+                && IsElectronicKind(row.invoice_kind as string))
+                return Common.Fail("数电票不能作废，请使用红冲方式冲销", 400);
+            if (string.Equals(targetStatus, "red_flushed", StringComparison.Ordinal))
+                return Common.Fail("红冲需关联原蓝票，请在发票行内选择原蓝字发票后提交", 400);
 
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
             using var tx = db.BeginTransaction();
@@ -107,5 +121,17 @@ safety_training=COALESCE(@SafetyTraining, safety_training),work_section=COALESCE
             tx.Commit();
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
+    }
+
+    /// <summary>
+    /// FP06 票种判定（快捷路径本地复刻，与 InvoiceEndpoints.IsElectronicKind 同口径）：
+    /// 仅明确 electronic_* 视为数电票；空 kind 放行（保历史数据兼容）。
+    /// </summary>
+    private static bool IsElectronicKind(string? kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind)) return false;
+        var k = kind.Trim();
+        return k.Equals("electronic_regular", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("electronic_special", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -46,11 +46,14 @@ public static class InvoiceEndpoints
             // FP02：无发票代码时发票号码必须为 20 位纯数字（新版数电票）；有码旧票与空值放行
             if (!IsInvoiceNoValid(dto.InvoiceNo, dto.InvoiceCode))
                 return Common.Fail("新版数电票发票号码为20位数字；旧版8位号码请一并填写发票代码", 400);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices (project_id,seller_id,buyer_id,contract_id,settlement_id,type,invoice_kind,invoice_no,invoice_code,name,
-                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
+            // FP06：红冲必须关联原蓝票；数电票不能作废（空 kind 放行保历史兼容）
+            var fp06 = await ValidateInvoiceFp06Async(db, dto.Status, dto.InvoiceKind, dto.OriginalInvoiceId);
+            if (fp06 != null) return Common.Fail(fp06, 400);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices (project_id,seller_id,buyer_id,contract_id,settlement_id,original_invoice_id,type,invoice_kind,invoice_no,invoice_code,name,
+                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@OriginalInvoiceId,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
                         @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
+                new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
                       dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       Status = dto.Status ?? "pending", dto.Remarks, dto.FileUrl, dto.FileType, CreatedBy = uid, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
@@ -87,7 +90,7 @@ public static class InvoiceEndpoints
             // invoices 无锁列，故无 409 档；预读不加 deleted_at，与现状 WHERE 一致（Pin4 钉住）。
             if (!dto.Id.HasValue) return Results.Forbid();
             var row = db.QueryFirstOrDefault(
-                "SELECT created_by, project_id FROM invoices WHERE id=@Id",
+                "SELECT created_by, project_id, status, invoice_kind FROM invoices WHERE id=@Id",
                 new { Id = dto.Id.Value });
             // 行不存在 → 维持现状「不存在=403」语义（Pin4 钉住，未改 WriteResult 的 404）
             if (row == null) return Results.Forbid();
@@ -97,14 +100,27 @@ public static class InvoiceEndpoints
             var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
             if (access == RowWriteOutcome.Denied) return Results.Forbid();
 
+            // FP06：仅状态发生变更时门控；普通字段更新（状态不变/未传状态）不受影响（保历史数据兼容）。
+            // 生效 kind 取 incoming 优先、回落库内值；空 kind 放行。
+            var currentStatus = row.status as string;
+            var currentKind = row.invoice_kind as string;
+            var statusChanged = !string.IsNullOrWhiteSpace(dto.Status)
+                && !string.Equals(dto.Status.Trim(), (currentStatus ?? "").Trim(), StringComparison.Ordinal);
+            if (statusChanged)
+            {
+                var effectiveKind = !string.IsNullOrWhiteSpace(dto.InvoiceKind) ? dto.InvoiceKind : currentKind;
+                var fp06Put = await ValidateInvoiceFp06Async(db, dto.Status, effectiveKind, dto.OriginalInvoiceId);
+                if (fp06Put != null) return Common.Fail(fp06Put, 400);
+            }
+
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,seller_id=@SellerId,
-                buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,type=@Type,invoice_kind=@InvoiceKind,
+                buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,original_invoice_id=COALESCE(@OriginalInvoiceId,original_invoice_id),type=@Type,invoice_kind=@InvoiceKind,
                 invoice_no=@InvoiceNo,invoice_code=@InvoiceCode,name=@Name,amount=@Amount,price_amount=@PriceAmount,
                 tax_rate=@TaxRate,tax_amount=@TaxAmount,received_amount=@ReceivedAmount,issue_date=@IssueDate,
                 status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
+                new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
                       dto.InvoiceCode, dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
@@ -309,6 +325,50 @@ public static class InvoiceEndpoints
         if (string.IsNullOrWhiteSpace(invoiceNo)) return true;
         var no = invoiceNo.Trim();
         return no.Length == 20 && no.All(char.IsDigit);
+    }
+
+    /// <summary>
+    /// FP06 票种判定：仅明确 electronic_* 视为数电票；空 kind 放行（保历史数据兼容）。
+    /// </summary>
+    private static bool IsElectronicKind(string? kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind)) return false;
+        var k = kind.Trim();
+        return k.Equals("electronic_regular", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("electronic_special", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// FP06 红冲/作废门控（Wave 1B-1，仿 IsInvoiceNoValid 模式）：
+    /// (a) status==red_flushed 时 original_invoice_id 必须指向存在的、且自身非
+    /// red_flushed/cancelled 的发票（软删视为不存在），否则返回中文错误；
+    /// (b) status==cancelled 且 kind 为 electronic_* 时拒绝；空 kind 放行。
+    /// 返回 null 表示通过，否则为走 Common.Fail 约定的中文提示。
+    /// </summary>
+    private static async Task<string?> ValidateInvoiceFp06Async(IDbConnection db, string? status, string? kind, long? originalInvoiceId)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return null;
+        var s = status.Trim();
+        if (s.Equals("cancelled", StringComparison.Ordinal))
+        {
+            if (IsElectronicKind(kind))
+                return "数电票不能作废，请使用红冲方式冲销";
+            return null;
+        }
+        if (!s.Equals("red_flushed", StringComparison.Ordinal)) return null;
+        if (!originalInvoiceId.HasValue)
+            return "红冲必须关联原蓝票，请选择要冲销的蓝字发票";
+        var orig = await db.QueryFirstOrDefaultAsync(
+            "SELECT [status] FROM [invoices] WHERE [id]=@Id AND [deleted_at] IS NULL",
+            new { Id = originalInvoiceId.Value });
+        if (orig == null)
+            return "关联的原发票不存在，请重新选择原蓝票";
+        var origStatus = (orig as IDictionary<string, object>)?.TryGetValue("status", out var v) == true ? v as string : null;
+        origStatus ??= (orig as dynamic)?.status as string;
+        if (string.Equals(origStatus?.Trim(), "red_flushed", StringComparison.Ordinal)
+            || string.Equals(origStatus?.Trim(), "cancelled", StringComparison.Ordinal))
+            return "关联的原发票已红冲或已作废，不能重复红冲";
+        return null;
     }
 }
 

@@ -10,6 +10,7 @@ import { Tooltip } from '../../ui/Tooltip/Tooltip'
 import { DataTable, type Column } from '@/components/DataTable'
 import { getStatusLabel, getStatusConfig, getKindConfig } from './invoiceConfig'
 import { Button } from '../../ui/Button'
+import { useToastStore } from '@/store/toastStore'
 
 export interface InvoiceListProps {
   invoices: Invoice[]
@@ -28,6 +29,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   onPrint,
   onPreview
 }) => {
+  // 红冲经全量路径成功后需本地刷新本行（不再走 onStatusChange 快捷路径）
+  const [, forceRefresh] = React.useReducer((x: number) => x + 1, 0)
   const columns: Column<Invoice>[] = [
     {
       key: 'issueDate',
@@ -137,9 +140,47 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       render: (item) => (
         <select
           value={item.status}
-          onChange={(e) => {
+          onChange={async (e) => {
             e.stopPropagation()
-            onStatusChange(item.id, e.target.value as InvoiceStatus)
+            const next = e.target.value as InvoiceStatus
+            // FP06 前端门控（与后端 ValidateInvoiceFp06Async 同口径）：空 kind 放行保历史兼容
+            // （?. 守卫：测试/旧数据可能缺票种字段，运行时不得崩）
+            const isElectronic = item.invoiceKind?.startsWith('electronic_') ?? false
+            const toast = useToastStore.getState().showToast
+            // (b) 数电票禁止作废：直接拦截，select 受控回显旧值
+            if (next === 'cancelled' && isElectronic) {
+              toast('数电票不能作废，请使用红冲方式冲销', 'error')
+              return
+            }
+            // (a) 红冲必须关联原蓝票：发票号码输入，就地按列表解析到 id（后端按 id 校验，失败 400）
+            if (next === 'red_flushed') {
+              const input = window.prompt('红冲需关联原蓝票：请输入原蓝字发票号码（仅限当前列表页“No.”列可见范围，取消则不红冲）')
+              if (!input || !input.trim()) {
+                toast('红冲必须关联原蓝票，请选择要冲销的蓝字发票', 'error')
+                return
+              }
+              const target = invoices.find(i => i.invoiceNo === input.trim() && i.id !== item.id)
+              if (!target || target.status === 'red_flushed' || target.status === 'cancelled') {
+                toast('关联的原发票不存在或已红冲/作废，请重新选择原蓝票', 'error')
+                return
+              }
+              // 经 PUT /api/invoices 全量路径持久化原票关联（该路径有后端 FP06 校验，失败 400）；
+              // 成功后直接 return，不再落到 onStatusChange（快捷 /status 路径无关联字段，
+              // 后端一律拒绝红冲）。本地同步状态并刷新本行显示。
+              try {
+                const { getAPI } = await import('@/services/api-adapter')
+                const api = await getAPI() as any
+                await api.updateInvoice({ ...item, status: 'red_flushed', originalInvoiceId: target.id })
+                item.status = 'red_flushed'
+                toast('红冲成功，已关联原蓝票', 'success')
+                forceRefresh()
+                return
+              } catch (err: any) {
+                toast(err?.message || '红冲关联原票失败（后端已拒绝）', 'error')
+                return
+              }
+            }
+            onStatusChange(item.id, next)
           }}
           onClick={(e) => e.stopPropagation()}
           className={`status-badge px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusConfig(item.status, item.type).bgColor} ${getStatusConfig(item.status, item.type).color}`}
@@ -148,7 +189,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <option value="issued">{getStatusLabel('issued', item.type)}</option>
           <option value="partially_paid">{getStatusLabel('partially_paid', item.type)}</option>
           <option value="received">{getStatusLabel('received', item.type)}</option>
-          <option value="cancelled">已作废</option>
+          <option value="cancelled" disabled={item.invoiceKind?.startsWith('electronic_') ?? false}>已作废{(item.invoiceKind?.startsWith('electronic_') ?? false) ? '（数电票不可作废）' : ''}</option>
           <option value="red_flushed">已红冲</option>
         </select>
       )

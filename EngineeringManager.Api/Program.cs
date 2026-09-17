@@ -620,6 +620,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     tax_rate REAL DEFAULT 0,
     received_amount INTEGER DEFAULT 0,
     settlement_id INTEGER,
+    original_invoice_id INTEGER REFERENCES invoices(id),
     issue_date TEXT DEFAULT '',
     status TEXT DEFAULT 'pending',
     remarks TEXT DEFAULT '',
@@ -672,6 +673,7 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN buyer_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices buyer_id: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount INTEGER DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices received_amount: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN settlement_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices settlement_id: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN original_invoice_id INTEGER REFERENCES invoices(id)"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices original_invoice_id: {ex.Message}"); }
 
             // contract_templates 表迁移：旧库（早期版本建表）缺 content/variables 等列，自愈补齐（重复列报错属预期，记录即可）
             try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN content TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates content: {ex.Message}"); }
