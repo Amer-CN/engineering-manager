@@ -18,6 +18,7 @@ import { useAttendanceImport } from '../wages/useAttendanceImport'
 import { AttendanceImportModal } from '../wages/AttendanceImportModal'
 import { PayrollTable } from './PayrollTable'
 import { Button } from '../../ui/Button'
+import { TaxCalcDrawer } from './TaxCalcDrawer'
 
 interface PayrollPageProps {
   mode: PayrollMode
@@ -67,6 +68,11 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
     loadData: data.loadData,
   })
   const [showAttImport, setShowAttImport] = useState(false)
+  // Wave-T2：个税试算 Drawer 开关
+  const [showTaxCalc, setShowTaxCalc] = useState(false)
+  const taxPeople = useMemo(() =>
+    (data.people as { id: number; name?: string }[]).map((p) => ({ id: p.id, name: p.name ?? String(p.id) })),
+    [data.people])
 
   const importWorkerList = useMemo(() => {
     if (!selectedProject) return []
@@ -216,14 +222,19 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
         </div>
 
         {/* 操作按钮 */}
-        {mode === 'staff' && (
-          <div className="flex items-center gap-2 ml-2">
-            <Button onClick={handleGeneratePayroll} disabled={data.generating}  variant="primary" size="sm">
-              {data.generating ? '生成中...' : '生成薪酬'}
-            </Button>
-            <Button onClick={handleDeleteMonth}  variant="danger" size="sm">删除本月</Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 ml-2">
+          {can('wages:read') && (
+            <Button onClick={() => setShowTaxCalc(true)} variant="outline" size="sm">个税试算</Button>
+          )}
+          {mode === 'staff' && (
+            <>
+              <Button onClick={handleGeneratePayroll} disabled={data.generating}  variant="primary" size="sm">
+                {data.generating ? '生成中...' : '生成薪酬'}
+              </Button>
+              <Button onClick={handleDeleteMonth}  variant="danger" size="sm">删除本月</Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── 汇总条（staff） ── */}
@@ -261,6 +272,16 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
         />
       )}
       {attImport.ConflictDialog}
+
+      {showTaxCalc && (
+        <TaxCalcDrawer
+          open={showTaxCalc}
+          onClose={() => setShowTaxCalc(false)}
+          mode={mode}
+          people={taxPeople}
+          defaultYearMonth={data.selectedMonth}
+        />
+      )}
 
       {ConfirmDialog}
     </div>

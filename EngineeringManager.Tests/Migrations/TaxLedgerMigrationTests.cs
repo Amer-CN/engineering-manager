@@ -108,4 +108,61 @@ public class TaxLedgerMigrationTests : IDisposable
             ([person_key],[tax_year],[year_month],[gross_fen],[created_by],[created_at],[updated_at])
             VALUES ('member:1','2026','2026-08',200,'1','2026-08-01 00:00:00','2026-08-01 00:00:00')"));
     }
+
+    // ============================================================
+    // 060 四川种子：两行存在 + 关键值抽查 + 未确认项为 NULL
+    // ============================================================
+
+    [Fact]
+    public void FreshDatabase_RunAllMigrations_HasSichuanTwoRows()
+    {
+        MigrationRunner.Run(_connStr);
+        using var conn = new SqliteConnection(_connStr);
+        conn.Open();
+
+        foreach (var code in new[] { "sichuan", "chengdu" })
+            Assert.Equal(1, conn.ExecuteScalar<int>(
+                "SELECT COUNT(*) FROM [city_insurance_rates] WHERE [city_code]=@C", new { C = code }));
+
+        // 四川省行：费率/基数抽查 + 转载标记
+        var sc = conn.QueryFirst("SELECT * FROM [city_insurance_rates] WHERE [city_code]='sichuan'");
+        Assert.Equal("转载", (string)sc.status);
+        Assert.Equal("2026", (string)sc.effective_year);
+        Assert.Equal(0.08, Convert.ToDouble(sc.pension_personal));
+        Assert.Equal(0.02, Convert.ToDouble(sc.medical_personal));
+        Assert.Equal(0.004, Convert.ToDouble(sc.unemp_personal));
+        Assert.Equal(469900L, (long)sc.base_min_fen);
+        Assert.Equal(2349300L, (long)sc.base_max_fen);
+        // 未确认项为 NULL：工伤浮动、生育（并入医保）、省行公积金四列（分中心制按城市行）
+        Assert.True(sc.injury_corp is null or DBNull, "四川工伤浮动无单一值应存NULL");
+        Assert.True(sc.maternity_corp is null or DBNull, "四川生育已并入医保应存NULL");
+        Assert.True(sc.housing_min_rate is null or DBNull, "四川省行公积金分中心制应存NULL");
+        Assert.True(sc.housing_base_min_fen is null or DBNull, "四川省行公积金基数按城市行应存NULL");
+        Assert.Contains("2026-09-07", (string)sc.source_note);
+
+        // 成都行：社保沿用省值 + 公积金四列 + 转载标记
+        var cd = conn.QueryFirst("SELECT * FROM [city_insurance_rates] WHERE [city_code]='chengdu'");
+        Assert.Equal("转载", (string)cd.status);
+        Assert.Equal(0.08, Convert.ToDouble(cd.pension_personal));
+        Assert.Equal(469900L, (long)cd.base_min_fen);
+        Assert.Equal(2349300L, (long)cd.base_max_fen);
+        Assert.Equal(0.05, Convert.ToDouble(cd.housing_min_rate));
+        Assert.Equal(0.12, Convert.ToDouble(cd.housing_max_rate));
+        Assert.Equal(220000L, (long)cd.housing_base_min_fen);
+        Assert.Equal(3296900L, (long)cd.housing_base_max_fen);
+        Assert.True(cd.injury_corp is null or DBNull, "成都工伤浮动同省行应存NULL");
+        Assert.True(cd.maternity_corp is null or DBNull, "成都生育同省行应存NULL");
+        Assert.Contains("2026-01-01", (string)cd.source_note);
+    }
+
+    [Fact]
+    public void RunTwice_SichuanSeeds_Idempotent()
+    {
+        MigrationRunner.Run(_connStr);
+        MigrationRunner.Run(_connStr);
+        using var conn = new SqliteConnection(_connStr);
+        conn.Open();
+        Assert.Equal(2, conn.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM [city_insurance_rates] WHERE [city_code] IN ('sichuan','chengdu')"));
+    }
 }

@@ -7,9 +7,11 @@ using EngineeringManager.Api.Services;
 namespace EngineeringManager.Api;
 
 // ============================================================
-// 个税引擎 Wave-T1 端点（纯后端，T2前无前端）：
+// 个税引擎 Wave-T1 端点（Wave-T2 追加两读端点 + 前端试算）：
 //   POST /api/wages/calc-tax    试算纯读（不写库）
-//   POST /api/wages/confirm-tax 落库（wage_tax_ledger upsert）
+//   POST /api/wages/confirm-tax 落库（wage_tax_ledger upsert，bonus_mode 落库尊重显式值）
+//   GET  /api/wages/tax-cities  配置城市清单（试算城市下拉数据源）
+//   GET  /api/wages/tax-ledger  按 person+year 查 ledger 行（工资表税额只读列数据源，无记录空数组）
 // 单位契约：库内一律分（INTEGER），API一律元；换算只走 MoneyUnit 单点，
 //   禁止散写 ×100 / ÷100（含 SQL 表达式）。
 // 口径见 Services/TaxCalculationService.cs（GS01/GS02/GS03文号注）。
@@ -65,6 +67,8 @@ public static class WageTaxEndpoints
                 if (!CurrentUser.CanWriteProject(ctx, db, pid)) return Results.Forbid();
 
             // 归属裁决：既有ledger行 → Classify；新建 → 创建分支无audit（照batch-save）
+            // paid_tax_fen 列语义：存本期预扣额（可负=应退走汇算）；SUM(paid_tax_fen) 即累计已缴
+            //   （与 TryCalc 内 priorPaid = SUM([paid_tax_fen]) 口径一致）
             var existing = db.QueryFirstOrDefault(
                 "SELECT [id], [created_by] FROM [wage_tax_ledger] WHERE [person_key]=@K AND [year_month]=@YM",
                 new { K = c.PersonKey, YM = c.YearMonth });
@@ -109,7 +113,7 @@ public static class WageTaxEndpoints
                         CumTaxable = c.CumTaxableFen,
                         CumTax = c.CumTaxFen,
                         Paid = c.CurrentWithholdingFen,
-                        BMode = c.BonusRecommended,
+                        BMode = c.BonusEffective,
                         BFen = c.BonusFen,
                         City = dto.CityCode,
                         Now = now(),
@@ -155,7 +159,7 @@ public static class WageTaxEndpoints
                         CumTaxable = c.CumTaxableFen,
                         CumTax = c.CumTaxFen,
                         Paid = c.CurrentWithholdingFen,
-                        BMode = c.BonusRecommended,
+                        BMode = c.BonusEffective,
                         BFen = c.BonusFen,
                         City = dto.CityCode,
                         By = uid,
@@ -170,6 +174,70 @@ public static class WageTaxEndpoints
                 yearMonth = c.YearMonth,
                 calc = c.Response,
             });
+        });
+
+        // GET /api/wages/tax-cities — 配置城市清单（试算城市下拉数据源；读权限 wages:read，不加白）
+        app.MapGet("/api/wages/tax-cities", (HttpContext ctx, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.HasPermission(ctx, db, "wages:read")) return Results.Forbid();
+            var rows = db.Query(
+                "SELECT [city_code], [city_name], [effective_year], [status] FROM [city_insurance_rates] ORDER BY [city_code]");
+            var data = rows.Select(r =>
+            {
+                var d = (IDictionary<string, object?>)r;
+                return new
+                {
+                    cityCode = d.TryGetValue("city_code", out var c) ? c : null,
+                    cityName = d.TryGetValue("city_name", out var n) ? n : null,
+                    effectiveYear = d.TryGetValue("effective_year", out var y) ? y : null,
+                    status = d.TryGetValue("status", out var s) ? s : null,
+                };
+            }).ToList();
+            return Common.Ok(data);
+        });
+
+        // GET /api/wages/tax-ledger — 按 person+year 查 ledger 行（工资表税额只读列数据源；
+        // 无记录返回空数组不报错；读权限 wages:read，不加白；
+        // user-dim：ledger 无 project 列可做项目域过滤，读权限把关，与 calc-tax 同口径）
+        app.MapGet("/api/wages/tax-ledger", (HttpContext ctx, IDbConnection db, long? memberId, long? projectWorkerId, string? year) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.HasPermission(ctx, db, "wages:read")) return Results.Forbid();
+            if (!memberId.HasValue && !projectWorkerId.HasValue)
+                return Results.BadRequest(new { success = false, error = "tax-ledger: memberId / projectWorkerId 二选一必填" });
+            if (memberId.HasValue && projectWorkerId.HasValue)
+                return Results.BadRequest(new { success = false, error = "tax-ledger: memberId 与 projectWorkerId 不可同时传" });
+            var personKey = memberId.HasValue ? $"member:{memberId.Value}" : $"pw:{projectWorkerId!.Value}";
+            var sql = "SELECT [person_key], [tax_year], [year_month], [gross_fen], [social_fen], [housing_fen]," +
+                " [extra_total_fen], [cum_taxable_fen], [cum_tax_fen], [paid_tax_fen], [bonus_mode], [bonus_fen], [city_code]" +
+                " FROM [wage_tax_ledger] WHERE [person_key]=@K";
+            if (!string.IsNullOrWhiteSpace(year)) sql += " AND [tax_year]=@Y";
+            sql += " ORDER BY [year_month]";
+            var rows = db.Query(sql, new { K = personKey, Y = year });
+            // 单位契约：库内分 → API 元（只走 MoneyUnit，不散写 /100）
+            var data = rows.Select(r =>
+            {
+                var d = (IDictionary<string, object?>)r;
+                long Fen(string k) => d.TryGetValue(k, out var v) && v != null && v is not DBNull ? Convert.ToInt64(v) : 0;
+                return new
+                {
+                    personKey = d.TryGetValue("person_key", out var pk) ? pk : null,
+                    taxYear = d.TryGetValue("tax_year", out var ty) ? ty : null,
+                    yearMonth = d.TryGetValue("year_month", out var ym) ? ym : null,
+                    grossYuan = MoneyUnit.ToYuan(Fen("gross_fen")),
+                    socialYuan = MoneyUnit.ToYuan(Fen("social_fen")),
+                    housingYuan = MoneyUnit.ToYuan(Fen("housing_fen")),
+                    extraTotalYuan = MoneyUnit.ToYuan(Fen("extra_total_fen")),
+                    cumTaxableYuan = MoneyUnit.ToYuan(Fen("cum_taxable_fen")),
+                    cumTaxYuan = MoneyUnit.ToYuan(Fen("cum_tax_fen")),
+                    paidTaxYuan = MoneyUnit.ToYuan(Fen("paid_tax_fen")),
+                    bonusMode = d.TryGetValue("bonus_mode", out var bm) ? bm : null,
+                    bonusYuan = MoneyUnit.ToYuan(Fen("bonus_fen")),
+                    cityCode = d.TryGetValue("city_code", out var cc) ? cc : null,
+                };
+            }).ToList();
+            return Common.Ok(data);
         });
     }
 
@@ -197,6 +265,8 @@ public static class WageTaxEndpoints
         public long CurrentWithholdingFen { get; set; }
         public long BonusFen { get; set; }
         public string BonusRecommended { get; set; } = "separate";
+        // reviewer遗留b：落库用显式值（explicit separate/combined）还是择优值（auto/缺省），由 TryCalc 裁决
+        public string BonusEffective { get; set; } = "separate";
         public object Response { get; set; } = new { };
     }
 
@@ -306,7 +376,8 @@ public static class WageTaxEndpoints
             grossSource = "wages_sum";
         }
 
-        // 7. 专项7分项（元→分，缺省0）
+        // 7. 专项7分项（元→分，缺省0）：端点以显式入参为准；
+        //    TaxCalculationService.DefaultExtraMonthly 仅为 GS02 现行参考值（前端试算默认值来源），此处不调用
         long e1 = MoneyUnit.ToFen(dto.ChildEdu ?? 0);
         long e2 = MoneyUnit.ToFen(dto.ContEdu ?? 0);
         long e3 = MoneyUnit.ToFen(dto.Medical ?? 0);
@@ -353,6 +424,11 @@ public static class WageTaxEndpoints
         long bonusFen = MoneyUnit.ToFen(dto.Bonus ?? 0);
         var (separate, combined, recommended, saving) =
             TaxCalculationService.ChooseBonusMode(cumTaxable, bonusFen);
+        // reviewer遗留b：显式 separate/combined 落库用显式值；仅 auto/缺省用择优值；非法值 400
+        var modeRaw = (dto.BonusMode ?? "auto").Trim().ToLowerInvariant();
+        if (modeRaw is not ("separate" or "combined" or "auto" or ""))
+            return (false, "calc-tax: bonusMode 须为 separate/combined/auto 之一", null);
+        var bonusEffective = modeRaw is "separate" or "combined" ? modeRaw : recommended;
 
         var refundNote = current < 0 ? "应退，走汇算" : "";
         var firstNote = isFirst ? "本年首次测算" : $"本年累计{priorCount}笔";
@@ -407,6 +483,7 @@ public static class WageTaxEndpoints
                 separateTaxYuan = MoneyUnit.ToYuan(separate),
                 combinedExtraYuan = MoneyUnit.ToYuan(combined),
                 recommended,
+                mode = bonusEffective,
                 savingYuan = MoneyUnit.ToYuan(saving),
                 // GS03引用链（引用必带30号）
                 lawRef = "国税发〔2005〕9号方法 + 财税〔2018〕164号 + 财政部 税务总局公告2023年第30号（执行至2027-12-31）",
@@ -436,6 +513,7 @@ public static class WageTaxEndpoints
             CurrentWithholdingFen = current,
             BonusFen = bonusFen,
             BonusRecommended = recommended,
+            BonusEffective = bonusEffective,
             Response = response,
         };
         return (true, null, calc);

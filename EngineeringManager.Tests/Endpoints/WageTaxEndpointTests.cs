@@ -42,7 +42,7 @@ public class WageTaxEndpointTests : ApiTestBase
 
     private static object CalcBody(object? memberId, string yearMonth, string cityCode,
         double contributionBase = 10000, double grossMonthly = 20000,
-        double childEdu = 2000, double bonus = 12000) => new
+        double childEdu = 2000, double bonus = 12000, string? bonusMode = null) => new
     {
         memberId,
         yearMonth,
@@ -57,6 +57,7 @@ public class WageTaxEndpointTests : ApiTestBase
         elderly = 0.0,
         infant = 0.0,
         bonus,
+        bonusMode,
     };
 
     [Fact]
@@ -219,5 +220,124 @@ public class WageTaxEndpointTests : ApiTestBase
         var resp = await Client.PostAsJsonAsync("/api/wages/confirm-tax",
             CalcBody(7008, "2026-08", "beijing"));
         Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
+    // ============================================================
+    // Wave-T2 reviewer遗留b：BonusMode 三路（低月薪场景择优=combine，能区分显式与择优）
+    // grossMonthly=3000 → 累计应纳税为负 → combined差额0 < separate360元 → recommended=combined
+    // ============================================================
+
+    private static object LowIncomeBody(object? memberId, string? bonusMode) =>
+        CalcBody(memberId, "2026-08", "beijing", contributionBase: 10000,
+            grossMonthly: 3000, childEdu: 2000, bonus: 12000, bonusMode: bonusMode);
+
+    private async Task<string> ConfirmBonusModeAsync(object body)
+    {
+        var resp = await Client.PostAsJsonAsync("/api/wages/confirm-tax", body);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        var ledgerId = data.GetProperty("ledgerId").GetInt64();
+        using var conn = new SqliteConnection(ConnectionString);
+        return (string)conn.QueryFirst(
+            "SELECT [bonus_mode] FROM [wage_tax_ledger] WHERE [id]=@Id",
+            new { Id = ledgerId }).bonus_mode;
+    }
+
+    [Fact]
+    public async Task ConfirmTax_BonusModeSeparate_RespectsExplicit()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        Assert.Equal("separate", await ConfirmBonusModeAsync(LowIncomeBody(7101, "separate")));
+    }
+
+    [Fact]
+    public async Task ConfirmTax_BonusModeCombined_RespectsExplicit()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        Assert.Equal("combined", await ConfirmBonusModeAsync(LowIncomeBody(7102, "combined")));
+    }
+
+    [Fact]
+    public async Task ConfirmTax_BonusModeAuto_UsesRecommended()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        // auto → 择优 combined；calc 响应 mode 与 recommended 一致
+        Assert.Equal("combined", await ConfirmBonusModeAsync(LowIncomeBody(7103, "auto")));
+        var calc = await Client.PostAsJsonAsync("/api/wages/calc-tax", LowIncomeBody(7103, "auto"));
+        Assert.Equal(HttpStatusCode.OK, calc.StatusCode);
+        var bonus = (await GetDataAsync(calc)).GetProperty("bonus");
+        Assert.Equal("combined", bonus.GetProperty("recommended").GetString());
+        Assert.Equal("combined", bonus.GetProperty("mode").GetString());
+    }
+
+    [Fact]
+    public async Task ConfirmTax_BonusModeMissing_UsesRecommended()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        Assert.Equal("combined", await ConfirmBonusModeAsync(LowIncomeBody(7104, null)));
+    }
+
+    // ============================================================
+    // Wave-T2 读端点：tax-cities / tax-ledger
+    // ============================================================
+
+    [Fact]
+    public async Task TaxCities_ReturnsSixCities()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        var resp = await Client.GetAsync("/api/wages/tax-cities");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.True(data.GetArrayLength() >= 6, "期望≥6城（四城+四川+成都）");
+        var codes = data.EnumerateArray().Select(e => e.GetProperty("cityCode").GetString()).ToList();
+        foreach (var c in new[] { "beijing", "shanghai", "guangzhou", "shenzhen", "sichuan", "chengdu" })
+            Assert.Contains(c, codes);
+        var cd = data.EnumerateArray().First(e => e.GetProperty("cityCode").GetString() == "chengdu");
+        Assert.Equal("成都", cd.GetProperty("cityName").GetString());
+        Assert.Equal("2026", cd.GetProperty("effectiveYear").GetString());
+        Assert.Equal("转载", cd.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task TaxCities_NoAuth_Returns401()
+    {
+        SetAuth(null);
+        var resp = await Client.GetAsync("/api/wages/tax-cities");
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task TaxLedger_EmptyArray_WhenNoRows()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        var resp = await Client.GetAsync("/api/wages/tax-ledger?memberId=7199&year=2026");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(0, data.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task TaxLedger_ReturnsRows_AfterConfirm()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        var confirm = await Client.PostAsJsonAsync("/api/wages/confirm-tax",
+            CalcBody(7105, "2026-08", "beijing"));
+        Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+
+        var resp = await Client.GetAsync("/api/wages/tax-ledger?memberId=7105&year=2026");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetArrayLength());
+        var row = data.EnumerateArray().First();
+        Assert.Equal("2026-08", row.GetProperty("yearMonth").GetString());
+        Assert.True(row.TryGetProperty("paidTaxYuan", out _));
+        Assert.Equal("beijing", row.GetProperty("cityCode").GetString());
     }
 }

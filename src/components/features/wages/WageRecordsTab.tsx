@@ -12,6 +12,8 @@ interface WageRecordsTabProps {
   filterMemberName: string
   selectedIds: Set<number>
   paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>
+  /** Wave-T2 税额只读列数据源（GET /api/wages/tax-ledger 行；不传则显示 -） */
+  taxLedgerMap?: Record<string, TaxLedgerInfo>
   onFilterYearMonthChange: (val: string) => void
   onFilterNameChange: (val: string) => void
   onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate' | 'paidChannel', value: string | number) => void
@@ -38,9 +40,22 @@ function getEditPaidDate(record: WageRecord, edits: Map<number, { paidAmount: st
   return edit?.paidDate ?? record.paidDate ?? ''
 }
 
+/** 税额只读列行信息（元；来自 tax-ledger） */
+export interface TaxLedgerInfo {
+  /** 本期税额 = ledger paid_tax_fen → 元 */
+  paidTaxYuan: number
+  /** 累计口径说明（试算 calcNote 口径，悬停看全文） */
+  calcNote?: string
+}
+
+/** taxLedgerMap 键：memberId/projectWorkerId 二选一 + 月份 */
+export function taxLedgerKey(record: Pick<WageRecord, 'memberId' | 'projectWorkerId' | 'yearMonth'>): string {
+  return `${record.memberId ?? ''}:${record.projectWorkerId ?? ''}:${record.yearMonth ?? ''}`
+}
+
 export default function WageRecordsTab({
   allWageRecords, filterYearMonth, filterMemberName,
-  selectedIds, paymentEdits,
+  selectedIds, paymentEdits, taxLedgerMap,
   onFilterYearMonthChange, onFilterNameChange,
   onPaymentChange, onSavePayments,
   onBankReceiptUpload, onOpenBatchReceipt, receiptParsing, receiptResult,
@@ -167,7 +182,33 @@ export default function WageRecordsTab({
           </span>
         )
       }
-    }
+    },
+    // Wave-T2 税额只读列（数据源 taxLedgerMap；无记录显示 -，不报错）
+    {
+      key: 'currentTax',
+      title: '本期税额',
+      render: (item) => {
+        const info = taxLedgerMap?.[taxLedgerKey(item)]
+        if (!info) return <span className="text-[color:var(--muted)]">-</span>
+        return (
+          <span className="font-mono tabular-nums">¥{info.paidTaxYuan.toFixed(2)}</span>
+        )
+      }
+    },
+    {
+      key: 'taxNote',
+      title: '累计口径说明',
+      render: (item) => {
+        const info = taxLedgerMap?.[taxLedgerKey(item)]
+        if (!info?.calcNote) return <span className="text-[color:var(--muted)]">-</span>
+        const short = info.calcNote.length > 18 ? `${info.calcNote.slice(0, 18)}…` : info.calcNote
+        return (
+          <span className="text-xs text-[color:var(--muted)]" title={info.calcNote}>
+            {short}
+          </span>
+        )
+      }
+    },
   ]
 
   return (

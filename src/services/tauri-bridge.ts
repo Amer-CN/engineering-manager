@@ -350,6 +350,17 @@ export const tauriAPI = {
   batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string; paidChannel?: string }[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { id: number }[] }>('/api/wages/batch-payment', records),
 
+  // ────────── 个税试算（Wave-T2：calc-tax 纯读试算 / confirm-tax 落库 / 两读端点） ──────────
+  // 金额一律元（与后端 WageTaxRequest 契约一致：ContributionBase/GrossMonthly/7分项/Bonus 均为元）
+  calcTax: (body: { memberId?: number; projectWorkerId?: number; yearMonth: string; cityCode: string; contributionBase?: number; grossMonthly?: number; childEdu?: number; contEdu?: number; medical?: number; mortgage?: number; rent?: number; elderly?: number; infant?: number; bonus?: number; bonusMode?: string; housingRate?: number }) =>
+    apiClient.post('/api/wages/calc-tax', body),
+  confirmTax: (body: { memberId?: number; projectWorkerId?: number; yearMonth: string; cityCode: string; contributionBase?: number; grossMonthly?: number; childEdu?: number; contEdu?: number; medical?: number; mortgage?: number; rent?: number; elderly?: number; infant?: number; bonus?: number; bonusMode?: string; housingRate?: number }) =>
+    apiClient.post<{ ledgerId: number }>('/api/wages/confirm-tax', body),
+  getTaxCities: () =>
+    apiClient.get<{ cityCode: string; cityName: string; effectiveYear: string; status: string }[]>('/api/wages/tax-cities'),
+  getTaxLedger: (params: { memberId?: number; projectWorkerId?: number; year?: string }) =>
+    apiClient.get<{ yearMonth: string; paidTaxYuan: number; cumTaxYuan: number; cumTaxableYuan: number; bonusMode: string; cityCode: string }[]>('/api/wages/tax-ledger', params),
+
   // ────────── 薪资历史 ──────────
   getWageHistory: (projectWorkerId: number) =>
     apiClient.get<{ id: number; projectWorkerId: number; yearMonth: string; dailyWage: number; note?: string; createdAt: string }[]>(`/api/wage-history/${projectWorkerId}`),
