@@ -58,7 +58,7 @@ describe('FileDropZone', () => {
     const { FileDropZone } = await importModule()
     render(<FileDropZone {...baseProps} />)
     expect(screen.getByText('点击上传 / 拖拽上传 / Ctrl+V 粘贴')).toBeInTheDocument()
-    expect(screen.getByText('支持 JPG、PNG、WebP、PDF 格式，最大 10MB')).toBeInTheDocument()
+    expect(screen.getByText('支持 JPG、PNG、WebP、PDF、XML、OFD 格式，最大 10MB')).toBeInTheDocument()
   })
 
   it('applies drag-over style when dragOver=true', async () => {

@@ -27,8 +27,8 @@ public static class FileEndpoints
     /// </summary>
     private static readonly HashSet<string> OpenableExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        // 文档
-        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".rtf",
+        // 文档（含 FP04 发票附件 XML/OFD：数电票版式文件）
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".rtf", ".xml", ".ofd",
         // 图片
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tif", ".tiff", ".svg",
     };
@@ -94,6 +94,8 @@ public static class FileEndpoints
                             ".jpg" or ".jpeg" => "image/jpeg",
                             ".png" => "image/png",
                             ".pdf" => "application/pdf",
+                            ".xml" => "text/xml",
+                            ".ofd" => "application/ofd",
                             _ => "application/octet-stream"
                         };
                         return Common.Ok(new { dataUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}", mimeType = mime });

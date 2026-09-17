@@ -46,6 +46,9 @@ public static class InvoiceEndpoints
             // FP02：无发票代码时发票号码必须为 20 位纯数字（新版数电票）；有码旧票与空值放行
             if (!IsInvoiceNoValid(dto.InvoiceNo, dto.InvoiceCode))
                 return Common.Fail("新版数电票发票号码为20位数字；旧版8位号码请一并填写发票代码", 400);
+            // FP04：发票附件仅放行图片/PDF/XML/OFD，其余 400（空值无附件放行）
+            if (!IsFileTypeAllowed(dto.FileType))
+                return Common.Fail("仅支持 JPG、PNG、WebP、PDF、XML、OFD 格式的发票附件", 400);
             // FP06：红冲必须关联原蓝票；数电票不能作废（空 kind 放行保历史兼容）
             var fp06 = await ValidateInvoiceFp06Async(db, dto.Status, dto.InvoiceKind, dto.OriginalInvoiceId);
             if (fp06 != null) return Common.Fail(fp06, 400);
@@ -84,6 +87,9 @@ public static class InvoiceEndpoints
             // FP02：无发票代码时发票号码必须为 20 位纯数字（新版数电票）；有码旧票与空值放行
             if (!IsInvoiceNoValid(dto.InvoiceNo, dto.InvoiceCode))
                 return Common.Fail("新版数电票发票号码为20位数字；旧版8位号码请一并填写发票代码", 400);
+            // FP04：发票附件仅放行图片/PDF/XML/OFD，其余 400（空值无附件放行）
+            if (!IsFileTypeAllowed(dto.FileType))
+                return Common.Fail("仅支持 JPG、PNG、WebP、PDF、XML、OFD 格式的发票附件", 400);
             // R9-12 方案丙更新侧：授权项目跨人可改 + audit（B13）
             // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
             // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
@@ -325,6 +331,23 @@ public static class InvoiceEndpoints
         if (string.IsNullOrWhiteSpace(invoiceNo)) return true;
         var no = invoiceNo.Trim();
         return no.Length == 20 && no.All(char.IsDigit);
+    }
+
+    /// <summary>
+    /// FP04 后端校验（与前端 processFile 白名单同口径）：
+    /// 仅放行 jpeg/png/webp/pdf/xml/ofd（短码/fileType/mime/带点扩展名均认）；
+    /// 空值（无附件）放行，其余走 Common.Fail 约定 400。
+    /// PaymentRecord 的 fileType 联合类型在 scope 外，此处只门控 invoices。
+    /// </summary>
+    private static bool IsFileTypeAllowed(string? fileType)
+    {
+        if (string.IsNullOrWhiteSpace(fileType)) return true;
+        var t = fileType.Trim().ToLowerInvariant();
+        return t is "image" or "pdf" or "xml" or "ofd"
+            or "jpg" or "jpeg" or "png" or "webp"
+            or ".jpg" or ".jpeg" or ".png" or ".webp" or ".pdf" or ".xml" or ".ofd"
+            or "image/jpeg" or "image/png" or "image/webp" or "application/pdf"
+            or "text/xml" or "application/xml" or "application/ofd" or "application/x-ofd";
     }
 
     /// <summary>

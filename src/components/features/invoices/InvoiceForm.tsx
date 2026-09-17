@@ -49,7 +49,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const showToast = useToastStore(state => state.showToast)
   const [formData, setFormData] = useState<InvoiceFormData>(initialData)
   const [dragOverFile, setDragOverFile] = useState(false)
-  const [previewFile, setPreviewFile] = useState<{data: string, type: 'image' | 'pdf', title: string} | null>(null)
+  const [previewFile, setPreviewFile] = useState<{data: string, type: 'image' | 'pdf' | 'xml' | 'ofd', title: string} | null>(null)
   const [duplicateInvoice, setDuplicateInvoice] = useState<{ id: number; invoiceNo: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -58,12 +58,22 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   onUpdate: (patch) => setFormData(prev => ({ ...prev, ...patch }))
   })
 
+  const resolveInvoiceFileType = (file: File): 'image' | 'pdf' | 'xml' | 'ofd' => {
+  const name = (file.name || '').toLowerCase()
+  if (file.type === 'application/pdf') return 'pdf'
+  if (file.type === 'text/xml' || file.type === 'application/xml' || name.endsWith('.xml')) return 'xml'
+  if (file.type === 'application/ofd' || file.type === 'application/x-ofd' || name.endsWith('.ofd')) return 'ofd'
+  return 'image'
+  }
+
   const processFile = (file: File) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-  if (!allowedTypes.includes(file.type)) { showToast('只能上传 JPG、PNG、WebP 或 PDF 格式的文件', 'error'); return }
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/xml', 'application/xml', 'application/ofd', 'application/x-ofd']
+  const fileName = (file.name || '').toLowerCase()
+  const isXmlOfdByExt = fileName.endsWith('.xml') || fileName.endsWith('.ofd')
+  if (!allowedTypes.includes(file.type) && !isXmlOfdByExt) { showToast('只能上传 JPG、PNG、WebP、PDF、XML 或 OFD 格式的文件', 'error'); return }
   if (file.size > 10 * 1024 * 1024) { showToast('文件大小不能超过 10MB', 'error'); return }
   const reader = new FileReader()
-  reader.onload = (event) => setFormData(prev => ({ ...prev, fileUrl: event.target?.result as string, fileType: file.type === 'application/pdf' ? 'pdf' : 'image' }))
+  reader.onload = (event) => setFormData(prev => ({ ...prev, fileUrl: event.target?.result as string, fileType: resolveInvoiceFileType(file) }))
   reader.readAsDataURL(file)
   }
 
@@ -101,9 +111,13 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   if (!items) return
   for (let i = 0; i < items.length; i++) {
   const item = items[i]
-  if (item.type.startsWith('image/') || item.type === 'application/pdf') {
-  const file = item.getAsFile()
-  if (file) { e.preventDefault(); processFile(file); return }
+  // 与 processFile 同门控：图片/PDF/XML/OFD（文件名后缀兜底浏览器空 mime）
+  const pasteFile = item.getAsFile()
+  if (!pasteFile) continue
+  const pasteName = (pasteFile.name || '').toLowerCase()
+  const pasteAllowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/xml', 'application/xml', 'application/ofd', 'application/x-ofd']
+  if (pasteAllowed.includes(pasteFile.type) || pasteFile.type.startsWith('image/') || pasteName.endsWith('.xml') || pasteName.endsWith('.ofd')) {
+  e.preventDefault(); processFile(pasteFile); return
   }
   }
   }
@@ -162,11 +176,11 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       iconName="Paperclip"
       file={formData.fileUrl}
       fileType={formData.fileType}
-      fileLabel={formData.fileType === 'pdf' ? 'PDF文件' : '图片文件'}
+      fileLabel={formData.fileType === 'pdf' ? 'PDF文件' : formData.fileType === 'xml' ? 'XML文件' : formData.fileType === 'ofd' ? 'OFD文件' : '图片文件'}
       dragOver={dragOverFile}
       inputRef={fileInputRef}
       iconBgClass="bg-[color:var(--accent-soft)]"
-      onPreview={() => setPreviewFile({ data: formData.fileUrl, type: formData.fileType === 'pdf' ? 'pdf' : 'image', title: '发票预览' })}
+      onPreview={() => setPreviewFile({ data: formData.fileUrl, type: formData.fileType === 'pdf' || formData.fileType === 'xml' || formData.fileType === 'ofd' ? formData.fileType : 'image', title: '发票预览' })}
       onFileSelect={processFile}
       onRemove={() => setFormData(prev => ({ ...prev, fileUrl: '', fileType: '' }))}
       onDragOver={(e) => { e.preventDefault(); setDragOverFile(true) }}
