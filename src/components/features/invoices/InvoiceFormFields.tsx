@@ -5,7 +5,7 @@ import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
 import { Input } from '../../ui/Input/Input'
 import { Icon } from '../../ui/Icon'
-import { invoiceKindOptions, taxRateOptions } from './constants'
+import { invoiceKindOptions, nonDeductibleReasonOptions, taxRateOptions } from './constants'
 
 interface InvoiceFormFieldsProps {
   formData: InvoiceFormData
@@ -55,6 +55,23 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
             ))}
           </select>
         </div>
+      </div>
+
+      {/* FP08 进项不得抵扣原因：仅收票（进项）可标记，开票时禁用 */}
+      <div>
+        <label className="label">进项抵扣</label>
+        <select
+          value={formData.nonDeductibleReason || ''}
+          onChange={e => setFormData({ ...formData, nonDeductibleReason: e.target.value })}
+          className="input"
+          disabled={formData.type !== 'invoice_in'}
+          title={formData.type !== 'invoice_in' ? '仅收票（进项）可标记不得抵扣原因' : '可抵扣（空）或六类不得抵扣原因'}
+        >
+          <option value="">可抵扣</option>
+          {nonDeductibleReasonOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

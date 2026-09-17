@@ -9,6 +9,7 @@ import { Icon } from '../../ui/Icon'
 import { Tooltip } from '../../ui/Tooltip/Tooltip'
 import { DataTable, type Column } from '@/components/DataTable'
 import { getStatusLabel, getStatusConfig, getKindConfig } from './invoiceConfig'
+import { getNonDeductibleReasonLabel } from './constants'
 import { Button } from '../../ui/Button'
 import { useToastStore } from '@/store/toastStore'
 
@@ -93,6 +94,21 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <div className="text-xs font-mono tabular-nums" style={{ color: 'var(--muted)' }}>税: ¥{formatMoney(item.taxAmount)}</div>
         </>
       )
+    },
+    {
+      key: 'nonDeductibleReason',
+      title: '抵扣',
+      align: 'center',
+      render: (item) => {
+        const label = getNonDeductibleReasonLabel(item.nonDeductibleReason)
+        return label ? (
+          <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }} title={`不得抵扣：${label}`}>
+            {label}
+          </span>
+        ) : (
+          <span className="text-xs" style={{ color: 'var(--muted)' }}>可抵扣</span>
+        )
+      }
     },
     {
       key: 'receivedAmount',

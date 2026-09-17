@@ -14,6 +14,7 @@ import { validateInvoiceNumber } from '@/utils/validate'
 export interface InvoiceFormData {
   type: InvoiceType
   invoiceKind: InvoiceKind
+  nonDeductibleReason: string
   invoiceNo: string
   invoiceCode: string
   name: string

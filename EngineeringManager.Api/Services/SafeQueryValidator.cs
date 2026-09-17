@@ -50,7 +50,7 @@ public static class SafeQueryValidator
             "id", "project_id", "seller_id", "buyer_id", "contract_id",
             "settlement_id", "type", "invoice_kind", "invoice_no", "invoice_code",
             "name", "amount", "price_amount", "tax_rate", "tax_amount",
-            "received_amount", "issue_date", "status", "remarks", "created_by", "created_at"
+            "received_amount", "non_deductible_reason", "issue_date", "status", "remarks", "created_by", "created_at"
         },
         ["settlements"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {

@@ -52,11 +52,15 @@ public static class InvoiceEndpoints
             // FP06：红冲必须关联原蓝票；数电票不能作废（空 kind 放行保历史兼容）
             var fp06 = await ValidateInvoiceFp06Async(db, dto.Status, dto.InvoiceKind, dto.OriginalInvoiceId);
             if (fp06 != null) return Common.Fail(fp06, 400);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices (project_id,seller_id,buyer_id,contract_id,settlement_id,original_invoice_id,type,invoice_kind,invoice_no,invoice_code,name,
-                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@OriginalInvoiceId,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
+            // FP08：不得抵扣原因仅放行 NULL/空或六枚举之一，其余 400（空归一为 NULL=可抵扣）
+            var nonDeductReason = NormalizeNonDeductibleReason(dto.NonDeductibleReason);
+            if (!IsNonDeductibleReasonValid(nonDeductReason))
+                return Common.Fail("进项税额不得抵扣原因取值不合法", 400);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices (project_id,seller_id,buyer_id,contract_id,settlement_id,original_invoice_id,non_deductible_reason,type,invoice_kind,invoice_no,invoice_code,name,
+                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@OriginalInvoiceId,@NonDeductibleReason,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
                         @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
+                new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReason, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
                       dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       Status = dto.Status ?? "pending", dto.Remarks, dto.FileUrl, dto.FileType, CreatedBy = uid, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
@@ -90,6 +94,11 @@ public static class InvoiceEndpoints
             // FP04：发票附件仅放行图片/PDF/XML/OFD，其余 400（空值无附件放行）
             if (!IsFileTypeAllowed(dto.FileType))
                 return Common.Fail("仅支持 JPG、PNG、WebP、PDF、XML、OFD 格式的发票附件", 400);
+            // FP08：不得抵扣原因仅放行 NULL/空或六枚举之一，其余 400（空归一为 NULL；
+            // 与 OriginalInvoiceId 同模式：NULL 经 COALESCE 保旧值，字段形状校验先行）
+            var nonDeductReasonPut = NormalizeNonDeductibleReason(dto.NonDeductibleReason);
+            if (!IsNonDeductibleReasonValid(nonDeductReasonPut))
+                return Common.Fail("进项税额不得抵扣原因取值不合法", 400);
             // R9-12 方案丙更新侧：授权项目跨人可改 + audit（B13）
             // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
             // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
@@ -122,11 +131,11 @@ public static class InvoiceEndpoints
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,seller_id=@SellerId,
-                buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,original_invoice_id=COALESCE(@OriginalInvoiceId,original_invoice_id),type=@Type,invoice_kind=@InvoiceKind,
+                buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,original_invoice_id=COALESCE(@OriginalInvoiceId,original_invoice_id),non_deductible_reason=COALESCE(@NonDeductibleReason,non_deductible_reason),type=@Type,invoice_kind=@InvoiceKind,
                 invoice_no=@InvoiceNo,invoice_code=@InvoiceCode,name=@Name,amount=@Amount,price_amount=@PriceAmount,
                 tax_rate=@TaxRate,tax_amount=@TaxAmount,received_amount=@ReceivedAmount,issue_date=@IssueDate,
                 status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
+                new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReasonPut, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
                       dto.InvoiceCode, dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
@@ -360,6 +369,25 @@ public static class InvoiceEndpoints
         return k.Equals("electronic_regular", StringComparison.OrdinalIgnoreCase)
             || k.Equals("electronic_special", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// FP08 不得抵扣原因（Wave 1B-4，仿 IsInvoiceNoValid 模式）：
+    /// 可空枚举六值（simple_taxation/exempt/abnormal_loss/
+    /// welfare_personal/catering_entertainment/other），NULL/空=可抵扣放行；
+    /// 其余值由调用方走 Common.Fail 约定 400。
+    /// 口径：docs/finance-knowledge/invoice/数电票与增值税规则.md 六项。
+    /// </summary>
+    private static readonly HashSet<string> NonDeductibleReasons = new(StringComparer.Ordinal)
+    {
+        "simple_taxation", "exempt", "abnormal_loss",
+        "welfare_personal", "catering_entertainment", "other"
+    };
+
+    private static string? NormalizeNonDeductibleReason(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+    private static bool IsNonDeductibleReasonValid(string? v) =>
+        v == null || NonDeductibleReasons.Contains(v);
 
     /// <summary>
     /// FP06 红冲/作废门控（Wave 1B-1，仿 IsInvoiceNoValid 模式）：

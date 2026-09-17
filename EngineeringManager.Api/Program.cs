@@ -621,6 +621,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     received_amount INTEGER DEFAULT 0,
     settlement_id INTEGER,
     original_invoice_id INTEGER REFERENCES invoices(id),
+    non_deductible_reason TEXT,
     issue_date TEXT DEFAULT '',
     status TEXT DEFAULT 'pending',
     remarks TEXT DEFAULT '',
@@ -674,6 +675,7 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount INTEGER DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices received_amount: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN settlement_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices settlement_id: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN original_invoice_id INTEGER REFERENCES invoices(id)"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices original_invoice_id: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN non_deductible_reason TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices non_deductible_reason: {ex.Message}"); }
 
             // settlements 表迁移：057 质保金三列自愈（与 057_SettlementRetention.sql 双路径一致，防漂移）
             try { db.Execute(@"ALTER TABLE settlements ADD COLUMN retention_amount INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] settlements retention_amount: {ex.Message}"); }

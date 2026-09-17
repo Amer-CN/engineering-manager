@@ -20,9 +20,24 @@ export const invoiceKindOptions: { value: InvoiceKind; label: string }[] = [
   { value: 'electronic_special', label: '电子专票' }
 ]
 
+// FP08 进项不得抵扣原因六值（''=可抵扣；口径：增值税法第22条，
+// 细则见 docs/finance-knowledge/invoice/数电票与增值税规则.md）
+export const nonDeductibleReasonOptions: { value: string; label: string }[] = [
+  { value: 'simple_taxation', label: '简易计税' },
+  { value: 'exempt', label: '免税项目' },
+  { value: 'abnormal_loss', label: '非正常损失' },
+  { value: 'welfare_personal', label: '福利/个人消费' },
+  { value: 'catering_entertainment', label: '餐饮娱乐' },
+  { value: 'other', label: '其他' }
+]
+
+export const getNonDeductibleReasonLabel = (v?: string | null): string =>
+  nonDeductibleReasonOptions.find(o => o.value === (v ?? '').trim())?.label ?? ''
+
 export const defaultInvoiceFormData: InvoiceFormData = {
   type: 'invoice_in',
   invoiceKind: 'electronic_regular' as InvoiceKind,
+  nonDeductibleReason: '',
   invoiceNo: '',
   invoiceCode: '',
   name: '',
@@ -58,6 +73,7 @@ export function getInvoiceFormData(editingInvoice: Invoice | null): InvoiceFormD
   return {
     type: editingInvoice.type,
     invoiceKind: editingInvoice.invoiceKind || 'electronic_regular',
+    nonDeductibleReason: editingInvoice.nonDeductibleReason || '',
     invoiceNo: editingInvoice.invoiceNo || '',
     invoiceCode: editingInvoice.invoiceCode || '',
     name: editingInvoice.name || '',

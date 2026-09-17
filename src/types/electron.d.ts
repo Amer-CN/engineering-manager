@@ -671,6 +671,9 @@ export type InvoiceStatus = 'issued' | 'partially_paid' | 'received' | 'cancelle
 export type InvoiceTaxRate = 0 | 0.01 | 0.03 | 0.06 | 0.09 | 0.13
 export type InvoiceKind = 'electronic_regular' | 'electronic_special' | 'paper_regular' | 'paper_special'  // 电子普票/电子专票/纸质普票/纸质专票
 
+// FP08 进项不得抵扣原因六值（口径：增值税法第22条；NULL=可抵扣）
+export type InvoiceNonDeductibleReason = 'simple_taxation' | 'exempt' | 'abnormal_loss' | 'welfare_personal' | 'catering_entertainment' | 'other'
+
 // 发票关联的收款明细
 export interface InvoicePaymentDetail {
   invoiceId: number       // 关联的发票ID
@@ -705,6 +708,10 @@ export interface Invoice {
   type: InvoiceType
   status: InvoiceStatus
   invoiceKind: InvoiceKind                        // 票种：电子发票/纸质发票
+  // 进项不得抵扣原因（FP08）：六值可空枚举，null/缺省=可抵扣
+  // simple_taxation=简易计税 exempt=免税项目 abnormal_loss=非正常损失
+  // welfare_personal=福利/个人消费 catering_entertainment=餐饮娱乐 other=其他
+  nonDeductibleReason?: InvoiceNonDeductibleReason | null
   invoiceNo: string              // 发票号码
   invoiceCode: string           // 发票代码
   name: string                   // 发票名称/摘要

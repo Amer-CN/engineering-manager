@@ -27,10 +27,12 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   specialTax: filteredInvoices.filter(i => isSpecial(i.invoiceKind)).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
   // 普票税额
   regularTax: filteredInvoices.filter(i => isRegular(i.invoiceKind)).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
+  // FP08 不得抵扣汇总（原因非空即不得抵扣）
+  nonDeductible: filteredInvoices.filter(i => (i.nonDeductibleReason ?? '') !== ''),
   }
 
   return (
-  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+  <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="Upload" size={20} /></div>
@@ -78,6 +80,20 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   <div>
   <p className="text-xs" style={{ color: 'var(--muted)' }}>普票税额</p>
   <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.regularTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.regularTax)}</p>
+  </div>
+  </div>
+  </Card>
+  <Card bordered={false} className="p-4">
+  <div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}><Icon name="AlertTriangle" size={20} /></div>
+  <div>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>不得抵扣</p>
+  <p className="text-lg font-bold flex items-center gap-2 font-mono tabular-nums tracking-tight" style={{ color: stats.nonDeductible.length > 0 ? 'var(--fg)' : 'var(--muted)' }}>
+  {stats.nonDeductible.length} 张
+  <span className="text-xs font-normal leading-tight" style={{ color: 'var(--muted)' }}>
+  ¥{formatMoney(stats.nonDeductible.reduce((sum, i) => sum + i.amount, 0))}
+  </span>
+  </p>
   </div>
   </div>
   </Card>
