@@ -34,6 +34,9 @@ public static class MemberEndpoints
             {
                 id = m.id, name = m.name, member_type = m.member_type, role = m.role, gender = m.gender,
                 ethnicity = m.ethnicity, birth_date = m.birth_date, base_salary = MoneyUnit.ToYuanFromDb(m.base_salary), daily_wage = MoneyUnit.ToYuanFromDb(m.daily_wage),
+                social_security_personal = MoneyUnit.ToYuanFromDb(m.social_security_personal), social_security_company = MoneyUnit.ToYuanFromDb(m.social_security_company),
+                housing_fund = MoneyUnit.ToYuanFromDb(m.housing_fund), housing_fund_personal = MoneyUnit.ToYuanFromDb(m.housing_fund_personal),
+                company_covers_social = m.company_covers_social == null || m.company_covers_social is DBNull ? (bool?)null : (bool?)(Convert.ToInt64(m.company_covers_social) == 1),
                 entry_date = m.entry_date, status = m.status, department_id = m.department_id, position = m.position,
                 department_name = m.department_name, created_at = m.created_at, updated_at = m.updated_at,
                 id_card = Common.MaskPiiField("idCard", m.id_card as string, piiAccess),
@@ -64,6 +67,11 @@ public static class MemberEndpoints
                 // 金额列分→元（2026-09 分制契约）
                 result["base_salary"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("base_salary") ? result["base_salary"] : null);
                 result["daily_wage"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("daily_wage") ? result["daily_wage"] : null);
+                result["social_security_personal"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("social_security_personal") ? result["social_security_personal"] : null);
+                result["social_security_company"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("social_security_company") ? result["social_security_company"] : null);
+                result["housing_fund"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("housing_fund") ? result["housing_fund"] : null);
+                result["housing_fund_personal"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("housing_fund_personal") ? result["housing_fund_personal"] : null);
+                result["company_covers_social"] = result.TryGetValue("company_covers_social", out var _ccs) && _ccs != null && _ccs is not DBNull ? (bool?)(Convert.ToInt64(_ccs) == 1) : null;
                 return Common.Ok(result);
                         });
 
@@ -75,14 +83,18 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO members (name,phone,email,member_type,role,id_card,gender,ethnicity,birth_date,id_card_address,
-                 base_salary,daily_wage,entry_date,status,department_id,position,created_by,created_at,
+                 base_salary,daily_wage,social_security_personal,social_security_company,housing_fund,housing_fund_personal,company_covers_social,entry_date,status,department_id,position,created_by,created_at,
                  id_card_enc,id_card_address_enc,phone_enc,bank_account_enc, last_modified_at) VALUES (@Name,@Phone,@Email,@MemberType,@Role,@IdCard,@Gender,@Ethnicity,@BirthDate,
-                        @IdCardAddress,@BaseSalary,@DailyWage,@EntryDate,@Status,@DepartmentId,@Position,@CreatedBy,@Now,
+                        @IdCardAddress,@BaseSalary,@DailyWage,@SocialSecurityPersonal,@SocialSecurityCompany,@HousingFund,@HousingFundPersonal,@CompanyCoversSocial,@EntryDate,@Status,@DepartmentId,@Position,@CreatedBy,@Now,
                         @IdCardEnc,@IdCardAddressEnc,@PhoneEnc,@BankAccountEnc, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Phone, dto.Email, MemberType = dto.MemberType ?? "staff",
                       dto.Role, dto.IdCard, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress,
-                      BaseSalary = MoneyUnit.ToFen(dto.BaseSalary), DailyWage = MoneyUnit.ToFen(dto.DailyWage), dto.EntryDate, Status = dto.Status ?? "active",
+                      BaseSalary = MoneyUnit.ToFen(dto.BaseSalary), DailyWage = MoneyUnit.ToFen(dto.DailyWage),
+                      SocialSecurityPersonal = MoneyUnit.ToFen(dto.SocialSecurityPersonal), SocialSecurityCompany = MoneyUnit.ToFen(dto.SocialSecurityCompany),
+                      HousingFund = MoneyUnit.ToFen(dto.HousingFund), HousingFundPersonal = MoneyUnit.ToFen(dto.HousingFundPersonal),
+                      CompanyCoversSocial = dto.CompanyCoversSocial == null ? (int?)null : (dto.CompanyCoversSocial == true ? 1 : 0),
+                      dto.EntryDate, Status = dto.Status ?? "active",
                       dto.DepartmentId, dto.Position, CreatedBy = uid, Now = now(),
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), IdCardAddressEnc = pii.Encrypt(dto.IdCardAddress ?? ""),
                       PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt("") });
@@ -100,12 +112,17 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var affected = await db.ExecuteAsync(@"UPDATE members SET name=@Name,phone=@Phone,email=@Email,
                 member_type=@MemberType,role=@Role,id_card=@IdCard,gender=@Gender,ethnicity=@Ethnicity,
                 birth_date=@BirthDate,id_card_address=@IdCardAddress,base_salary=@BaseSalary,daily_wage=@DailyWage,
+                social_security_personal=@SocialSecurityPersonal,social_security_company=@SocialSecurityCompany,
+                housing_fund=@HousingFund,housing_fund_personal=@HousingFundPersonal,company_covers_social=@CompanyCoversSocial,
                 entry_date=@EntryDate,status=@Status,department_id=@DepartmentId,position=@Position,
                 id_card_enc=@IdCardEnc,id_card_address_enc=@IdCardAddressEnc,phone_enc=@PhoneEnc,bank_account_enc=@BankAccountEnc, version=version+1, last_modified_at=@Now
                 WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Phone, dto.Email, dto.MemberType, dto.Role, dto.IdCard,
                       Uid = uid, IsAdmin = isAdmin, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress,
                       BaseSalary = MoneyUnit.ToFen(dto.BaseSalary), DailyWage = MoneyUnit.ToFen(dto.DailyWage),
+                      SocialSecurityPersonal = MoneyUnit.ToFen(dto.SocialSecurityPersonal), SocialSecurityCompany = MoneyUnit.ToFen(dto.SocialSecurityCompany),
+                      HousingFund = MoneyUnit.ToFen(dto.HousingFund), HousingFundPersonal = MoneyUnit.ToFen(dto.HousingFundPersonal),
+                      CompanyCoversSocial = dto.CompanyCoversSocial == null ? (int?)null : (dto.CompanyCoversSocial == true ? 1 : 0),
                       dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position,
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), IdCardAddressEnc = pii.Encrypt(dto.IdCardAddress ?? ""),
                       PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt(""), Now = now() });
