@@ -91,6 +91,17 @@ describe('computeWindow', () => {
     }
   })
 
+  it('旧数据（末条早于当前超过 1 小时）也会把窗口延伸到当前，使「现在」可见', () => {
+    const logs = [
+      AT('2026-10-18T01:00:00Z'),
+      AT('2026-10-18T03:00:00Z'),
+    ]
+    const now = new Date('2026-10-19T12:00:00Z').getTime()
+    const win = computeWindow(logs, now)
+    expect(win.start).toBeLessThanOrEqual(new Date(logs[0].timestamp).getTime())
+    expect(win.end).toBeGreaterThanOrEqual(now)
+  })
+
   it('忽略非法时间戳', () => {
     const win = computeWindow([{ timestamp: 'not-a-date' }], 1_700_000_000_000)
     expect(Number.isFinite(win.start)).toBe(true)
@@ -182,9 +193,23 @@ describe('percentOf / blockRect', () => {
     expect(r.width).toBe(0.6)
   })
 
-  it('块矩形不越界', () => {
+  it('块矩形不越界（left+width 不得超过 100%）', () => {
     const r = blockRect({ start: -100, end: 2000 }, win)
     expect(r.left).toBe(0)
-    expect(r.left + r.width).toBeLessThanOrEqual(200)
+    // 关键不变量是 100（容器宽度），不是 200
+    expect(r.left + r.width).toBeLessThanOrEqual(100)
+  })
+
+  it('贴右边界的块会左移回退，和不超过 100%', () => {
+    // start 落在窗口末尾，宽度会被最小宽度撑开，必须回退 left
+    const r = blockRect({ start: 995, end: 1000 }, win, 0.6)
+    expect(r.left + r.width).toBeLessThanOrEqual(100)
+    expect(r.width).toBeGreaterThan(0)
+  })
+
+  it('瞬时块在 minPercent=0 时宽度可为 0，但 left 仍合法', () => {
+    const r = blockRect({ start: 500, end: 500 }, win, 0)
+    expect(r.width).toBe(0)
+    expect(Number.isFinite(r.left)).toBe(true)
   })
 })

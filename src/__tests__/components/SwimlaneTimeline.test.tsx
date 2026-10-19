@@ -1,8 +1,11 @@
 /**
  * SwimlaneTimeline 渲染测试
  *
- * 覆盖验收第 5 条：泳道视图能渲染块、空数据显空状态、
- * 减少动态效果时不播生长动画（直接给终态）。
+ * 覆盖：泳道视图能渲染块、空数据显空状态、块的 aria-label 与图例。
+ *
+ * 注意（勿误读为已覆盖）：本文件把 framer-motion 与 useReducedMotion 都 mock 掉了，
+ * 因此**不验证**动画与 reduced-motion 行为——那部分靠实机 Playwright 截图核对
+ * （见 .work/scaffold-verify/shots/swimlane-reduced-motion.png）。
  */
 
 /// <reference types="node" />

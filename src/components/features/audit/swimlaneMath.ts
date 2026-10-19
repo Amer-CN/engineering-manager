@@ -97,7 +97,10 @@ export function computeWindow(
     if (span < minSpan) {
       // 不足下限时向后补足，保证「现在」尽量落在窗内
       end = start + minSpan
-      if (end < now) end = now + HOUR
+    }
+    // 末条早于当前超过 1 小时时，把窗口延伸到当前，使「现在」线始终可见
+    if (end < now) {
+      end = now + HOUR
     }
   }
 

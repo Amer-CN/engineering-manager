@@ -55,12 +55,12 @@ const LEVEL_STYLE: Record<
 > = {
   info: {
     bg: 'bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]',
-    ring: 'border-[color-mix(in_srgb,var(--accent)_40%,transparent)]',
+    ring: 'border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]',
     label: '正常',
   },
   warning: {
     bg: 'bg-[color-mix(in_srgb,var(--warning)_14%,transparent)]',
-    ring: 'border-[color-mix(in_srgb,var(--warning)_55%,transparent)]',
+    ring: 'border-[color:color-mix(in_srgb,var(--warning)_55%,transparent)]',
     label: '警告',
   },
   error: {
@@ -92,7 +92,6 @@ export const SwimlaneTimeline = <T extends SwimlaneLogLike = SwimlaneLogLike>({
       if (timerRef.current !== null) window.clearInterval(timerRef.current)
     }
   }, [])
-
   // 窗口依赖 now（「末条早于当前」时要把窗口补到当前），刻度因此随之推进
   const win = useMemo(() => computeWindow(logs, now), [logs, now])
 
@@ -164,14 +163,14 @@ export const SwimlaneTimeline = <T extends SwimlaneLogLike = SwimlaneLogLike>({
                 </span>
               </div>
 
-              <div className="relative flex-1 h-9 rounded-md bg-[color:var(--panel-2)]/40 overflow-hidden">
+              <div className="relative flex-1 h-9 rounded-md bg-[color-mix(in_srgb,var(--panel-2)_40%,transparent)] overflow-hidden">
                 {/* 纵向网格线 */}
                 {win.ticks.map((t) => {
                   const left = ((t - win.start) / (win.end - win.start)) * 100
                   return (
                     <span
                       key={t}
-                      className="absolute top-0 bottom-0 w-px bg-[color:var(--border)]/60"
+                      className="absolute top-0 bottom-0 w-px bg-[color-mix(in_srgb,var(--border)_60%,transparent)]"
                       style={{ left: `${left}%` }}
                     />
                   )
@@ -239,12 +238,12 @@ export const SwimlaneTimeline = <T extends SwimlaneLogLike = SwimlaneLogLike>({
       <div className="flex items-center justify-between gap-4 mt-3 pt-3 border-t border-[color:var(--border)]">
         <div className="flex items-center gap-4 text-caption text-[color:var(--muted)]">
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-2 rounded-sm bg-[color:var(--accent-soft)] border border-[color:var(--accent)]/30" />
+            <span className="w-3 h-2 rounded-sm bg-[color:var(--accent-soft)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]" />
             正常
           </span>
           <span className="flex items-center gap-1.5">
             <span
-              className="w-3 h-2 rounded-sm border border-dashed border-[color:var(--warning)]/50"
+              className="w-3 h-2 rounded-sm border border-dashed border-[color:color-mix(in_srgb,var(--warning)_55%,transparent)]"
               style={{
                 backgroundImage:
                   'repeating-linear-gradient(135deg, var(--warning) 0 1.5px, transparent 1.5px 6px)',
