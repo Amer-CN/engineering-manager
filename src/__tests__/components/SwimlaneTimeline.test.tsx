@@ -130,4 +130,13 @@ describe('AuditLogs 泳道视图集成', () => {
 
     expect(screen.queryByText(/现在/)).toBeNull()
   }, 15000)
+
+  // 注意：这里**故意不测**「点击按钮切换视图」。
+  // 原因是一个既有缺陷（基线 e332977f 即存在，与本次改动无关）：
+  //   useAuditLogFilters 每次渲染都新建 filterParams 对象
+  //   → AuditLogs 的 loadLogs（依赖 [f.page, f.filterParams]）每次换身份
+  //   → useEffect 反复触发 queryAuditLogs
+  // 于是任何一次 setState（包括点击视图切换）都会引发请求风暴，在 jsdom 下表现为用例挂死。
+  // 已用诊断用例实测确认（查询被调用 41 次），并已作为独立问题上报。
+  // 该缺陷修复后，此处的点击用例应当补回。
 })
