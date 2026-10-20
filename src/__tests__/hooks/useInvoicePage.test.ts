@@ -171,4 +171,178 @@ describe('useInvoicePage', () => {
     act(() => { result.current.setFilterPaymentProject(10) })
     expect(result.current.filteredPayments).toHaveLength(1)
   })
+
+  it('filterDeductStatus=deducted 仅保留已抵扣进项，销项永不进入', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in', isDeducted: false },
+      { id: 3, type: 'invoice_out', isDeducted: true, deductPeriod: '2024-03' },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => { result.current.setFilterDeductStatus('deducted') })
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+    expect(result.current.filteredInvoices.every(inv => inv.type === 'invoice_in')).toBe(true)
+  })
+
+  it('filterDeductStatus=undeducted 仅保留未抵扣进项，销项永不进入', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in', isDeducted: false },
+      { id: 3, type: 'invoice_out', isDeducted: false },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => { result.current.setFilterDeductStatus('undeducted') })
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(2)
+    expect(result.current.filteredInvoices.every(inv => inv.type === 'invoice_in')).toBe(true)
+  })
+
+  it('filterDeductPeriod 按税款所属期筛选进项，无所属期的行与销项被排除', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in', isDeducted: false, deductPeriod: null },
+      { id: 3, type: 'invoice_out', isDeducted: true, deductPeriod: '2024-03' },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => { result.current.setFilterDeductPeriod('2024-03') })
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+  })
+
+  it('抵扣状态与税款所属期可叠加（AND），销项两项均命中也不返回', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-04' },
+      { id: 3, type: 'invoice_out', isDeducted: true, deductPeriod: '2024-03' },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => {
+      result.current.setFilterDeductStatus('deducted')
+      result.current.setFilterDeductPeriod('2024-03')
+    })
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+  })
+
+  it('filterStatus 与抵扣筛选为 AND：两个条件须同时满足', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', status: 'issued', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in', status: 'received', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 3, type: 'invoice_in', status: 'issued', isDeducted: false },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => {
+      result.current.setFilterStatus('issued')
+      result.current.setFilterDeductStatus('deducted')
+    })
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+  })
+
+  it('filterStatus 与抵扣筛选 AND：状态命中但抵扣不命中的行被排除', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', status: 'issued', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in', status: 'issued', isDeducted: false },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => {
+      result.current.setFilterStatus('issued')
+      result.current.setFilterDeductPeriod('2024-04')
+    })
+    expect(result.current.filteredInvoices).toHaveLength(0)
+  })
+
+  it('deductPeriod 缺失（undefined）的进项被所属期筛选排除', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in', isDeducted: false },   // deductPeriod 为 undefined
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => { result.current.setFilterDeductPeriod('2024-03') })
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+    expect(result.current.filteredInvoices.some(inv => inv.id === 2)).toBe(false)
+  })
+
+  it('isDeducted 缺失（undefined）不算已抵扣，也不满足未抵扣之外的抵扣状态筛选', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_in' },   // isDeducted 为 undefined
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => { result.current.setFilterDeductStatus('deducted') })
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+  })
+
+  it('filterType 切到 invoice_out 时清空抵扣两项筛选，列表恢复为该票种全量', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_out', isDeducted: false },
+      { id: 3, type: 'invoice_out', isDeducted: true, deductPeriod: '2024-03' },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => {
+      result.current.setFilterDeductStatus('deducted')
+      result.current.setFilterDeductPeriod('2024-03')
+    })
+    // 抵扣筛选生效时，两张开票行都被排除，仅剩 1 张进项
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+    act(() => { result.current.handleFilterTypeChange('invoice_out') })
+    expect(result.current.filterType).toBe('invoice_out')
+    expect(result.current.filterDeductStatus).toBe('')
+    expect(result.current.filterDeductPeriod).toBe('')
+    // 抵扣筛选已清空，开票视图恢复全量（不会被恒空）
+    expect(result.current.filteredInvoices).toHaveLength(2)
+    expect(result.current.filteredInvoices.every(inv => inv.type === 'invoice_out')).toBe(true)
+  })
+
+  it('filterType 切到 invoice_in 时不动抵扣筛选', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const data = [
+      { id: 1, type: 'invoice_in', isDeducted: true, deductPeriod: '2024-03' },
+      { id: 2, type: 'invoice_out', isDeducted: false },
+    ]
+    ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data })
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => {
+      result.current.setFilterDeductStatus('deducted')
+      result.current.setFilterDeductPeriod('2024-03')
+    })
+    act(() => { result.current.handleFilterTypeChange('invoice_in') })
+    expect(result.current.filterDeductStatus).toBe('deducted')
+    expect(result.current.filterDeductPeriod).toBe('2024-03')
+    expect(result.current.filteredInvoices).toHaveLength(1)
+    expect(result.current.filteredInvoices[0].id).toBe(1)
+  })
 })

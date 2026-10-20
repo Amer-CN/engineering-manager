@@ -31,10 +31,15 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   regularTax: filteredInvoices.filter(isRegular).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
   // FP08 不得抵扣汇总（原因非空即不得抵扣）
   nonDeductible: filteredInvoices.filter(i => (i.nonDeductibleReason ?? '') !== ''),
+  // 抵扣口径只作用于进项（invoice_in），销项永不参与
+  // 已抵扣税额：取可抵扣税额 deductibleTax
+  deductedTax: invoiceIn.filter(i => i.isDeducted === true).reduce((sum, i) => sum + (i.deductibleTax ?? 0), 0),
+  // 待抵扣税额：未抵扣行的 deductibleTax 恒为 0，故口径取进项税额 taxAmount
+  pendingDeductTax: invoiceIn.filter(i => !i.isDeducted).reduce((sum, i) => sum + (i.taxAmount ?? 0), 0),
   }
 
   return (
-  <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="Upload" size={20} /></div>
@@ -96,6 +101,25 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   ¥{formatMoney(stats.nonDeductible.reduce((sum, i) => sum + i.amount, 0))}
   </span>
   </p>
+  </div>
+  </div>
+  </Card>
+  <Card bordered={false} className="p-4">
+  <div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}><Icon name="CheckCircle" size={20} /></div>
+  <div>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>已抵扣税额（进项）</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.deductedTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.deductedTax)}</p>
+  </div>
+  </div>
+  </Card>
+  <Card bordered={false} className="p-4">
+  <div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}><Icon name="Clock" size={20} /></div>
+  <div>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>待抵扣税额（进项）</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.pendingDeductTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.pendingDeductTax)}</p>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>未抵扣行 deductibleTax 恒为 0，按进项税额计</p>
   </div>
   </div>
   </Card>

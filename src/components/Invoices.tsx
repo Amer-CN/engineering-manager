@@ -78,11 +78,13 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   filterType={h.filterType} filterStatus={h.filterStatus} filterProject={h.filterProject}
   filterPaymentType={h.filterPaymentType} filterPaymentProject={h.filterPaymentProject}
   filterDateStart={h.filterDateStart} filterDateEnd={h.filterDateEnd}
+  filterDeductStatus={h.filterDeductStatus} filterDeductPeriod={h.filterDeductPeriod}
   projects={h.projects} partners={h.partners}
-  onFilterTypeChange={h.setFilterType} onFilterStatusChange={h.setFilterStatus}
+  onFilterTypeChange={h.handleFilterTypeChange} onFilterStatusChange={h.setFilterStatus}
   onFilterProjectChange={h.setFilterProject} onFilterPaymentTypeChange={h.setFilterPaymentType}
   onFilterPaymentProjectChange={h.setFilterPaymentProject}
   onFilterDateStartChange={h.setFilterDateStart} onFilterDateEndChange={h.setFilterDateEnd}
+  onFilterDeductStatusChange={h.setFilterDeductStatus} onFilterDeductPeriodChange={h.setFilterDeductPeriod}
   onPrint={h.activeTab === 'invoices' ? () => printInvoiceList(h.filteredInvoices) : () => printPaymentRecordList(h.filteredPayments, showToast as (msg: string, type?: string, duration?: number) => void, formatMoney, handlePrint)}
   onExportExcel={h.activeTab === 'invoices' ? () => exportInvoiceList(h.filteredInvoices) : () => exportPaymentRecordList(h.filteredPayments, showToast as (msg: string) => void)}
   isPaymentFilter={h.activeTab === 'payments'}
