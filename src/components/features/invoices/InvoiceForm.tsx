@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { InvoiceType, InvoiceKind, InvoiceTaxRate, Project, Partner, IncomeContract, ExpenseContract } from '@/types/electron'
+import { InvoiceType, InvoiceKind, InvoiceMedium, InvoiceCategory, InvoiceTaxRate, Project, Partner, IncomeContract, ExpenseContract } from '@/types/electron'
 import { FileDropZone } from '../partners/FileDropZone'
 import { FilePreviewModal } from './FilePreviewModal'
 import { useInvoiceAmounts } from './useInvoiceAmounts'
+import { deriveInvoiceKind, dimensionsFromOcrType, resolveInvoiceDimensions } from './invoiceConfig'
 import { useToastStore } from '@/store/toastStore'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import { InvoiceOCRBlock } from './InvoiceOCRBlock'
@@ -13,8 +14,17 @@ import { validateInvoiceNumber } from '@/utils/validate'
 
 export interface InvoiceFormData {
   type: InvoiceType
-  invoiceKind: InvoiceKind
+  // 票种两维（唯一真源）；空串表示历史数据推导不出、需用户重新选择
+  invoiceMedium: InvoiceMedium | ''
+  invoiceCategory: InvoiceCategory | ''
+  // 兼容派生列：仅专票/普票可折叠，其余票种为 ''（服务端落 kind=NULL）
+  invoiceKind: InvoiceKind | ''
   nonDeductibleReason: string
+  // 进项抵扣登记（P0-b）：仅收票（进项）可登记；默认未抵扣
+  isDeducted: boolean
+  deductDate: string
+  deductPeriod: string
+  deductibleTax: number
   invoiceNo: string
   invoiceCode: string
   name: string
@@ -48,7 +58,22 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   initialData, projects, partners, contracts, existingInvoices = [], onSubmit, onCancel
 }) => {
   const showToast = useToastStore(state => state.showToast)
-  const [formData, setFormData] = useState<InvoiceFormData>(initialData)
+  const [formData, setFormData] = useState<InvoiceFormData>(() => {
+    // 入参可能来自旧数据（只有 invoiceKind）：先归一成两维，避免下拉空值。
+    const dims = resolveInvoiceDimensions(initialData)
+    const invoiceMedium = initialData.invoiceMedium || dims.medium || ''
+    const invoiceCategory = initialData.invoiceCategory || dims.category || ''
+    return {
+      ...initialData,
+      invoiceMedium,
+      invoiceCategory,
+      invoiceKind: deriveInvoiceKind(invoiceMedium, invoiceCategory),
+      isDeducted: initialData.isDeducted ?? false,
+      deductDate: initialData.deductDate ?? '',
+      deductPeriod: initialData.deductPeriod ?? '',
+      deductibleTax: initialData.deductibleTax ?? 0
+    }
+  })
   const [dragOverFile, setDragOverFile] = useState(false)
   const [previewFile, setPreviewFile] = useState<{data: string, type: 'image' | 'pdf' | 'xml' | 'ofd', title: string} | null>(null)
   const [duplicateInvoice, setDuplicateInvoice] = useState<{ id: number; invoiceNo: string } | null>(null)
@@ -128,7 +153,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
   e.preventDefault()
-  onSubmit(formData)
+  // 提交前按两维重算 kind，确保 payload 永远携带 invoiceMedium/invoiceCategory 与派生 kind
+  onSubmit({ ...formData, invoiceKind: deriveInvoiceKind(formData.invoiceMedium, formData.invoiceCategory) })
   }
 
   const isEditing = !!initialData.invoiceNo && initialData.invoiceNo !== `INV${Date.now()}`
@@ -193,17 +219,30 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     <InvoiceOCRBlock
       fileUrl={formData.fileUrl}
       fileType={formData.fileType}
-      onResult={fields => setFormData(prev => ({
-        ...prev,
-        invoiceNo: fields.invoiceNo || prev.invoiceNo,
-        amount: fields.amount || prev.amount,
-        priceAmount: fields.priceAmount || prev.priceAmount,
-        taxAmount: fields.taxAmount || prev.taxAmount,
-        taxRate: fields.taxRate || prev.taxRate,
-        sellerName: fields.sellerName || prev.sellerName,
-        purchaserName: fields.purchaserName || prev.purchaserName,
-        issueDate: fields.issueDate || prev.issueDate
-      }))}
+      onResult={fields => {
+        // OCR 返回发票类型文本时回填介质/票种两维；缺项保留表单当前值。
+        const ocrType = fields.invoiceType ?? ''
+        if (dimensionsFromOcrType(ocrType).mediumInferredFromInvoiceText) {
+          showToast('已按票面文字推断介质，请核对', 'warning')
+        }
+        setFormData(prev => {
+          const ocrDims = dimensionsFromOcrType(ocrType, prev.invoiceMedium, prev.invoiceCategory)
+          return {
+            ...prev,
+            invoiceMedium: ocrDims.medium,
+            invoiceCategory: ocrDims.category,
+            invoiceKind: deriveInvoiceKind(ocrDims.medium, ocrDims.category),
+            invoiceNo: fields.invoiceNo || prev.invoiceNo,
+            amount: fields.amount || prev.amount,
+            priceAmount: fields.priceAmount || prev.priceAmount,
+            taxAmount: fields.taxAmount || prev.taxAmount,
+            taxRate: fields.taxRate || prev.taxRate,
+            sellerName: fields.sellerName || prev.sellerName,
+            purchaserName: fields.purchaserName || prev.purchaserName,
+            issueDate: fields.issueDate || prev.issueDate
+          }
+        })
+      }}
     />
   </HoverScrollbar>
   </form>

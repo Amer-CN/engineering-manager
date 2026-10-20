@@ -1,11 +1,12 @@
 import React from 'react'
-import type { InvoiceType, InvoiceKind, Partner, Project, IncomeContract, ExpenseContract } from '@/types/electron'
+import type { InvoiceType, InvoiceMedium, InvoiceCategory, Partner, Project, IncomeContract, ExpenseContract } from '@/types/electron'
 import type { InvoiceFormData } from './InvoiceForm'
 import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
 import { Input } from '../../ui/Input/Input'
 import { Icon } from '../../ui/Icon'
-import { invoiceKindOptions, nonDeductibleReasonOptions, taxRateOptions } from './constants'
+import { categoryOptions, mediumOptions, nonDeductibleReasonOptions, taxRateOptions } from './constants'
+import { deriveInvoiceKind } from './invoiceConfig'
 
 interface InvoiceFormFieldsProps {
   formData: InvoiceFormData
@@ -29,12 +30,20 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="label">发票类型 *</label>
           <select
             value={formData.type}
-            onChange={e => setFormData({ ...formData, type: e.target.value as InvoiceType })}
+            onChange={e => {
+              const type = e.target.value as InvoiceType
+              setFormData({
+                ...formData,
+                type,
+                // 切到开票（销项）时清空抵扣登记：仅进项可登记，避免携带脏值提交被服务端 400
+                ...(type === 'invoice_in' ? {} : { isDeducted: false, deductDate: '', deductPeriod: '', deductibleTax: 0 })
+              })
+            }}
             className="input"
             required
           >
@@ -43,14 +52,43 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
           </select>
         </div>
         <div>
-          <label className="label">票种 *</label>
+          <label className="label">介质 *</label>
           <select
-            value={formData.invoiceKind}
-            onChange={e => setFormData({ ...formData, invoiceKind: e.target.value as InvoiceKind })}
+            value={formData.invoiceMedium}
+            onChange={e => {
+              const invoiceMedium = e.target.value as InvoiceMedium | ''
+              setFormData({
+                ...formData,
+                invoiceMedium,
+                invoiceKind: deriveInvoiceKind(invoiceMedium, formData.invoiceCategory)
+              })
+            }}
             className="input"
             required
           >
-            {invoiceKindOptions.map(opt => (
+            <option value="" disabled>请选择</option>
+            {mediumOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">票种 *</label>
+          <select
+            value={formData.invoiceCategory}
+            onChange={e => {
+              const invoiceCategory = e.target.value as InvoiceCategory | ''
+              setFormData({
+                ...formData,
+                invoiceCategory,
+                invoiceKind: deriveInvoiceKind(formData.invoiceMedium, invoiceCategory)
+              })
+            }}
+            className="input"
+            required
+          >
+            <option value="" disabled>请选择</option>
+            {categoryOptions.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
@@ -73,6 +111,46 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
           ))}
         </select>
       </div>
+
+      {/* P0-b 抵扣登记：仅收票（进项）显示；未勾选时三字段随提交清空（服务端同口径） */}
+      {formData.type === 'invoice_in' && (
+        <div className="rounded-lg p-4 space-y-3" style={{ border: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={formData.isDeducted}
+                onChange={e => {
+                  const checked = e.target.checked
+                  setFormData({
+                    ...formData,
+                    isDeducted: checked,
+                    // 默认可抵扣税额等于税额（可改）；取消勾选时清零
+                    deductibleTax: checked
+                      ? (formData.deductibleTax || formData.taxAmount)
+                      : 0,
+                    ...(checked ? {} : { deductDate: '', deductPeriod: '' })
+                  })
+                }}
+                className="w-4 h-4 rounded accent-[color:var(--accent)]"
+              />
+              <span className="text-sm font-medium" style={{ color: 'var(--fg-2)' }}>已抵扣</span>
+            </label>
+            <span className="text-caption" style={{ color: 'var(--muted)' }}>仅进项发票可登记</span>
+          </div>
+          {formData.isDeducted && (
+            <div className="grid grid-cols-3 gap-4">
+              <Input label="抵扣日期" type="date" value={formData.deductDate}
+                onChange={e => setFormData({ ...formData, deductDate: e.target.value })} size="sm" />
+              <Input label="税款所属期" type="month" value={formData.deductPeriod}
+                onChange={e => setFormData({ ...formData, deductPeriod: e.target.value })} size="sm" required />
+              <Input label="可抵扣税额（元）" type="number" value={formData.deductibleTax || ''}
+                onChange={e => setFormData({ ...formData, deductibleTax: Number(e.target.value) || 0 })}
+                size="sm" min="0" step="0.01" />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -111,7 +189,7 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
         </div>
       </div>
 
-      {formData.invoiceKind.startsWith('paper') && (
+      {formData.invoiceMedium === 'paper' && (
         <div>
           <Input label="发票代码" type="text" value={formData.invoiceCode} onChange={e => setFormData({ ...formData, invoiceCode: e.target.value })} size="sm" className="font-mono" />
         </div>

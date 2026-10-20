@@ -166,7 +166,11 @@ record MemberDto(long? Id, string Name, string? Phone, string? Email, string? Me
 record WorkerDto(long? Id, string Name, string? IdCard, string? Gender, string? Phone, string? Address, string? BankAccount, string? BankName, string? WorkerType, double? DailyWage, string? CurrentAddress = null);
 
 record PartnerDto(long? Id, string Name, string? Category, string? Contact, string? Phone, string? Email, string? Address, string? BankAccount, string? BankName, string? TaxNumber, string? CreditCode, string? RegisteredAddress, string? BusinessScope, string? TaxType, string? ProjectIds);
-record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long? ContractId, long? SettlementId, string? Type, string? InvoiceKind, string? InvoiceNo, string? InvoiceCode, string? Name, double? Amount, double? PriceAmount, double? TaxRate, double? TaxAmount, double? ReceivedAmount, string? IssueDate, string? Status, string? Remarks, string? FileUrl, string? FileType, long? OriginalInvoiceId, string? NonDeductibleReason);
+record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long? ContractId, long? SettlementId, string? Type, string? InvoiceKind, string? InvoiceNo, string? InvoiceCode, string? Name, double? Amount, double? PriceAmount, double? TaxRate, double? TaxAmount, double? ReceivedAmount, string? IssueDate, string? Status, string? Remarks, string? FileUrl, string? FileType, long? OriginalInvoiceId, string? NonDeductibleReason,
+    // P0-a' 阶段 1：票种两维（介质 + 票种细分类）；与 InvoiceKind 双向派生由端点单点负责
+    string? InvoiceMedium, string? InvoiceCategory,
+    // P0-b：进项抵扣四字段（DeductibleTax 为元；落库分由端点经 MoneyUnit 换算）
+    bool? IsDeducted, string? DeductDate, string? DeductPeriod, double? DeductibleTax);
 record PaymentRecordDto(long? Id, string? Type, double? Amount, string? RecordDate, long? ProjectId, long? PartnerId, long? ContractId, string? InvoiceDetails, string? Remarks, string? FileUrl, string? FileType);
 record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWorkerId, string YearMonth, double? WorkDays, int? DaysOff, bool? IsFullAttendance, string? DailyStatus, string? FileUrl, string? FileName);
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);

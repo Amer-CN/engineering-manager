@@ -8,7 +8,7 @@ import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
 import { Tooltip } from '../../ui/Tooltip/Tooltip'
 import { DataTable, type Column } from '@/components/DataTable'
-import { getStatusLabel, getStatusConfig, getKindConfig } from './invoiceConfig'
+import { getStatusLabel, getStatusConfig, getInvoiceDimensionLabel, isElectronicInvoice } from './invoiceConfig'
 import { getNonDeductibleReasonLabel } from './constants'
 import { Button } from '../../ui/Button'
 import { useToastStore } from '@/store/toastStore'
@@ -45,9 +45,20 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: 'var(--panel-2)', color: 'var(--fg-2)' }}>
               {item.type === 'invoice_in' ? '收票' : '开票'}
             </span>
-            <span className={`px-1.5 py-0.5 rounded text-xs ${getKindConfig(item.invoiceKind).bgColor} ${getKindConfig(item.invoiceKind).color}`}>
-              {getKindConfig(item.invoiceKind).label}
+            <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: 'var(--panel-2)', color: 'var(--fg-2)' }}>
+              {getInvoiceDimensionLabel(item)}
             </span>
+            {/* P0-b：进项行显示抵扣状态（销项不参与抵扣，不渲染） */}
+            {item.type === 'invoice_in' && (
+              <span
+                className="px-1.5 py-0.5 rounded text-xs"
+                style={item.isDeducted
+                  ? { background: 'var(--success-soft)', color: 'var(--success)' }
+                  : { background: 'var(--panel-2)', color: 'var(--muted)' }}
+              >
+                {item.isDeducted ? '已抵扣' : '未抵扣'}
+              </span>
+            )}
           </div>
           <div className="text-xs mt-1 font-mono tabular-nums" style={{ color: 'var(--muted)' }}>No.{item.invoiceNo}</div>
         </>
@@ -153,15 +164,15 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
         { label: '已红冲', value: 'red_flushed' }
       ],
       filterAccessor: (item: Invoice) => item.status,
-      render: (item) => (
+      render: (item) => {
+        // FP06 前端门控（与后端 ValidateInvoiceFp06Async 同口径）：两维优先，空 kind 放行保历史兼容
+        const isElectronic = isElectronicInvoice(item)
+        return (
         <select
           value={item.status}
           onChange={async (e) => {
             e.stopPropagation()
             const next = e.target.value as InvoiceStatus
-            // FP06 前端门控（与后端 ValidateInvoiceFp06Async 同口径）：空 kind 放行保历史兼容
-            // （?. 守卫：测试/旧数据可能缺票种字段，运行时不得崩）
-            const isElectronic = item.invoiceKind?.startsWith('electronic_') ?? false
             const toast = useToastStore.getState().showToast
             // (b) 数电票禁止作废：直接拦截，select 受控回显旧值
             if (next === 'cancelled' && isElectronic) {
@@ -205,10 +216,11 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <option value="issued">{getStatusLabel('issued', item.type)}</option>
           <option value="partially_paid">{getStatusLabel('partially_paid', item.type)}</option>
           <option value="received">{getStatusLabel('received', item.type)}</option>
-          <option value="cancelled" disabled={item.invoiceKind?.startsWith('electronic_') ?? false}>已作废{(item.invoiceKind?.startsWith('electronic_') ?? false) ? '（数电票不可作废）' : ''}</option>
+          <option value="cancelled" disabled={isElectronic}>已作废{isElectronic ? '（数电票不可作废）' : ''}</option>
           <option value="red_flushed">已红冲</option>
         </select>
-      )
+        )
+      }
     },
     {
       key: 'actions',

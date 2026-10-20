@@ -1,6 +1,8 @@
 import type { InvoiceType, InvoiceTaxRate, InvoiceKind, Invoice, PaymentRecord } from '@/types'
+import type { InvoiceMedium, InvoiceCategory } from '@/types/electron'
 import type { InvoiceFormData } from './InvoiceForm'
 import type { PaymentFormData } from './PaymentForm'
+import { categoryLabels, deriveInvoiceKind, mediumLabels, resolveInvoiceDimensions } from './invoiceConfig'
 
 // 税率口径（增值税法）：第十条 13%/9%/6%/零税率，第十一条 3% 征收率；
 // 2026-01-01 前历史口径（旧税制过渡期税率）另见历史档案，新增选项前先对齐法条。
@@ -13,6 +15,24 @@ export const taxRateOptions: { value: InvoiceTaxRate; label: string }[] = [
   { value: 0.13, label: '13%' }
 ]
 
+// 票种两维（P0-a'）：介质 × 票种细分类，表单分别选择，invoiceKind 仅作兼容派生列。
+export const mediumOptions: { value: InvoiceMedium; label: string }[] = [
+  { value: 'electronic', label: mediumLabels.electronic },
+  { value: 'paper', label: mediumLabels.paper }
+]
+
+export const categoryOptions: { value: InvoiceCategory; label: string }[] = [
+  { value: 'special', label: categoryLabels.special },
+  { value: 'regular', label: categoryLabels.regular },
+  { value: 'passenger_transport', label: categoryLabels.passenger_transport },
+  { value: 'toll', label: categoryLabels.toll },
+  { value: 'train', label: categoryLabels.train },
+  { value: 'plane', label: categoryLabels.plane },
+  { value: 'quota', label: categoryLabels.quota },
+  { value: 'roll', label: categoryLabels.roll }
+]
+
+// 兼容导出：旧客户端/旧调用点仍可按四值 kind 选择（新表单已改为两维下拉）。
 export const invoiceKindOptions: { value: InvoiceKind; label: string }[] = [
   { value: 'paper_regular', label: '纸质普票' },
   { value: 'paper_special', label: '纸质专票' },
@@ -36,8 +56,14 @@ export const getNonDeductibleReasonLabel = (v?: string | null): string =>
 
 export const defaultInvoiceFormData: InvoiceFormData = {
   type: 'invoice_in',
+  invoiceMedium: 'electronic',
+  invoiceCategory: 'regular',
   invoiceKind: 'electronic_regular' as InvoiceKind,
   nonDeductibleReason: '',
+  isDeducted: false,
+  deductDate: '',
+  deductPeriod: '',
+  deductibleTax: 0,
   invoiceNo: '',
   invoiceCode: '',
   name: '',
@@ -70,10 +96,21 @@ export const defaultPaymentFormData: PaymentFormData = {
 
 export function getInvoiceFormData(editingInvoice: Invoice | null): InvoiceFormData {
   if (!editingInvoice) return { ...defaultInvoiceFormData }
+  // 两维是唯一真源：优先 invoiceMedium/invoiceCategory，缺失时从历史 invoiceKind 推导；
+  // 推导不出时留空（表单必填，由用户选择），不再兜底成 electronic_regular。
+  const dims = resolveInvoiceDimensions(editingInvoice)
+  const invoiceMedium = dims.medium ?? ''
+  const invoiceCategory = dims.category ?? ''
   return {
     type: editingInvoice.type,
-    invoiceKind: editingInvoice.invoiceKind || 'electronic_regular',
+    invoiceMedium,
+    invoiceCategory,
+    invoiceKind: deriveInvoiceKind(invoiceMedium, invoiceCategory),
     nonDeductibleReason: editingInvoice.nonDeductibleReason || '',
+    isDeducted: editingInvoice.isDeducted ?? false,
+    deductDate: editingInvoice.deductDate || '',
+    deductPeriod: editingInvoice.deductPeriod || '',
+    deductibleTax: editingInvoice.deductibleTax || 0,
     invoiceNo: editingInvoice.invoiceNo || '',
     invoiceCode: editingInvoice.invoiceCode || '',
     name: editingInvoice.name || '',

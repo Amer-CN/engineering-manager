@@ -35,7 +35,12 @@ public static class InvoiceEndpoints
                         WHERE (i.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=i.project_id AND user_id=@Uid)) AND i.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND i.project_id=@ProjectId";
             sql += " ORDER BY i.created_at DESC";
-            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount", "price_amount", "tax_amount", "received_amount"));
+            // P0-b：deductible_tax 分→元；is_deducted 归一为 JSON bool（前端 Invoice.isDeducted）
+            var rows = MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount", "price_amount", "tax_amount", "received_amount", "deductible_tax");
+            foreach (var row in rows)
+                if (row.TryGetValue("is_deducted", out var deductedFlag) && deductedFlag != null && !(deductedFlag is DBNull))
+                    row["is_deducted"] = Convert.ToInt64(deductedFlag) != 0;
+            return Common.Ok(rows);
         });
 
         app.MapPost("/api/invoices", async (HttpContext ctx, InvoiceDto dto, IDbConnection db) =>
@@ -49,18 +54,31 @@ public static class InvoiceEndpoints
             // FP04：发票附件仅放行图片/PDF/XML/OFD，其余 400（空值无附件放行）
             if (!IsFileTypeAllowed(dto.FileType))
                 return Common.Fail("仅支持 JPG、PNG、WebP、PDF、XML、OFD 格式的发票附件", 400);
-            // FP06：红冲必须关联原蓝票；数电票不能作废（空 kind 放行保历史兼容）
-            var fp06 = await ValidateInvoiceFp06Async(db, dto.Status, dto.InvoiceKind, dto.OriginalInvoiceId);
+            // P0-a' 阶段 1：票种两维校验（medium ∈ 2 值 / category ∈ 8 值；空值放行）
+            var invoiceMedium = NormalizeInvoiceMedium(dto.InvoiceMedium);
+            var invoiceCategory = NormalizeInvoiceCategory(dto.InvoiceCategory);
+            if (!IsInvoiceMediumValid(invoiceMedium) || !IsInvoiceCategoryValid(invoiceCategory))
+                return Common.Fail("发票介质/票种取值不合法", 400);
+            // P0-a' 阶段 1：kind 与两维服务端单点派生（只传 kind 的旧客户端反推两维）
+            var kindFields = ResolveInvoiceKindFields(dto.InvoiceKind, invoiceMedium, invoiceCategory, null, null, null);
+            // FP06：红冲必须关联原蓝票；数电票不能作废（介质优先，legacy kind 兼容）
+            var fp06 = await ValidateInvoiceFp06Async(db, dto.Status, kindFields.Kind, dto.OriginalInvoiceId, kindFields.Medium);
             if (fp06 != null) return Common.Fail(fp06, 400);
             // FP08：不得抵扣原因仅放行 NULL/空或六枚举之一，其余 400（空归一为 NULL=可抵扣）
             var nonDeductReason = NormalizeNonDeductibleReason(dto.NonDeductibleReason);
             if (!IsNonDeductibleReasonValid(nonDeductReason))
                 return Common.Fail("进项税额不得抵扣原因取值不合法", 400);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices (project_id,seller_id,buyer_id,contract_id,settlement_id,original_invoice_id,non_deductible_reason,type,invoice_kind,invoice_no,invoice_code,name,
-                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@OriginalInvoiceId,@NonDeductibleReason,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
+            // P0-b：进项抵扣四字段（POST 用归一后的持久化票向判定；校验与落库同一值）
+            var persistedType = NormalizeInvoiceType(dto.Type);
+            var deduction = ResolveInvoiceDeduction(dto.IsDeducted, dto.DeductDate, dto.DeductPeriod, dto.DeductibleTax, persistedType);
+            if (deduction.Error != null) return Common.Fail(deduction.Error, 400);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO [invoices] (project_id,seller_id,buyer_id,contract_id,settlement_id,original_invoice_id,non_deductible_reason,is_deducted,deduct_date,deduct_period,deductible_tax,type,invoice_kind,invoice_medium,invoice_category,invoice_no,invoice_code,name,
+                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@OriginalInvoiceId,@NonDeductibleReason,@IsDeducted,@DeductDate,@DeductPeriod,@DeductibleTax,@Type,@InvoiceKind,@InvoiceMedium,@InvoiceCategory,@InvoiceNo,@InvoiceCode,@Name,
                         @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReason, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
+                new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReason,
+                      IsDeducted = deduction.IsDeducted ? 1 : 0, deduction.DeductDate, deduction.DeductPeriod, DeductibleTax = deduction.DeductibleTaxFen, Type = persistedType,
+                      InvoiceKind = kindFields.Kind, InvoiceMedium = kindFields.Medium, InvoiceCategory = kindFields.Category, dto.InvoiceNo, dto.InvoiceCode,
                       dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       Status = dto.Status ?? "pending", dto.Remarks, dto.FileUrl, dto.FileType, CreatedBy = uid, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
@@ -99,13 +117,18 @@ public static class InvoiceEndpoints
             var nonDeductReasonPut = NormalizeNonDeductibleReason(dto.NonDeductibleReason);
             if (!IsNonDeductibleReasonValid(nonDeductReasonPut))
                 return Common.Fail("进项税额不得抵扣原因取值不合法", 400);
+            // P0-a' 阶段 1：票种两维校验（medium ∈ 2 值 / category ∈ 8 值；空值放行）
+            var invoiceMediumPut = NormalizeInvoiceMedium(dto.InvoiceMedium);
+            var invoiceCategoryPut = NormalizeInvoiceCategory(dto.InvoiceCategory);
+            if (!IsInvoiceMediumValid(invoiceMediumPut) || !IsInvoiceCategoryValid(invoiceCategoryPut))
+                return Common.Fail("发票介质/票种取值不合法", 400);
             // R9-12 方案丙更新侧：授权项目跨人可改 + audit（B13）
             // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
             // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
             // invoices 无锁列，故无 409 档；预读不加 deleted_at，与现状 WHERE 一致（Pin4 钉住）。
             if (!dto.Id.HasValue) return Results.Forbid();
             var row = db.QueryFirstOrDefault(
-                "SELECT created_by, project_id, status, invoice_kind FROM invoices WHERE id=@Id",
+                "SELECT created_by, project_id, status, invoice_kind, invoice_medium, invoice_category, type FROM [invoices] WHERE id=@Id",
                 new { Id = dto.Id.Value });
             // 行不存在 → 维持现状「不存在=403」语义（Pin4 钉住，未改 WriteResult 的 404）
             if (row == null) return Results.Forbid();
@@ -115,27 +138,45 @@ public static class InvoiceEndpoints
             var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
             if (access == RowWriteOutcome.Denied) return Results.Forbid();
 
-            // FP06：仅状态发生变更时门控；普通字段更新（状态不变/未传状态）不受影响（保历史数据兼容）。
-            // 生效 kind 取 incoming 优先、回落库内值；空 kind 放行。
+            // P0-a' 阶段 1：kind 与两维服务端单点派生；三者都未传时保留库内语义
+            // （旧客户端只传 kind → 反推两维；新客户端只传两维 → 派生 kind）。
             var currentStatus = row.status as string;
             var currentKind = row.invoice_kind as string;
+            var currentMedium = row.invoice_medium as string;
+            var currentCategory = row.invoice_category as string;
+            var kindFieldsPut = ResolveInvoiceKindFields(dto.InvoiceKind, invoiceMediumPut, invoiceCategoryPut,
+                currentKind, currentMedium, currentCategory);
+            // FP06 生效介质：以本次解析后的最终生效值（dto/回填/反推）为准，而非库内旧值
+            var effectiveMediumPut = invoiceMediumPut ?? kindFieldsPut.Medium;
+
+            // P0-b：进项抵扣四字段（PUT 票向 = dto 归一值，空则沿用库内 type；
+            // 校验与 UPDATE 落库共用该值，避免「校验用库内、落库用 dto」的反向伪造）
+            var currentType = row.type as string;
+            var persistedTypePut = NormalizeInvoiceType(dto.Type) ?? NormalizeInvoiceType(currentType);
+            var deductionPut = ResolveInvoiceDeduction(dto.IsDeducted, dto.DeductDate, dto.DeductPeriod, dto.DeductibleTax, persistedTypePut);
+            if (deductionPut.Error != null) return Common.Fail(deductionPut.Error, 400);
+
+            // FP06：仅状态发生变更时门控；普通字段更新（状态不变/未传状态）不受影响（保历史数据兼容）。
             var statusChanged = !string.IsNullOrWhiteSpace(dto.Status)
                 && !string.Equals(dto.Status.Trim(), (currentStatus ?? "").Trim(), StringComparison.Ordinal);
             if (statusChanged)
             {
-                var effectiveKind = !string.IsNullOrWhiteSpace(dto.InvoiceKind) ? dto.InvoiceKind : currentKind;
-                var fp06Put = await ValidateInvoiceFp06Async(db, dto.Status, effectiveKind, dto.OriginalInvoiceId);
+                var fp06Put = await ValidateInvoiceFp06Async(db, dto.Status, kindFieldsPut.Kind, dto.OriginalInvoiceId, effectiveMediumPut);
                 if (fp06Put != null) return Common.Fail(fp06Put, 400);
             }
 
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
             using var tx = db.BeginTransaction();
-            var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,seller_id=@SellerId,
-                buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,original_invoice_id=COALESCE(@OriginalInvoiceId,original_invoice_id),non_deductible_reason=COALESCE(@NonDeductibleReason,non_deductible_reason),type=@Type,invoice_kind=@InvoiceKind,
+            var affected = await db.ExecuteAsync(@"UPDATE [invoices] SET project_id=@ProjectId,seller_id=@SellerId,
+                buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,original_invoice_id=COALESCE(@OriginalInvoiceId,original_invoice_id),non_deductible_reason=COALESCE(@NonDeductibleReason,non_deductible_reason),
+                is_deducted=@IsDeducted,deduct_date=@DeductDate,deduct_period=@DeductPeriod,deductible_tax=@DeductibleTax,type=@Type,invoice_kind=@InvoiceKind,
+                invoice_medium=@InvoiceMedium,invoice_category=@InvoiceCategory,
                 invoice_no=@InvoiceNo,invoice_code=@InvoiceCode,name=@Name,amount=@Amount,price_amount=@PriceAmount,
                 tax_rate=@TaxRate,tax_amount=@TaxAmount,received_amount=@ReceivedAmount,issue_date=@IssueDate,
                 status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReasonPut, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
+                new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReasonPut,
+                      IsDeducted = deductionPut.IsDeducted ? 1 : 0, deductionPut.DeductDate, deductionPut.DeductPeriod, DeductibleTax = deductionPut.DeductibleTaxFen, Type = persistedTypePut,
+                      InvoiceKind = kindFieldsPut.Kind, InvoiceMedium = kindFieldsPut.Medium, InvoiceCategory = kindFieldsPut.Category, dto.InvoiceNo,
                       dto.InvoiceCode, dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
@@ -371,6 +412,98 @@ public static class InvoiceEndpoints
     }
 
     /// <summary>
+    /// P0-a' 阶段 1：发票介质两值（electronic=电子 / paper=纸质）。
+    /// </summary>
+    private static readonly HashSet<string> InvoiceMediums = new(StringComparer.Ordinal)
+    {
+        "electronic", "paper"
+    };
+
+    /// <summary>
+    /// P0-a' 阶段 1：发票票种细分类八值（对齐金蝶 FINVOICETYPE 口径）：
+    /// special=专票 regular=普票 passenger_transport=旅客运输 toll=过路费
+    /// train=火车票 plane=飞机票 quota=定额发票 roll=卷式发票。
+    /// </summary>
+    private static readonly HashSet<string> InvoiceCategories = new(StringComparer.Ordinal)
+    {
+        "special", "regular", "passenger_transport", "toll",
+        "train", "plane", "quota", "roll"
+    };
+
+    private static string? NormalizeInvoiceMedium(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null : v.Trim().ToLowerInvariant();
+
+    private static string? NormalizeInvoiceCategory(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null : v.Trim().ToLowerInvariant();
+
+    private static bool IsInvoiceMediumValid(string? v) => v == null || InvoiceMediums.Contains(v);
+
+    private static bool IsInvoiceCategoryValid(string? v) => v == null || InvoiceCategories.Contains(v);
+
+    /// <summary>FP06 介质判定：仅 electronic 视为数电票；空介质放行（回落 legacy kind）。</summary>
+    private static bool IsElectronicMedium(string? medium) =>
+        !string.IsNullOrWhiteSpace(medium)
+        && medium.Trim().Equals("electronic", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>由 legacy kind 反推介质：electronic_* / paper_*；无法识别返回 null。</summary>
+    private static string? MediumFromKind(string? kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind)) return null;
+        var k = kind.Trim();
+        if (k.StartsWith("electronic_", StringComparison.OrdinalIgnoreCase)) return "electronic";
+        if (k.StartsWith("paper_", StringComparison.OrdinalIgnoreCase)) return "paper";
+        return null;
+    }
+
+    /// <summary>由 legacy kind 反推票种：*_special / *_regular；其他返回 null。</summary>
+    private static string? CategoryFromKind(string? kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind)) return null;
+        var k = kind.Trim();
+        if (k.EndsWith("_special", StringComparison.OrdinalIgnoreCase)) return "special";
+        if (k.EndsWith("_regular", StringComparison.OrdinalIgnoreCase)) return "regular";
+        return null;
+    }
+
+    /// <summary>
+    /// 由介质+票种派生 legacy kind：仅 special/regular 可折叠为 {medium}_{category}；
+    /// 旅客运输/过路费/火车/飞机/定额/卷票等保留两维语义，kind 为 NULL。
+    /// </summary>
+    private static string? KindFromPair(string? medium, string? category) =>
+        medium != null && (category == "special" || category == "regular")
+            ? $"{medium}_{category}"
+            : null;
+
+    /// <summary>
+    /// P0-a' 阶段 1：kind 与两维（medium/category）服务端单点派生。
+    /// - 传 medium 或 category（新模型）：两维优先，忽略传入 kind，缺失侧从既有值/既有 kind
+    ///   回填后由两维派生 kind（避免 kind 与两维自相矛盾）；
+    /// - 只传 kind（旧客户端）：kind 原样保留，两维从 kind 反推（显式传值优先）；
+    /// - 三者都未传：POST 全 NULL，PUT 保留库内原值（不覆盖已有语义）。
+    /// </summary>
+    private static (string? Kind, string? Medium, string? Category) ResolveInvoiceKindFields(
+        string? kind, string? medium, string? category,
+        string? existingKind, string? existingMedium, string? existingCategory)
+    {
+        var k = string.IsNullOrWhiteSpace(kind) ? null : kind.Trim();
+        var m = NormalizeInvoiceMedium(medium);
+        var c = NormalizeInvoiceCategory(category);
+
+        // 未传任何两维：只传 kind 走旧客户端反推；三者都未传则保持既有（PUT）/ NULL（POST）
+        if (m == null && c == null)
+        {
+            if (k == null)
+                return (existingKind, existingMedium, existingCategory);
+            return (k, MediumFromKind(k) ?? existingMedium, CategoryFromKind(k) ?? existingCategory);
+        }
+
+        // 新模型两维优先：忽略传入 kind，缺失侧回填后由两维派生 kind
+        m ??= existingMedium ?? MediumFromKind(existingKind);
+        c ??= existingCategory ?? CategoryFromKind(existingKind);
+        return (KindFromPair(m, c), m, c);
+    }
+
+    /// <summary>
     /// FP08 不得抵扣原因（Wave 1B-4，仿 IsInvoiceNoValid 模式）：
     /// 可空枚举六值（simple_taxation/exempt/abnormal_loss/
     /// welfare_personal/catering_entertainment/other），NULL/空=可抵扣放行；
@@ -386,27 +519,76 @@ public static class InvoiceEndpoints
     private static string? NormalizeNonDeductibleReason(string? v) =>
         string.IsNullOrWhiteSpace(v) ? null : v.Trim();
 
+    /// <summary>
+    /// P0-b：票向归一（空/空白 → null；否则 Trim）。POST/PUT 的抵扣校验与落库必须
+    /// 共用同一个归一值；PUT 空值由调用方回落到库内 type（不得写 NULL）。
+    /// </summary>
+    private static string? NormalizeInvoiceType(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
     private static bool IsNonDeductibleReasonValid(string? v) =>
         v == null || NonDeductibleReasons.Contains(v);
+
+    /// <summary>
+    /// P0-b：进项抵扣四字段归一 + 校验（发票票向由调用方传入「归一后的持久化 type」，
+    /// POST 为 dto.Type 归一值，PUT 为 dto.Type 归一值或库内 type 回落值）。
+    /// - isDeducted 归一：仅 true 视为已抵扣；false/缺省 → 三字段清空（date/period NULL、tax 0）；
+    /// - 仅 type='invoice_in' 允许登记抵扣（开票/未知票向 → 400）；
+    /// - 已抵扣时所属期必填且 YYYY-MM；抵扣日期可空，非空须 YYYY-MM-DD；
+    /// - 可抵扣税额（元→分）不得为负。
+    /// 返回 Error 非 null 表示 400 提示；否则为落库值（分制）。
+    /// </summary>
+    private static (string? Error, bool IsDeducted, string? DeductDate, string? DeductPeriod, long DeductibleTaxFen) ResolveInvoiceDeduction(
+        bool? isDeductedRaw, string? deductDate, string? deductPeriod, double? deductibleTax, string? invoiceType)
+    {
+        if (deductibleTax.HasValue && deductibleTax.Value < 0)
+            return ("可抵扣税额不能为负数", false, null, null, 0);
+
+        var isDeducted = isDeductedRaw == true;
+        // 取消抵扣/未登记：三字段清空（不保留历史登记值）
+        if (!isDeducted) return (null, false, null, null, 0);
+
+        if (!string.Equals((invoiceType ?? "").Trim(), "invoice_in", StringComparison.Ordinal))
+            return ("仅进项发票可登记抵扣", false, null, null, 0);
+
+        var period = string.IsNullOrWhiteSpace(deductPeriod) ? null : deductPeriod.Trim();
+        if (period == null || !DeductPeriodPattern.IsMatch(period))
+            return ("已抵扣发票的税款所属期格式应为 YYYY-MM", false, null, null, 0);
+
+        var date = string.IsNullOrWhiteSpace(deductDate) ? null : deductDate.Trim();
+        if (date != null && !DeductDatePattern.IsMatch(date))
+            return ("抵扣日期格式应为 YYYY-MM-DD", false, null, null, 0);
+
+        var fen = MoneyUnit.ToFen(deductibleTax ?? 0);
+        return (null, true, date, period, fen);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex DeductPeriodPattern =
+        new(@"^\d{4}-(0[1-9]|1[0-2])$");
+
+    private static readonly System.Text.RegularExpressions.Regex DeductDatePattern =
+        new(@"^\d{4}-\d{2}-\d{2}$");
 
     /// <summary>
     /// FP06 红冲/作废门控（Wave 1B-1，仿 IsInvoiceNoValid 模式）：
     /// (a) status==red_flushed 时 original_invoice_id 必须指向存在的、且自身非
     /// red_flushed/cancelled 的发票（软删视为不存在），否则返回中文错误；
-    /// (b) status==cancelled 且 kind 为 electronic_* 时拒绝；空 kind 放行。
+    /// (b) status==cancelled 且 medium==electronic（或 legacy kind 为 electronic_*）时拒绝；
+    /// 空 medium/kind 放行。
     /// 返回 null 表示通过，否则为走 Common.Fail 约定的中文提示。
     /// </summary>
-    private static async Task<string?> ValidateInvoiceFp06Async(IDbConnection db, string? status, string? kind, long? originalInvoiceId)
+    private static async Task<string?> ValidateInvoiceFp06Async(IDbConnection db, string? status, string? kind, long? originalInvoiceId, string? medium = null)
     {
         if (string.IsNullOrWhiteSpace(status)) return null;
         var s = status.Trim();
-        if (s.Equals("cancelled", StringComparison.Ordinal))
+        if (s.Equals("cancelled", StringComparison.OrdinalIgnoreCase))
         {
-            if (IsElectronicKind(kind))
+            // P0-a' 阶段 1：介质优先（electronic=数电票），legacy kind 兜底
+            if (IsElectronicMedium(medium) || IsElectronicKind(kind))
                 return "数电票不能作废，请使用红冲方式冲销";
             return null;
         }
-        if (!s.Equals("red_flushed", StringComparison.Ordinal)) return null;
+        if (!s.Equals("red_flushed", StringComparison.OrdinalIgnoreCase)) return null;
         if (!originalInvoiceId.HasValue)
             return "红冲必须关联原蓝票，请选择要冲销的蓝字发票";
         var orig = await db.QueryFirstOrDefaultAsync(
@@ -416,8 +598,8 @@ public static class InvoiceEndpoints
             return "关联的原发票不存在，请重新选择原蓝票";
         var origStatus = (orig as IDictionary<string, object>)?.TryGetValue("status", out var v) == true ? v as string : null;
         origStatus ??= (orig as dynamic)?.status as string;
-        if (string.Equals(origStatus?.Trim(), "red_flushed", StringComparison.Ordinal)
-            || string.Equals(origStatus?.Trim(), "cancelled", StringComparison.Ordinal))
+        if (string.Equals(origStatus?.Trim(), "red_flushed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(origStatus?.Trim(), "cancelled", StringComparison.OrdinalIgnoreCase))
             return "关联的原发票已红冲或已作废，不能重复红冲";
         return null;
     }

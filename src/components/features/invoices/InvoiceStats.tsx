@@ -7,6 +7,7 @@ import { Invoice } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
 import { Card } from '@/components/ui/Card'
+import { resolveInvoiceDimensions } from './invoiceConfig'
 
 interface InvoiceStatsProps {
   invoices: Invoice[]
@@ -16,17 +17,18 @@ interface InvoiceStatsProps {
 export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredInvoices }) => {
   const invoiceOut = filteredInvoices.filter(i => i.type === 'invoice_out')
   const invoiceIn = filteredInvoices.filter(i => i.type === 'invoice_in')
-  const isSpecial = (kind: string) => kind === 'paper_special' || kind === 'electronic_special'
-  const isRegular = (kind: string) => kind === 'paper_regular' || kind === 'electronic_regular'
+  // 专/普按两维票种口径汇总（缺失时从历史 invoiceKind 推导），不再用 kind 后缀
+  const isSpecial = (invoice: Invoice) => resolveInvoiceDimensions(invoice).category === 'special'
+  const isRegular = (invoice: Invoice) => resolveInvoiceDimensions(invoice).category === 'regular'
 
   const stats = {
   invoiceOutAmount: invoiceOut.reduce((sum, i) => sum + i.amount, 0),
   invoiceInAmount: invoiceIn.reduce((sum, i) => sum + i.amount, 0),
   totalCount: filteredInvoices.length,
   // 专票税额（可抵扣）
-  specialTax: filteredInvoices.filter(i => isSpecial(i.invoiceKind)).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
+  specialTax: filteredInvoices.filter(isSpecial).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
   // 普票税额
-  regularTax: filteredInvoices.filter(i => isRegular(i.invoiceKind)).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
+  regularTax: filteredInvoices.filter(isRegular).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
   // FP08 不得抵扣汇总（原因非空即不得抵扣）
   nonDeductible: filteredInvoices.filter(i => (i.nonDeductibleReason ?? '') !== ''),
   }

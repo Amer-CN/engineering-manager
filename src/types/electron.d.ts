@@ -671,6 +671,11 @@ export type InvoiceStatus = 'issued' | 'partially_paid' | 'received' | 'cancelle
 export type InvoiceTaxRate = 0 | 0.01 | 0.03 | 0.06 | 0.09 | 0.13
 export type InvoiceKind = 'electronic_regular' | 'electronic_special' | 'paper_regular' | 'paper_special'  // 电子普票/电子专票/纸质普票/纸质专票
 
+// 票种两维模型（P0-a' 阶段 1）：介质 + 票种细分类；服务端与 InvoiceKind 双向派生
+export type InvoiceMedium = 'electronic' | 'paper'  // 介质：电子/纸质
+// 票种细分类（对齐金蝶 FINVOICETYPE）：专票/普票/旅客运输/过路费/火车/飞机/定额/卷式
+export type InvoiceCategory = 'special' | 'regular' | 'passenger_transport' | 'toll' | 'train' | 'plane' | 'quota' | 'roll'
+
 // FP08 进项不得抵扣原因六值（口径：增值税法第22条；NULL=可抵扣）
 export type InvoiceNonDeductibleReason = 'simple_taxation' | 'exempt' | 'abnormal_loss' | 'welfare_personal' | 'catering_entertainment' | 'other'
 
@@ -708,10 +713,18 @@ export interface Invoice {
   type: InvoiceType
   status: InvoiceStatus
   invoiceKind: InvoiceKind                        // 票种：电子发票/纸质发票
+  // 票种两维模型（P0-a' 阶段 1）：旧数据已由 061 迁移回填；新数据由服务端派生
+  invoiceMedium?: InvoiceMedium | null            // 介质：electronic/paper
+  invoiceCategory?: InvoiceCategory | null        // 票种细分类（八值）
   // 进项不得抵扣原因（FP08）：六值可空枚举，null/缺省=可抵扣
   // simple_taxation=简易计税 exempt=免税项目 abnormal_loss=非正常损失
   // welfare_personal=福利/个人消费 catering_entertainment=餐饮娱乐 other=其他
   nonDeductibleReason?: InvoiceNonDeductibleReason | null
+  // 进项抵扣登记（P0-b）：仅 type='invoice_in' 可登记；未登记/取消抵扣时三字段为空
+  isDeducted?: boolean | null    // 是否已抵扣
+  deductDate?: string | null     // 抵扣日期 YYYY-MM-DD（可空）
+  deductPeriod?: string | null   // 税款所属期 YYYY-MM（已抵扣时必填）
+  deductibleTax?: number         // 可抵扣税额（元；库内 INTEGER 分）
   invoiceNo: string              // 发票号码
   invoiceCode: string           // 发票代码
   name: string                   // 发票名称/摘要

@@ -2,6 +2,7 @@ import type { Invoice, PaymentRecord } from '@/types'
 import { formatMoney } from '@/utils/format'
 import { COLORS } from './invoicesPrintExportColors'
 import { useToastStore } from '@/store/toastStore'
+import { getInvoiceDimensionLabel } from './invoiceConfig'
 
 function escapeHtml(s: string): string {
   if (!s) return ''
@@ -23,14 +24,14 @@ export function getStatusLabel(status: string, type?: string) {
   return labels[status] || status
 }
 
+// 票种两维标签（介质 · 票种）；无法推导显示「未知」，不兜底成任一票种。
+export function getInvoiceKindLabel(invoice: Invoice) {
+  return getInvoiceDimensionLabel(invoice)
+}
+
+/** @deprecated 仅按历史 invoiceKind 推导两维标签，保留给旧调用点。 */
 export function getKindLabel(kind: string) {
-  const labels: Record<string, string> = {
-    paper_regular: '纸质普票',
-    paper_special: '纸质专票',
-    electronic_regular: '电子普票',
-    electronic_special: '电子专票',
-  }
-  return labels[kind] || '纸质普票'
+  return getInvoiceDimensionLabel({ invoiceKind: kind })
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -47,7 +48,7 @@ export function generateInvoicePrintContent(invoice: Invoice) {
         <p><strong>发票代码:</strong> ${invoice.invoiceCode || '-'}</p>
         <p><strong>发票号码:</strong> ${invoice.invoiceNo}</p>
         <p><strong>开票日期:</strong> ${invoice.issueDate}</p>
-        <p><strong>票种:</strong> ${getKindLabel(invoice.invoiceKind)}</p>
+        <p><strong>票种:</strong> ${getInvoiceKindLabel(invoice)}</p>
       </div>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
         <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px; width: 50%;"><strong>销售方:</strong> ${invoice.sellerName || '-'}</td>
@@ -114,7 +115,7 @@ export function handlePrint(content: string) {
 export function printInvoiceList(invoiceList: Invoice[]) {
   const rows = invoiceList.map(inv => `
     <tr><td>${escapeHtml(inv.issueDate || '-')}</td><td>${inv.type === 'invoice_in' ? '收票' : '开票'}</td>
-    <td>${getKindLabel(inv.invoiceKind)}</td><td>${escapeHtml(inv.name || '-')}</td>
+    <td>${getInvoiceKindLabel(inv)}</td><td>${escapeHtml(inv.name || '-')}</td>
     <td>${escapeHtml(inv.invoiceNo || '-')}</td><td>${(inv.taxRate * 100).toFixed(0)}%</td>
     <td>¥${formatMoney(inv.amount)}</td><td>¥${inv.taxAmount.toLocaleString()}</td>
     <td>${getStatusLabel(inv.status, inv.type)}</td></tr>`).join('')
@@ -150,7 +151,7 @@ export async function exportInvoiceList(invoiceList: Invoice[]) {
     const exportData = invoiceList.map((inv, index) => ({
       '序号': index + 1, '开票日期': inv.issueDate || '',
       '发票类型': inv.type === 'invoice_in' ? '收票' : '开票',
-      '票种': getKindLabel(inv.invoiceKind),
+      '票种': getInvoiceKindLabel(inv),
       '发票名称': inv.name || '', '发票号码': inv.invoiceNo || '',
       '发票代码': inv.invoiceCode || '', '不含税金额': inv.priceAmount,
       '税率': `${(inv.taxRate * 100).toFixed(0)}%`, '税额': inv.taxAmount,

@@ -35,6 +35,29 @@ describe('InvoiceStats', () => {
 
   test('空发票列表应显示零值', () => {
     render(React.createElement(InvoiceStats, { invoices: [], filteredInvoices: [] }))
-    expect(screen.getByText('0 张')).toBeTruthy()
+    // 总数卡 + FP08 不得抵扣卡各显示 0 张
+    expect(screen.getAllByText('0 张').length).toBe(2)
+  })
+
+  test('FP08：应汇总不得抵扣张数与金额', () => {
+    const mixed = [
+      ...baseInvoices,
+      { type: 'invoice_in', amount: 20000, invoiceKind: 'paper_special', taxAmount: 1000, nonDeductibleReason: 'welfare_personal' },
+    ] as any as Invoice[]
+    render(React.createElement(InvoiceStats, { invoices: mixed, filteredInvoices: mixed }))
+    expect(screen.getByText('不得抵扣')).toBeTruthy()
+    expect(screen.getByText('1 张')).toBeTruthy()
+  })
+
+  test('票种两维：专票税额按 invoiceCategory 口径汇总（kind 为空）', () => {
+    const mixed = [
+      { type: 'invoice_in', amount: 113, invoiceMedium: 'paper', invoiceCategory: 'special', invoiceKind: '', taxAmount: 13 },
+      { type: 'invoice_in', amount: 100, invoiceMedium: 'electronic', invoiceCategory: 'passenger_transport', invoiceKind: '', taxAmount: 9 },
+      { type: 'invoice_in', amount: 105, invoiceMedium: 'electronic', invoiceCategory: 'regular', invoiceKind: '', taxAmount: 5 },
+    ] as any as Invoice[]
+    render(React.createElement(InvoiceStats, { invoices: mixed, filteredInvoices: mixed }))
+    // 专/普按两维汇总；旅客运输不落入任一口径
+    expect(screen.getByText('¥13')).toBeTruthy()
+    expect(screen.getByText('¥5')).toBeTruthy()
   })
 })

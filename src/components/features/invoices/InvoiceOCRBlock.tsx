@@ -20,6 +20,8 @@ interface InvoiceOCRBlockProps {
     sellerName?: string
     purchaserName?: string
     issueDate?: string
+    /** OCR 原始发票类型文本，父组件据此回填介质/票种两维 */
+    invoiceType?: string
   }) => void
 }
 
@@ -63,7 +65,8 @@ export const InvoiceOCRBlock: React.FC<InvoiceOCRBlockProps> = ({
           taxRate: ocrResult.taxRate as InvoiceTaxRate | undefined,
           sellerName: ocrResult.sellerName,
           purchaserName: ocrResult.purchaserName,
-          issueDate: ocrResult.issueDate
+          issueDate: ocrResult.issueDate,
+          invoiceType: ocrResult.invoiceType
         })
         setResult('发票号、金额、税额、销售方/购买方、税率、开票日期已自动填入')
         showToast('发票识别成功，已自动填充', 'success')
