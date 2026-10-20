@@ -5,8 +5,9 @@ import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
 import { Input } from '../../ui/Input/Input'
 import { Icon } from '../../ui/Icon'
-import { categoryOptions, mediumOptions, nonDeductibleReasonOptions, taxRateOptions } from './constants'
+import { categoryOptions, mediumOptions, nonDeductibleReasonOptions, resolveTaxRateSelectOptions } from './constants'
 import { deriveInvoiceKind } from './invoiceConfig'
+import { useTaxRates } from '@/hooks/data/useTaxRates'
 
 interface InvoiceFormFieldsProps {
   formData: InvoiceFormData
@@ -28,6 +29,11 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
   handleInvoiceNoChange, handleTaxRateChange, handleTaxedAmountChange,
   handleUntaxedAmountChange, handleTaxAmountChange, duplicateInvoice, invoiceNoWarning
 }) => {
+  // P1/T1：税率下拉数据源 —— 服务端主数据优先，hook 失败/空/非标准档位时回落 constants 兜底。
+  // 发票仍存自己的税率快照，历史发票不受主数据变更影响。
+  const { data: taxRates } = useTaxRates()
+  const taxRateSelectOptions = resolveTaxRateSelectOptions(taxRates)
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-4">
@@ -264,7 +270,7 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
             className="input"
             required
           >
-            {taxRateOptions.map(opt => (
+            {taxRateSelectOptions.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>

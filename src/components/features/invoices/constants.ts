@@ -1,11 +1,13 @@
 import type { InvoiceType, InvoiceTaxRate, InvoiceKind, Invoice, PaymentRecord } from '@/types'
-import type { InvoiceMedium, InvoiceCategory } from '@/types/electron'
+import type { InvoiceMedium, InvoiceCategory, TaxRate } from '@/types/electron'
 import type { InvoiceFormData } from './InvoiceForm'
 import type { PaymentFormData } from './PaymentForm'
 import { categoryLabels, deriveInvoiceKind, mediumLabels, resolveInvoiceDimensions } from './invoiceConfig'
 
 // 税率口径（增值税法）：第十条 13%/9%/6%/零税率，第十一条 3% 征收率；
 // 2026-01-01 前历史口径（旧税制过渡期税率）另见历史档案，新增选项前先对齐法条。
+// P1/T1：服务端税率主数据（tax_rates，063 迁移）是默认数据源；本数组降级为
+// hook 失败/空时的兜底。数值集合必须与 063 种子一致，不得单边新增档位。
 export const taxRateOptions: { value: InvoiceTaxRate; label: string }[] = [
   { value: 0, label: '不征税' },
   { value: 0.01, label: '1%' },
@@ -14,6 +16,36 @@ export const taxRateOptions: { value: InvoiceTaxRate; label: string }[] = [
   { value: 0.09, label: '9%' },
   { value: 0.13, label: '13%' }
 ]
+
+// —— 税率主数据（服务端）→ 下拉选项的投影（P1/T1） ——
+// 0 档沿用「不征税」文案（与上面兜底选项一致）；其余按百分比展示。
+export const taxRateLabel = (rate: number): string =>
+  rate === 0 ? '不征税' : `${+(rate * 100).toFixed(4)}%`
+
+/** 服务端税率的展示名：优先主数据 name，缺失时按 rate 兜底。 */
+export const taxRateDisplayLabel = (r: Pick<TaxRate, 'name' | 'rate'>): string =>
+  r.name?.trim() ? r.name : taxRateLabel(r.rate)
+
+/**
+ * 默认下拉选项：服务端 6 档正常时用主数据；hook 失败/空/含非标准档位时
+ * 回落 taxRateOptions，保证表单永远有值可选（不阻塞开票）。
+ *
+ * 去重顺序（R3）：先按 effectiveFrom 降序（缺失/空视为最早），同 rate 只保留
+ * 生效期最新的一条，再按 rate 升序输出 —— 避免下拉里同一税率出现两次且展示旧档。
+ */
+export function resolveTaxRateSelectOptions(rates?: TaxRate[] | null): { value: number; label: string }[] {
+  if (!rates || rates.length === 0) return taxRateOptions
+  const valid = rates.filter(r =>
+    Number.isFinite(r?.rate) && (taxRateOptions as { value: number }[]).some(o => o.value === r.rate))
+  if (valid.length === 0) return taxRateOptions
+  const seen = new Set<number>()
+  const options = [...valid]
+    .sort((a, b) => (b.effectiveFrom ?? '').localeCompare(a.effectiveFrom ?? ''))
+    .filter(r => (seen.has(r.rate) ? false : (seen.add(r.rate), true)))
+    .sort((a, b) => a.rate - b.rate)
+    .map(r => ({ value: r.rate, label: taxRateDisplayLabel(r) }))
+  return options
+}
 
 // 票种两维（P0-a'）：介质 × 票种细分类，表单分别选择，invoiceKind 仅作兼容派生列。
 export const mediumOptions: { value: InvoiceMedium; label: string }[] = [

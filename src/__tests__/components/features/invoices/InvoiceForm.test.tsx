@@ -9,7 +9,7 @@
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Project, Partner, IncomeContract, ExpenseContract, InvoiceType, InvoiceKind, InvoiceTaxRate, InvoiceMedium, InvoiceCategory } from '@/types/electron'
-import { getInvoiceFormData } from '@/components/features/invoices/constants'
+import { getInvoiceFormData, resolveTaxRateSelectOptions } from '@/components/features/invoices/constants'
 import { dimensionsFromOcrType, isElectronicInvoice } from '@/components/features/invoices/invoiceConfig'
 
 // ═════════════════════════════════════
@@ -54,6 +54,18 @@ vi.mock('@/hooks/useInvoiceOCR', () => ({
     processInvoiceFile: mockProcessInvoiceFile,
     validateFile: () => null,
   }),
+}))
+
+// ═════════════════════════════════════
+// Mock：useTaxRates（P1/T1 税率主数据）
+// InvoiceFormFields 链上挂了 useTaxRates（react-query）——本文件不测主数据加载，
+// 与 writingToolbarDraft.test.tsx 对 useActiveLlmModel 同口径 mock 掉，
+// 免 QueryClientProvider；hook 自身的正常/失败两条路径由 useTaxRates.test.ts 覆盖。
+// 返回空数组 → 组件走 constants 兜底，下拉 6 档与原行为一致。
+// ═════════════════════════════════════
+const mockTaxRatesQuery = vi.hoisted(() => ({ data: undefined as any, isLoading: false, isError: false }))
+vi.mock('@/hooks/data/useTaxRates', () => ({
+  useTaxRates: () => mockTaxRatesQuery,
 }))
 
 // ═════════════════════════════════════
@@ -112,6 +124,7 @@ describe('InvoiceForm', () => {
     vi.clearAllMocks()
     mockOnSubmit.mockClear()
     mockOnCancel.mockClear()
+    mockTaxRatesQuery.data = undefined  // 默认：主数据未加载 → constants 兜底
     // Mock clipboard API - use stubGlobal
     Object.defineProperty(navigator, 'clipboard', {
       value: { read: vi.fn() },
@@ -548,6 +561,94 @@ describe('InvoiceForm', () => {
     expect(submitted?.deductDate).toBe('')
     expect(submitted?.deductPeriod).toBe('')
     expect(submitted?.deductibleTax).toBe(0)
+  })
+
+  // ═════════════════════════════════════
+  // P1/T1：税率下拉数据源 —— 主数据优先 / constants 兜底
+  // ═════════════════════════════════════
+  // 税率 select 的 <label> 无 htmlFor（既有实现），按「税率 *」文本的相邻 select 取。
+  const getTaxRateSelect = (): HTMLSelectElement => {
+    const label = Array.from(document.querySelectorAll('label.label'))
+      .find(l => l.textContent?.trim() === '税率 *')
+    const select = label?.parentElement?.querySelector('select')
+    if (!select) throw new Error('未找到税率下拉')
+    return select as HTMLSelectElement
+  }
+
+  it('P1/T1：税率主数据可用时，下拉用主数据标签', async () => {
+    mockTaxRatesQuery.data = [
+      { id: 6, code: 'VAT13', name: '13%', rate: 0.13, category: 'general', effectiveFrom: '2026-01-01', effectiveTo: null, isDefault: 0 },
+      { id: 1, code: 'VAT0', name: '不征税', rate: 0, category: 'zero', effectiveFrom: '2026-01-01', effectiveTo: null, isDefault: 1 },
+    ] as any
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData()}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    const select = getTaxRateSelect()
+    expect(Array.from(select.options).map(o => o.label)).toEqual(['不征税', '13%'])
+  })
+
+  it('P1/T1：主数据缺失（失败/空）时，下拉回落 constants 六档兜底', async () => {
+    mockTaxRatesQuery.data = undefined
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData()}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    const select = getTaxRateSelect()
+    expect(Array.from(select.options).map(o => o.label)).toEqual(['不征税', '1%', '3%', '6%', '9%', '13%'])
+  })
+})
+
+describe('resolveTaxRateSelectOptions（P1/T1 主数据 → 下拉选项，R3 去重顺序）', () => {
+  const rate = (over: Record<string, unknown>) => ({
+    id: 1, code: 'VAT13', name: '13%', rate: 0.13, category: 'general',
+    effectiveFrom: '2026-01-01', effectiveTo: null, isDefault: 0, ...over,
+  }) as any
+
+  it('同一税率多生效期时，保留 effectiveFrom 最新的一条', () => {
+    const options = resolveTaxRateSelectOptions([
+      rate({ id: 1, rate: 0.13, name: '13%（旧）', effectiveFrom: '2025-01-01' }),
+      rate({ id: 2, rate: 0.13, name: '13%（新）', effectiveFrom: '2026-01-01' }),
+    ])
+    expect(options).toEqual([{ value: 0.13, label: '13%（新）' }])
+  })
+
+  it('effectiveFrom 缺失/空视为最早，不抢占已有生效期', () => {
+    const options = resolveTaxRateSelectOptions([
+      rate({ id: 1, rate: 0.09, name: '9%（无生效期）', effectiveFrom: '' }),
+      rate({ id: 2, rate: 0.09, name: '9%（有生效期）', effectiveFrom: '2026-01-01' }),
+    ])
+    expect(options).toEqual([{ value: 0.09, label: '9%（有生效期）' }])
+  })
+
+  it('去重后仍按 rate 升序输出', () => {
+    const options = resolveTaxRateSelectOptions([
+      rate({ id: 1, code: 'VAT13', rate: 0.13, name: '13%', effectiveFrom: '2026-01-01' }),
+      rate({ id: 2, code: 'VAT0', rate: 0, name: '不征税', effectiveFrom: '2026-01-01', isDefault: 1 }),
+      rate({ id: 3, code: 'VAT6', rate: 0.06, name: '6%', effectiveFrom: '2026-01-01' }),
+    ])
+    expect(options.map(o => o.value)).toEqual([0, 0.06, 0.13])
+  })
+
+  it('空/缺失回落 constants 六档兜底', () => {
+    expect(resolveTaxRateSelectOptions(null).map(o => o.value)).toEqual([0, 0.01, 0.03, 0.06, 0.09, 0.13])
+    expect(resolveTaxRateSelectOptions([]).map(o => o.value)).toEqual([0, 0.01, 0.03, 0.06, 0.09, 0.13])
   })
 })
 

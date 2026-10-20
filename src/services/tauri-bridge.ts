@@ -23,6 +23,7 @@ import type {
   SqliteStatus,
   ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair, ParsedBankReceipt,
   StoredAuth,
+  TaxRate,
 } from '../types/electron';
 
 // ============ 导出的 API ============
@@ -403,6 +404,11 @@ export const tauriAPI = {
     apiClient.put<void>('/api/departments', { id, ...updates }),
   deleteDepartment: (id: number) =>
     apiClient.del<void>(`/api/departments/${id}`),
+
+  // ────────── 税率主数据（P1 / T1） ──────────
+  // GET /api/tax-rates/resolve（默认税率解析）后端已就绪，但前端本任务不接通；
+  // 桥接层不暴露 resolveTaxRate，等下一任务接前端时再补，避免留死接口。
+  getTaxRates: () => apiClient.get<TaxRate[]>('/api/tax-rates'),
 
   // ────────── 模板 ──────────
   getTemplates: () => apiClient.get<Template[]>('/api/templates'),

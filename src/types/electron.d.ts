@@ -671,6 +671,30 @@ export type InvoiceStatus = 'issued' | 'partially_paid' | 'received' | 'cancelle
 export type InvoiceTaxRate = 0 | 0.01 | 0.03 | 0.06 | 0.09 | 0.13
 export type InvoiceKind = 'electronic_regular' | 'electronic_special' | 'paper_regular' | 'paper_special'  // 电子普票/电子专票/纸质普票/纸质专票
 
+// ============ 税率主数据 / 税率规则（P1 / T1） ============
+// 服务端真源：tax_rates / tax_rules（063 迁移）+ TaxEndpoints.cs。
+// 数值集合与 constants.ts taxRateOptions 一致（0/0.01/0.03/0.06/0.09/0.13），法律口径 FP07。
+export interface TaxRate {
+  id: number
+  code: string                 // 税目编码（如 VAT13），与 effectiveFrom 组成唯一键
+  name: string                 // 展示名（如 13%）
+  rate: number                 // 税率小数
+  category: string | null      // 税目分类（zero/levy/general…）
+  effectiveFrom: string        // 生效起 YYYY-MM-DD
+  effectiveTo: string | null   // 生效止 YYYY-MM-DD；null = 无失效日
+  isDefault: number            // 1 = 规则不命中时的全局兜底默认
+}
+
+export interface TaxRule {
+  id: number
+  businessType: string | null      // 业务类型维度；null = 不限
+  partnerTaxType: string | null    // 对方纳税人类别维度；null = 不限
+  itemCategory: string | null      // 项目类别维度；null = 不限
+  taxRateId: number                // → TaxRate.id
+  priority: number                 // 同维度数下大者优先
+  enabled: number                  // 0/1
+}
+
 // 票种两维模型（P0-a' 阶段 1）：介质 + 票种细分类；服务端与 InvoiceKind 双向派生
 export type InvoiceMedium = 'electronic' | 'paper'  // 介质：电子/纸质
 // 票种细分类（对齐金蝶 FINVOICETYPE）：专票/普票/旅客运输/过路费/火车/飞机/定额/卷式
@@ -1064,6 +1088,12 @@ export interface ElectronAPI {
   // 图纸
   // 部门管理
   getDepartments: () => Promise<{ success: boolean; data?: Department[]; error?: string }>
+
+  // 税率主数据（P1 / T1）：GET 纯读端点。
+  // 注：GET /api/tax-rates/resolve（默认税率解析）后端已就绪并有独立测试，但前端
+  // 尚未接通，故这里不声明 resolveTaxRate 契约（避免留一条指向不了实现的死接口）；
+  // 下一任务接默认税率解析时再补方法签名与 TaxRateResolution 类型。
+  getTaxRates: () => Promise<{ success: boolean; data?: TaxRate[]; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

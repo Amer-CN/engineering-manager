@@ -225,6 +225,8 @@ function createMockAPI() {
     deleteMaterial: async () => ({ success: true }),
     // 监管单位
     getSupervisors: async () => ({ success: true, data: [] }),
+    // 税率主数据（P1 / T1）：mock 无真实主数据 → 空数组，由调用点回落 constants 兜底
+    getTaxRates: async () => ({ success: true, data: [] }),
     createSupervisor: async () => ({ success: true, data: { id: 1 } }),
     updateSupervisor: async () => ({ success: true }),
     deleteSupervisor: async () => ({ success: true }),
