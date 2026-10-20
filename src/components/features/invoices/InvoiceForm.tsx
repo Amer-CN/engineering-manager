@@ -11,6 +11,8 @@ import { InvoiceFormFields } from './InvoiceFormFields'
 import { Button } from '../../ui/Button'
 import { Drawer } from '../../ui/Drawer'
 import { validateInvoiceNumber } from '@/utils/validate'
+import { useResolveTaxRate, useTaxRates } from '@/hooks/data/useTaxRates'
+import { resolveTaxRateSelectOptions } from './constants'
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -77,12 +79,73 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [dragOverFile, setDragOverFile] = useState(false)
   const [previewFile, setPreviewFile] = useState<{data: string, type: 'image' | 'pdf' | 'xml' | 'ofd', title: string} | null>(null)
   const [duplicateInvoice, setDuplicateInvoice] = useState<{ id: number; invoiceNo: string } | null>(null)
+  const [taxRateHint, setTaxRateHint] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { handleTaxRateChange, handleTaxedAmountChange, handleUntaxedAmountChange, handleTaxAmountChange } = useInvoiceAmounts({
   initial: { amount: formData.amount, priceAmount: formData.priceAmount, taxAmount: formData.taxAmount, taxRate: formData.taxRate },
   onUpdate: (patch) => setFormData(prev => ({ ...prev, ...patch }))
   })
+
+  const resolveTaxRate = useResolveTaxRate()
+  // 回填前的档位白名单（F2）：与 InvoiceFormFields 下拉同源（同一 react-query key，共享缓存）
+  const { data: taxRates } = useTaxRates()
+  const availableRateValues = resolveTaxRateSelectOptions(taxRates).map(o => o.value)
+
+  // F3：解析结论只在**当前维度组合**下成立；维度一变就作废，避免旧结论被误读成当前选择的结果。
+  const dimensionsChangedRef = useRef(false)
+  useEffect(() => {
+    if (!dimensionsChangedRef.current) {
+      // 首次挂载不算「变化」：此时本就没有提示可清
+      dimensionsChangedRef.current = true
+      return
+    }
+    setTaxRateHint(null)
+  }, [formData.type, formData.sellerId, formData.buyerId, formData.issueDate])
+
+  /**
+   * P1/T1b 默认税率解析：**只能由用户点击「按规则取默认」触发**。
+   * 财税零容错 —— 本函数不在任何 effect/依赖变化里被调用，也不得被自动调用；
+   * matchedBy='none'（无匹配）时明确不改税率，只给提示。
+   *
+   * F1 安全护栏：063 种子里 is_default=1 的是 0%（不征税）档，且当前未种子任何 tax_rules，
+   * 因此解析会落到 matchedBy='default' && rate===0。若照单回填，用户已选的 13% 会被静默
+   * 改成 0% —— 这在财税上是危险行为。故：default 档的 0% 一律不回填，只提示人工确认；
+   * 只有管理员显式配置的 rule 档才允许回填 0%。
+   */
+  const handleResolveTaxRate = async () => {
+    // 对方纳税资质：收票（进项）时对方是销售方，开票（销项）时对方是购买方
+    const partnerId = formData.type === 'invoice_in' ? formData.sellerId : formData.buyerId
+    const partner = partnerId ? partners.find(p => p.id === partnerId) : undefined
+    try {
+      const resolution = await resolveTaxRate.mutateAsync({
+        date: formData.issueDate || undefined,
+        partnerTaxType: partner?.taxType || undefined,
+      })
+      if (resolution.matchedBy === 'none' || resolution.rate == null) {
+        setTaxRateHint('无匹配规则，未改动')
+        return
+      }
+      // F1（P0）：默认档的 0%（不征税）不得自动回填，交人工确认
+      if (resolution.matchedBy === 'default' && resolution.rate === 0) {
+        setTaxRateHint('默认档为 0%（不征税），未自动回填，请手工确认')
+        return
+      }
+      // F1 其余情况：只有 rate>0，或管理员显式配置的 rule 档（允许回填 0%），才允许回填
+      if (!(resolution.rate > 0) && resolution.matchedBy !== 'rule') return
+      // F2：回填值必须落在下拉可用档位内，否则宁可不改
+      if (!availableRateValues.includes(resolution.rate)) {
+        setTaxRateHint('解析结果不在可用税率档位内，未改动')
+        return
+      }
+      handleTaxRateChange(resolution.rate)
+      const ratePercent = +(resolution.rate * 100).toFixed(4)
+      const source = resolution.matchedBy === 'rule' ? '规则' : '默认'
+      setTaxRateHint(`已按规则取默认：${ratePercent}%（${source}）`)
+    } catch {
+      setTaxRateHint('取默认税率失败')
+    }
+  }
 
   const resolveInvoiceFileType = (file: File): 'image' | 'pdf' | 'xml' | 'ofd' => {
   const name = (file.name || '').toLowerCase()
@@ -195,6 +258,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       handleTaxAmountChange={handleTaxAmountChange}
       duplicateInvoice={duplicateInvoice}
       invoiceNoWarning={invoiceNoWarning}
+      onResolveTaxRate={handleResolveTaxRate}
+      resolvePending={resolveTaxRate.isPending}
+      taxRateHint={taxRateHint}
     />
 
     {/* 文件上传 */}

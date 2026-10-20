@@ -57,15 +57,22 @@ vi.mock('@/hooks/useInvoiceOCR', () => ({
 }))
 
 // ═════════════════════════════════════
-// Mock：useTaxRates（P1/T1 税率主数据）
+// Mock：useTaxRates（P1/T1 税率主数据）+ useResolveTaxRate（P1/T1b 默认税率解析）
 // InvoiceFormFields 链上挂了 useTaxRates（react-query）——本文件不测主数据加载，
 // 与 writingToolbarDraft.test.tsx 对 useActiveLlmModel 同口径 mock 掉，
 // 免 QueryClientProvider；hook 自身的正常/失败两条路径由 useTaxRates.test.ts 覆盖。
 // 返回空数组 → 组件走 constants 兜底，下拉 6 档与原行为一致。
+// useResolveTaxRate 同理 mock 成可重置的 mutation 形状（默认 reject，用例按需覆盖）。
 // ═════════════════════════════════════
 const mockTaxRatesQuery = vi.hoisted(() => ({ data: undefined as any, isLoading: false, isError: false }))
+const mockResolveMutateAsync = vi.hoisted(() => vi.fn())
+const mockResolveTaxRate = vi.hoisted(() => ({
+  mutateAsync: mockResolveMutateAsync,
+  isPending: false,
+}))
 vi.mock('@/hooks/data/useTaxRates', () => ({
   useTaxRates: () => mockTaxRatesQuery,
+  useResolveTaxRate: () => mockResolveTaxRate,
 }))
 
 // ═════════════════════════════════════
@@ -125,6 +132,10 @@ describe('InvoiceForm', () => {
     mockOnSubmit.mockClear()
     mockOnCancel.mockClear()
     mockTaxRatesQuery.data = undefined  // 默认：主数据未加载 → constants 兜底
+    mockResolveTaxRate.isPending = false
+    // 默认：解析不可用（用例按需覆盖）——防止任何「意外自动调用」静默通过
+    mockResolveMutateAsync.mockReset()
+    mockResolveMutateAsync.mockRejectedValue(new Error('未配置'))
     // Mock clipboard API - use stubGlobal
     Object.defineProperty(navigator, 'clipboard', {
       value: { read: vi.fn() },
@@ -612,6 +623,231 @@ describe('InvoiceForm', () => {
 
     const select = getTaxRateSelect()
     expect(Array.from(select.options).map(o => o.label)).toEqual(['不征税', '1%', '3%', '6%', '9%', '13%'])
+  })
+
+  // ═════════════════════════════════════
+  // P1/T1b：默认税率解析 —— 显式点击三路径 + 「无自动改税率」防御
+  // 财税零容错：解析只能由用户点击「按规则取默认」触发；matchedBy=none 不得改税率。
+  // ═════════════════════════════════════
+  const getResolveButton = () => screen.getByRole('button', { name: '按规则取默认' })
+
+  it('P1/T1b：点击命中规则 → 税率改为解析值且提示含「规则」', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockResolvedValue({ rateId: 6, code: 'VAT13', rate: 0.13, matchedBy: 'rule' })
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.09, sellerId: 1 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    expect(getTaxRateSelect().value).toBe('0.09')
+
+    await user.click(getResolveButton())
+
+    await waitFor(() => expect(getTaxRateSelect().value).toBe('0.13'))
+    // 提示文案核对：数值 + 来源（rule → 规则），排除把「按规则取默认」按钮文字误当提示
+    expect(screen.getByText(/^已按规则取默认：13%（规则）$/)).toBeInTheDocument()
+    // 入参：issueDate 空 → date 不下发；对方资质取收票（进项）的销售方
+    expect(mockResolveMutateAsync).toHaveBeenCalledWith({ date: undefined, partnerTaxType: 'general' })
+  })
+
+  it('P1/T1b：matchedBy=none → 税率不变且提示「无匹配规则」', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockResolvedValue({ rateId: null, code: null, rate: null, matchedBy: 'none' })
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.09, sellerId: 1 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(getResolveButton())
+
+    await waitFor(() => expect(screen.getByText('无匹配规则，未改动')).toBeInTheDocument())
+    expect(getTaxRateSelect().value).toBe('0.09')
+  })
+
+  it('P1/T1b：解析抛错 → 提示「取默认税率失败」且税率不变', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockRejectedValue(new Error('后端不可用'))
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.09, sellerId: 1 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(getResolveButton())
+
+    await waitFor(() => expect(screen.getByText('取默认税率失败')).toBeInTheDocument())
+    expect(getTaxRateSelect().value).toBe('0.09')
+  })
+
+  it('P1/T1b：开票（销项）取购买方纳税资质，且带开票日期', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockResolvedValue({ rateId: 6, code: 'VAT13', rate: 0.13, matchedBy: 'rule' })
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ type: 'invoice_out', taxRate: 0.06, buyerId: 2, issueDate: '2026-10-21' })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(getResolveButton())
+
+    await waitFor(() => expect(getTaxRateSelect().value).toBe('0.13'))
+    expect(mockResolveMutateAsync).toHaveBeenCalledWith({ date: '2026-10-21', partnerTaxType: 'general' })
+  })
+
+  it('P1/T1b：无对方资质 → partnerTaxType 为 undefined，不伪造维度（默认档 0% 不回填）', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockResolvedValue({ rateId: 1, code: 'VAT0', rate: 0, matchedBy: 'default' })
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.13 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(getResolveButton())
+
+    await waitFor(() => expect(screen.getByText('默认档为 0%（不征税），未自动回填，请手工确认')).toBeInTheDocument())
+    expect(mockResolveMutateAsync).toHaveBeenCalledWith({ date: undefined, partnerTaxType: undefined })
+    // F1：default 档 0% 不得回填，用户已选的 13% 保持不动
+    expect(getTaxRateSelect().value).toBe('0.13')
+  })
+
+  // ═════════════════════════════════════
+  // T1b 第 2 轮加固（F1/F2/F3）：0% 默认护栏 / 档位校验 / 维度变化清提示
+  // ═════════════════════════════════════
+  it('T1b-F1：matchedBy=default 且 rate=0 → 税率不变且提示「未自动回填」', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockResolvedValue({ rateId: 1, code: 'VAT0', rate: 0, matchedBy: 'default' })
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.13, sellerId: 1 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    expect(getTaxRateSelect().value).toBe('0.13')
+    await user.click(getResolveButton())
+
+    const hint = await screen.findByText(/未自动回填，请手工确认/)
+    expect(hint).toHaveAttribute('aria-live', 'polite')
+    // 关键断言：不得被静默改成 0%
+    expect(getTaxRateSelect().value).toBe('0.13')
+  })
+
+  it('T1b-F2：rate 不在可用档位（5%）→ 税率不变且提示「不在可用税率档位」', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockResolvedValue({ rateId: 9, code: 'VAT5', rate: 0.05, matchedBy: 'rule' })
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.13, sellerId: 1 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(getResolveButton())
+
+    await waitFor(() => expect(screen.getByText('解析结果不在可用税率档位内，未改动')).toBeInTheDocument())
+    expect(getTaxRateSelect().value).toBe('0.13')
+  })
+
+  it('T1b-F3：切换票种/对方后旧提示被清除', async () => {
+    const user = userEvent.setup()
+    mockResolveMutateAsync.mockResolvedValue({ rateId: 6, code: 'VAT13', rate: 0.13, matchedBy: 'rule' })
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.09, sellerId: 1 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(getResolveButton())
+    await waitFor(() => expect(screen.getByText(/^已按规则取默认：13%（规则）$/)).toBeInTheDocument())
+
+    // 切票种（收票 → 开票）：对方主体含义变了，旧结论作废
+    await user.selectOptions(screen.getAllByRole('combobox')[0], 'invoice_out')
+    await waitFor(() => expect(screen.queryByText(/^已按规则取默认：13%（规则）$/)).toBeNull())
+
+    // 再点一次拿到提示后，改对方主体同样清除
+    mockResolveMutateAsync.mockResolvedValue({ rateId: 6, code: 'VAT13', rate: 0.13, matchedBy: 'rule' })
+    await user.selectOptions(screen.getAllByRole('combobox')[0], 'invoice_in')
+    await user.click(getResolveButton())
+    await waitFor(() => expect(screen.getByText(/^已按规则取默认：13%（规则）$/)).toBeInTheDocument())
+
+    const sellerSelect = screen.getByText('请选择销售方').closest('select') as HTMLSelectElement
+    await user.selectOptions(sellerSelect, '2')
+    await waitFor(() => expect(screen.queryByText(/^已按规则取默认：13%（规则）$/)).toBeNull())
+  })
+
+  it('P1/T1b 防御：挂载/改日期/改对方都不触发解析（不存在自动改税率的路径）', async () => {
+    const user = userEvent.setup()
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData({ taxRate: 0.09, sellerId: 1 })}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    // 挂载后 + 用户改开票日期 + 改销售方：解析接口一次都不许被调用
+    expect(mockResolveMutateAsync).not.toHaveBeenCalled()
+
+    const selects = screen.getAllByRole('combobox')
+    await user.selectOptions(selects[0], 'invoice_out')
+    await user.selectOptions(selects[0], 'invoice_in')
+    fireEvent.change(screen.getByLabelText(/开票日期/), { target: { value: '2026-10-21' } })
+
+    expect(mockResolveMutateAsync).not.toHaveBeenCalled()
+    expect(getTaxRateSelect().value).toBe('0.09')
   })
 })
 

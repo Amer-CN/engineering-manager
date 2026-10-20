@@ -227,6 +227,8 @@ function createMockAPI() {
     getSupervisors: async () => ({ success: true, data: [] }),
     // 税率主数据（P1 / T1）：mock 无真实主数据 → 空数组，由调用点回落 constants 兜底
     getTaxRates: async () => ({ success: true, data: [] }),
+    // 默认税率解析（P1 / T1b）：mock 无规则库 → matchedBy='none'（不猜值，调用点据此不改税率）
+    resolveTaxRate: async () => ({ success: true, data: { rateId: null, code: null, rate: null, matchedBy: 'none' as const } }),
     createSupervisor: async () => ({ success: true, data: { id: 1 } }),
     updateSupervisor: async () => ({ success: true }),
     deleteSupervisor: async () => ({ success: true }),

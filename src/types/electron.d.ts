@@ -685,6 +685,18 @@ export interface TaxRate {
   isDefault: number            // 1 = 规则不命中时的全局兜底默认
 }
 
+/**
+ * 默认税率解析结果（GET /api/tax-rates/resolve）。
+ * 服务端真源：TaxEndpoints.cs —— 规则命中 → 默认兜底 → none（不猜值）。
+ * `matchedBy` 三值：rule=命中规则 / default=全局默认兜底 / none=无匹配（调用点不得改税率）。
+ */
+export interface TaxRateResolution {
+  rateId: number | null
+  code: string | null
+  rate: number | null
+  matchedBy: 'rule' | 'default' | 'none'
+}
+
 export interface TaxRule {
   id: number
   businessType: string | null      // 业务类型维度；null = 不限
@@ -1090,10 +1102,11 @@ export interface ElectronAPI {
   getDepartments: () => Promise<{ success: boolean; data?: Department[]; error?: string }>
 
   // 税率主数据（P1 / T1）：GET 纯读端点。
-  // 注：GET /api/tax-rates/resolve（默认税率解析）后端已就绪并有独立测试，但前端
-  // 尚未接通，故这里不声明 resolveTaxRate 契约（避免留一条指向不了实现的死接口）；
-  // 下一任务接默认税率解析时再补方法签名与 TaxRateResolution 类型。
   getTaxRates: () => Promise<{ success: boolean; data?: TaxRate[]; error?: string }>
+  // 默认税率解析（P1 / T1b）：GET 纯读端点，显式由用户点击「按规则取默认」触发。
+  // undefined/null 维度由 api-client 自动过滤，不下发空 query。
+  resolveTaxRate: (params: { date?: string; businessType?: string; partnerTaxType?: string; itemCategory?: string }) =>
+    Promise<{ success: boolean; data?: TaxRateResolution; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

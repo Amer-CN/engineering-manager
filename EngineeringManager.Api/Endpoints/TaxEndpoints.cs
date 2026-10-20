@@ -46,7 +46,7 @@ public static class TaxEndpoints
         // 不写库、不再要求 settings:update（此前用 POST 只为承载多字段条件，属实现便利，
         // 却因门禁 5 按 HTTP 动词提取写端点而被迫挂权限门 —— 读端点不该有写权限门槛）。
         // 仍受 GlobalAuthMiddleware 强制鉴权（未登录 401，不加白名单）。
-        app.MapGet("/api/tax-rates/resolve", (HttpContext ctx, IDbConnection db,
+        app.MapGet("/api/tax-rates/resolve", (IDbConnection db,
             string? date = null, string? businessType = null,
             string? partnerTaxType = null, string? itemCategory = null) =>
         {

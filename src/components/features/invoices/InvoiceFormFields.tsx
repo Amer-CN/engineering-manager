@@ -4,6 +4,7 @@ import type { InvoiceFormData } from './InvoiceForm'
 import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
 import { Input } from '../../ui/Input/Input'
+import { Button } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
 import { categoryOptions, mediumOptions, nonDeductibleReasonOptions, resolveTaxRateSelectOptions } from './constants'
 import { deriveInvoiceKind } from './invoiceConfig'
@@ -22,12 +23,17 @@ interface InvoiceFormFieldsProps {
   handleTaxAmountChange: (amount: number) => void
   duplicateInvoice: { id: number; invoiceNo: string } | null
   invoiceNoWarning: string | null
+  /** P1/T1b 默认税率解析：显式用户动作（点击按钮）才触发，不做任何自动调用 */
+  onResolveTaxRate: () => void
+  resolvePending: boolean
+  taxRateHint: string | null
 }
 
 export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
   formData, setFormData, partners, projects, contracts,
   handleInvoiceNoChange, handleTaxRateChange, handleTaxedAmountChange,
-  handleUntaxedAmountChange, handleTaxAmountChange, duplicateInvoice, invoiceNoWarning
+  handleUntaxedAmountChange, handleTaxAmountChange, duplicateInvoice, invoiceNoWarning,
+  onResolveTaxRate, resolvePending, taxRateHint
 }) => {
   // P1/T1：税率下拉数据源 —— 服务端主数据优先，hook 失败/空/非标准档位时回落 constants 兜底。
   // 发票仍存自己的税率快照，历史发票不受主数据变更影响。
@@ -274,6 +280,16 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {/* P1/T1b 默认税率解析：只读端点，必须由用户显式点击；点一次算一次，可重复点击重算 */}
+          <div className="mt-1">
+            <Button type="button" variant="secondary" size="sm" disabled={resolvePending} onClick={onResolveTaxRate}>
+              按规则取默认
+            </Button>
+            {taxRateHint && (
+              // F4：解析结论经屏幕阅读器播报（polite —— 不打断用户当前操作）
+              <p className="text-caption mt-1" role="status" aria-live="polite" style={{ color: 'var(--muted)' }}>{taxRateHint}</p>
+            )}
+          </div>
         </div>
         <div>
           <Input label="价税合计（含税价）" type="number" value={formData.amount || ''} onChange={e => handleTaxedAmountChange(Number(e.target.value) || 0)} size="sm" min="0" step="0.01" />

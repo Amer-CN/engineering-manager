@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { getAPI } from '../../services/api-adapter'
 
 /**
@@ -20,5 +20,31 @@ export function useTaxRates() {
       return res.data ?? []
     },
     staleTime: 30_000,
+  })
+}
+
+/** 默认税率解析入参（GET query；undefined/null 维度由 api-client 自动过滤）。 */
+export interface ResolveTaxRateParams {
+  date?: string
+  businessType?: string
+  partnerTaxType?: string
+  itemCategory?: string
+}
+
+/**
+ * 默认税率解析（P1 / T1b）：GET /api/tax-rates/resolve。
+ *
+ * 用 useMutation 而非 useQuery —— 解析必须**只能由用户点击**触发，不缓存、不自动跑、
+ * 不在依赖变化时重取（财税零容错：禁止任何静默改税率的路径）。
+ * 失败时 throw：调用点据此提示「取默认税率失败」，不得静默当成功。
+ */
+export function useResolveTaxRate() {
+  return useMutation({
+    mutationFn: async (params: ResolveTaxRateParams) => {
+      const api = await getAPI()
+      const res = await api.resolveTaxRate(params)
+      if (!res.success) throw new Error(res.error || '取默认税率失败')
+      return res.data ?? { rateId: null, code: null, rate: null, matchedBy: 'none' as const }
+    },
   })
 }
