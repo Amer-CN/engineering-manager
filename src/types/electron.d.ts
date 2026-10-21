@@ -1239,8 +1239,8 @@ export interface ElectronAPI {
 
   // ============ 收款记录 ============
   getPaymentRecords: (type?: InvoiceType) => Promise<{ success: boolean; data?: PaymentRecord[]; error?: string }>
-  createPaymentRecord: (record: Partial<PaymentRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
-  updatePaymentRecord: (record: PaymentRecord) => Promise<{ success: boolean; error?: string }>
+  createPaymentRecord: (record: Partial<PaymentRecord>) => Promise<{ success: boolean; data?: number; error?: string }>
+  updatePaymentRecord: (id: number, updates: Partial<PaymentRecord>) => Promise<{ success: boolean; error?: string }>
   deletePaymentRecord: (id: number) => Promise<{ success: boolean; error?: string }>
 
   // ============ 考勤管理 ============

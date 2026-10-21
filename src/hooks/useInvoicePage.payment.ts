@@ -72,7 +72,7 @@ export function useInvoicePagePaymentActions(deps: UseInvoicePagePaymentActionsD
           showToast(result.error || '保存失败', 'error')
           return
         }
-        logCreate('invoices', `回款/付款记录: ${submitData.amount}元`, result.data.id, submitData)
+        logCreate('invoices', `回款/付款记录: ${submitData.amount}元`, result.data, submitData)
       }
       loadData(); setShowPaymentModal(false); setEditingPayment(null)
       showToast(editingPayment ? '记录更新成功' : '记录创建成功', 'success')

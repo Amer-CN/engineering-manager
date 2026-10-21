@@ -246,7 +246,7 @@ function createMockAPI() {
     deleteWorkerTeam: async () => ({ success: true }),
     // 收付款记录
     getPaymentRecords: async () => ({ success: true, data: [] }),
-    createPaymentRecord: async () => ({ success: true, data: { id: 1 } }),
+    createPaymentRecord: async () => ({ success: true, data: 1 }),
     updatePaymentRecord: async () => ({ success: true }),
     deletePaymentRecord: async () => ({ success: true }),
     // 合同模板

@@ -3,6 +3,7 @@ using Dapper;
 using EngineeringManager.Api.Security;
 using EngineeringManager.Api.Services;
 using EngineeringManager.Api.Services.Stt;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EngineeringManager.Api;
@@ -313,7 +314,9 @@ public static class InvoiceEndpoints
             var paymentAmountFen = body.TryGetProperty("amount", out var payAmt) && payAmt.ValueKind == System.Text.Json.JsonValueKind.Number
                 ? MoneyUnit.ToFen((decimal?)payAmt.GetDouble())
                 : null;
-            var allocationError = ValidateInvoiceAllocationLimit(ctx, db, null, invoiceDetails);
+            // 写事务先开（IMMEDIATE），让“读已核销→校验→写入”在同一写锁内完成，堵并发窗口
+            using var tx = BeginWriteTransaction(db);
+            var allocationError = ValidateInvoiceAllocationLimit(ctx, db, null, invoiceDetails, tx);
             if (allocationError != null) return Common.Fail(allocationError, 400);
             // T4b：0 元付款不得登记核销（PUT 为兼容历史数据仍跳过；新建必须拒绝，堵 API 旁路）
             if ((paymentAmountFen ?? 0) <= 0 && ParseInvoiceAllocations(invoiceDetails).Count > 0)
@@ -322,7 +325,6 @@ public static class InvoiceEndpoints
             var allocationTotalError = ValidateAllocationTotalWithinPayment(invoiceDetails, paymentAmountFen);
             if (allocationTotalError != null) return Common.Fail(allocationTotalError, 400);
             // 付款记录与核销投影同一事务：任一失败都不留“付款已存、核销缺失”
-            using var tx = db.BeginTransaction();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO payment_records (type,amount,record_date,project_id,partner_id,contract_id,invoice_details,remarks,file_url,file_type,created_by,created_at, last_modified_at) VALUES (@Type,@Amount,@RecordDate,@ProjectId,@PartnerId,@ContractId,@InvoiceDetails,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new {
@@ -375,12 +377,13 @@ public static class InvoiceEndpoints
             var paymentAmountFen = body.TryGetProperty("amount", out var payAmt) && payAmt.ValueKind == System.Text.Json.JsonValueKind.Number
                 ? MoneyUnit.ToFen((decimal?)payAmt.GetDouble())
                 : null;
-            var allocationError = ValidateInvoiceAllocationLimit(ctx, db, recordId, invoiceDetails);
+            // 写事务先开（IMMEDIATE），校验与更新在同一写锁内完成
+            using var tx = BeginWriteTransaction(db);
+            var allocationError = ValidateInvoiceAllocationLimit(ctx, db, recordId, invoiceDetails, tx);
             if (allocationError != null) return Common.Fail(allocationError, 400);
             // T4b：核销合计不得超过付款记录金额（付款金额为 0 时跳过，兼容历史/未填数据）
             var allocationTotalError = ValidateAllocationTotalWithinPayment(invoiceDetails, paymentAmountFen);
             if (allocationTotalError != null) return Common.Fail(allocationTotalError, 400);
-            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE payment_records SET type=@Type,amount=@Amount,record_date=@RecordDate,
                 project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
                 remarks=@Remarks,file_url=@FileUrl,file_type=@FileType, version=version+1, last_modified_at=@Now WHERE id=@Id",
@@ -552,7 +555,7 @@ public static class InvoiceEndpoints
     /// T4a：超额校验。「除本付款记录外已核销合计 + 本次」&gt; 发票 amount（分）→ 返回可读错误；
     /// 相等允许。paymentId 为 null（新建）时不排除任何记录。发票不存在/已删除不在此拦截。
     /// </summary>
-    private static string? ValidateInvoiceAllocationLimit(HttpContext ctx, IDbConnection db, long? paymentId, string? invoiceDetailsJson)
+    private static string? ValidateInvoiceAllocationLimit(HttpContext ctx, IDbConnection db, long? paymentId, string? invoiceDetailsJson, IDbTransaction tx)
     {
         var allocations = ParseInvoiceAllocations(invoiceDetailsJson);
         if (allocations.Count == 0) return null;
@@ -565,7 +568,7 @@ public static class InvoiceEndpoints
             var invoice = db.QueryFirstOrDefault(
                 $@"SELECT i.[amount] FROM [invoices] i
                    WHERE i.[id]=@Id AND i.[deleted_at] IS NULL AND {visibility}",
-                new { Id = pair.Key, Uid = uid });
+                new { Id = pair.Key, Uid = uid }, tx);
             if (invoice == null) return $"发票 #{pair.Key} 不存在或无权访问";
             var invoiceAmountFen = ToFenFromDb(invoice.amount);
             // 排除本付款记录；已软删除付款记录的残留行不占额度
@@ -574,7 +577,7 @@ public static class InvoiceEndpoints
                   FROM [invoice_allocations] a
                   JOIN [payment_records] pr ON pr.[id]=a.[payment_id]
                   WHERE a.[invoice_id]=@InvoiceId AND a.[payment_id]<>@PaymentId AND pr.[deleted_at] IS NULL",
-                new { InvoiceId = pair.Key, PaymentId = paymentId ?? 0 });
+                new { InvoiceId = pair.Key, PaymentId = paymentId ?? 0 }, tx);
             if (otherAllocatedFen + pair.Value > invoiceAmountFen)
             {
                 var remainingFen = Math.Max(0, invoiceAmountFen - otherAllocatedFen);
@@ -601,6 +604,13 @@ public static class InvoiceEndpoints
     /// <summary>DB 金额列（分，兼容 INTEGER/REAL 亲和性）→ long 分。</summary>
     private static long ToFenFromDb(object? v) =>
         v == null || v is DBNull ? 0 : (long)Math.Round(Convert.ToDouble(v));
+
+    /// <summary>
+    /// 写事务统一用 IMMEDIATE：SQLite 默认 DEFERRED 会先拿读锁、写时再升级，
+    /// 使「读已核销 → 校验 → 写入」之间存在并发窗口（两个请求可同时通过超额校验）。
+    /// </summary>
+    private static IDbTransaction BeginWriteTransaction(IDbConnection db) =>
+        db is SqliteConnection sqlite ? sqlite.BeginTransaction(deferred: false) : db.BeginTransaction();
 
     /// <summary>
     /// FP02 后端校验（与前端 validateInvoiceNumber 同规则）：

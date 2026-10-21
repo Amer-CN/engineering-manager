@@ -30,7 +30,7 @@ public class InvoiceAllocationTests : ApiTestBase
             new AuthenticationHeaderValue("Bearer", json.GetProperty("data").GetProperty("token").GetString());
     }
 
-    private async Task<long> CreateInvoiceAsync(decimal amount, string? name = null)
+    private async Task<long> CreateInvoiceAsync(decimal amount, string? name = null, long? projectId = null)
     {
         var resp = await Client.PostAsJsonAsync("/api/invoices", new
         {
@@ -38,8 +38,49 @@ public class InvoiceAllocationTests : ApiTestBase
             amount,
             status = "issued",
             type = "invoice_in",
-            invoiceKind = "paper_special"
+            invoiceKind = "paper_special",
+            projectId
         });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        return json.GetProperty("data").GetInt64();
+    }
+
+    // ── T4c：非管理员 + 项目授权回归（P1 越权修复的自动化网）──
+
+    private async Task<string> LoginAsync(string username, string password)
+    {
+        var resp = await Client.PostAsJsonAsync("/api/auth/login", new { username, password });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        return json.GetProperty("data").GetProperty("token").GetString()!;
+    }
+
+    private void SetAuth(string token) =>
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+    /// <summary>复制 admin 的密码哈希造一个 accountant 用户（默认有 invoices:create/update/read）。</summary>
+    private void SeedAccountant()
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        conn.Execute(@"INSERT OR IGNORE INTO [users]
+            (id,username,password,password_hash,password_salt,password_hash_version,display_name,role_id,status,created_at)
+            SELECT '2','acc1',[password],[password_hash],[password_salt],[password_hash_version],'会计','accountant','active',[created_at]
+            FROM [users] WHERE [id]='1'");
+    }
+
+    private void AuthorizeProject(long projectId, string userId)
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        conn.Execute("INSERT OR IGNORE INTO [project_authorizations] ([project_id],[user_id]) VALUES (@P,@U)",
+            new { P = projectId, U = userId });
+    }
+
+    private async Task<long> CreateProjectAsync()
+    {
+        var resp = await Client.PostAsJsonAsync("/api/projects", new { name = $"核销项目-{Guid.NewGuid():N}" });
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
         return json.GetProperty("data").GetInt64();
@@ -354,6 +395,70 @@ public class InvoiceAllocationTests : ApiTestBase
         var row = rows.Single(r => r.GetProperty("id").GetInt64() == invoiceId);
         Assert.Equal(120.5m, row.GetProperty("allocated_amount").GetDecimal());
     }
+
+    // ── T4c：非管理员越权回归 ──
+
+    [Fact]
+    public async Task NonAdmin_CannotAllocateToUnauthorizedInvoice_NoBalanceLeak_AndNoRowsWritten()
+    {
+        SetAuth(await LoginAsync("admin", Password));
+        var projectId = await CreateProjectAsync();
+        var invoiceId = await CreateInvoiceAsync(1000m, projectId: projectId);
+
+        SeedAccountant();
+        SetAuth(await LoginAsync("acc1", Password));
+
+        // 会计未被授权该项目：既不能挂核销，也不能从错误信息里探测余额
+        var resp = await Client.PostAsJsonAsync("/api/payment-records", new
+        {
+            type = "invoice_in",
+            amount = 100m,
+            recordDate = "2026-10-10",
+            invoiceDetails = Details((invoiceId, 100m))
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var error = await ReadError(resp);
+        Assert.Contains("不存在或无权访问", error);
+        Assert.DoesNotContain("剩余", error);
+
+        // 不应产生付款记录与核销行
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            Assert.Equal(0L, conn.ExecuteScalar<long>("SELECT COUNT(*) FROM [payment_records]"));
+            Assert.Equal(0L, conn.ExecuteScalar<long>("SELECT COUNT(*) FROM [invoice_allocations]"));
+        }
+
+        // 未授权发票的核销明细 → 404
+        var get = await Client.GetAsync($"/api/invoices/{invoiceId}/allocations");
+        Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+    }
+
+    [Fact]
+    public async Task NonAdmin_WithProjectAuthorization_CanAllocate()
+    {
+        SetAuth(await LoginAsync("admin", Password));
+        var projectId = await CreateProjectAsync();
+        var invoiceId = await CreateInvoiceAsync(1000m, projectId: projectId);
+
+        SeedAccountant();
+        AuthorizeProject(projectId, "2");
+        SetAuth(await LoginAsync("acc1", Password));
+
+        var resp = await Client.PostAsJsonAsync("/api/payment-records", new
+        {
+            type = "invoice_in",
+            amount = 100m,
+            recordDate = "2026-10-10",
+            invoiceDetails = Details((invoiceId, 100m))
+        });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var get = await Client.GetAsync($"/api/invoices/{invoiceId}/allocations");
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+        var data = (await get.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        Assert.Equal(100m, data.GetProperty("allocated").GetDecimal());
+    }
 }
 
 /// <summary>
@@ -429,6 +534,63 @@ public class InvoiceAllocationBackfillTests : IDisposable
         }
         MigrationRunner.Run(_connectionString);
 
+        using (var conn = new SqliteConnection(_connectionString))
+        {
+            conn.Open();
+            Assert.Equal(2L, conn.ExecuteScalar<long>("SELECT COUNT(*) FROM [invoice_allocations]"));
+            Assert.Equal(7575L, conn.ExecuteScalar<long>("SELECT SUM([amount_fen]) FROM [invoice_allocations]"));
+        }
+    }
+
+    // 067：字符串金额（paymentAmount 为 "60.25"）的历史条目补回填
+    [Fact]
+    public void Migration067_BackfillsStringPaymentAmount_AndIsIdempotent()
+    {
+        // 历史库状态：067 之前（065/066 已跑，字符串金额被 065 跳过）
+        MigrationRunner.Run(_connectionString, "067_PaymentAllocationsBackfillText.sql");
+
+        using (var conn = new SqliteConnection(_connectionString))
+        {
+            conn.Open();
+            conn.Execute("INSERT INTO [invoices] ([id],[amount],[name],[created_at],[updated_at]) " +
+                         "VALUES (1, 10000, '字符串金额发票', datetime('now'), datetime('now'))");
+            conn.Execute(
+                "INSERT INTO [payment_records] ([id],[type],[amount],[record_date],[invoice_details],[remarks],[created_at]) " +
+                "VALUES (1,'invoice_in',6025,'2026-10-01','[{\"invoiceId\":1,\"paymentAmount\":\"60.25\"}]','字符串金额',datetime('now'))");
+            conn.Execute(
+                "INSERT INTO [payment_records] ([id],[type],[amount],[record_date],[invoice_details],[remarks],[created_at]) " +
+                "VALUES (2,'invoice_in',100,'2026-10-02','[{\"invoiceId\":1,\"paymentAmount\":\"abc\"}]','非数字',datetime('now'))");
+            // 同一 payment 内重复 invoiceId 的字符串金额 → 必须 SUM（10 + 5.5 = 15.50 元 → 1550 分）
+            conn.Execute(
+                "INSERT INTO [payment_records] ([id],[type],[amount],[record_date],[invoice_details],[remarks],[created_at]) " +
+                "VALUES (3,'invoice_in',1550,'2026-10-03','[{\"invoiceId\":1,\"paymentAmount\":\"10\"},{\"invoiceId\":1,\"paymentAmount\":\"5.5\"}]','重复字符串',datetime('now'))");
+            // invoiceId=0 必须排除（与 065 口径一致）
+            conn.Execute(
+                "INSERT INTO [payment_records] ([id],[type],[amount],[record_date],[invoice_details],[remarks],[created_at]) " +
+                "VALUES (4,'invoice_in',700,'2026-10-04','[{\"invoiceId\":0,\"paymentAmount\":\"7\"}]','零 id',datetime('now'))");
+        }
+
+        MigrationRunner.Run(_connectionString);
+
+        using (var conn = new SqliteConnection(_connectionString))
+        {
+            conn.Open();
+            var rows = conn.Query<AllocRow>(
+                "SELECT [invoice_id] AS InvoiceId, [payment_id] AS PaymentId, [amount_fen] AS AmountFen " +
+                "FROM [invoice_allocations] ORDER BY [payment_id]").ToList();
+            Assert.Equal(2, rows.Count);
+            Assert.Equal(1L, rows[0].PaymentId);
+            Assert.Equal(6025L, rows[0].AmountFen);
+            // 重复 invoiceId 聚合：10 + 5.5 = 15.50 元 → 1550 分
+            Assert.Equal(3L, rows[1].PaymentId);
+            Assert.Equal(1550L, rows[1].AmountFen);
+            Assert.DoesNotContain(rows, r => r.PaymentId == 4); // invoiceId=0 被排除
+            Assert.Equal(7575L, rows.Sum(r => r.AmountFen));
+
+            // 重跑：清版本记录后再跑，不产生重复
+            conn.Execute("DELETE FROM [schema_versions] WHERE [script_name] LIKE '%067_PaymentAllocationsBackfillText.sql'");
+        }
+        MigrationRunner.Run(_connectionString);
         using (var conn = new SqliteConnection(_connectionString))
         {
             conn.Open();

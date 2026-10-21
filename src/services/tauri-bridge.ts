@@ -470,7 +470,7 @@ export const tauriAPI = {
   getPaymentRecords: (paymentType?: string, projectId?: number) =>
     apiClient.get<PaymentRecord[]>('/api/payment-records', { paymentType, projectId }),
   createPaymentRecord: (record: Partial<PaymentRecord>) =>
-    apiClient.post<{ id: number }>('/api/payment-records', record),
+    apiClient.post<number>('/api/payment-records', record),
   updatePaymentRecord: (id: number, updates: Partial<PaymentRecord>) =>
     apiClient.put<void>('/api/payment-records', { id, ...updates }),
   deletePaymentRecord: (id: number) =>
