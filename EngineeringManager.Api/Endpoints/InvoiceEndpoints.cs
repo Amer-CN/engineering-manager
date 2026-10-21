@@ -305,6 +305,12 @@ public static class InvoiceEndpoints
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var invoiceDetails = body.TryGetProperty("invoiceDetails", out var iv) ? (iv.ValueKind == System.Text.Json.JsonValueKind.String ? iv.GetString() : iv.GetRawText()) : null;
+            // T4a：核销超额校验（新建尚无 payment_id，其他付款记录全部计入；等额允许）
+            var allocationError = ValidateInvoiceAllocationLimit(ctx, db, null, invoiceDetails);
+            if (allocationError != null) return Common.Fail(allocationError, 400);
+            // 付款记录与核销投影同一事务：任一失败都不留“付款已存、核销缺失”
+            using var tx = db.BeginTransaction();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO payment_records (type,amount,record_date,project_id,partner_id,contract_id,invoice_details,remarks,file_url,file_type,created_by,created_at, last_modified_at) VALUES (@Type,@Amount,@RecordDate,@ProjectId,@PartnerId,@ContractId,@InvoiceDetails,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new {
@@ -314,12 +320,15 @@ public static class InvoiceEndpoints
                     ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
                     PartnerId = body.TryGetProperty("partnerId", out var pi) && pi.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)pi.GetInt64() : null,
                     ContractId = body.TryGetProperty("contractId", out var ci) && ci.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)ci.GetInt64() : null,
-                    InvoiceDetails = body.TryGetProperty("invoiceDetails", out var iv) ? (iv.ValueKind == System.Text.Json.JsonValueKind.String ? iv.GetString() : iv.GetRawText()) : null,
+                    InvoiceDetails = invoiceDetails,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     FileUrl = body.TryGetProperty("fileUrl", out var fu) ? fu.GetString() : null,
                     FileType = body.TryGetProperty("fileType", out var ft) ? ft.GetString() : null,
                     CreatedBy = uid, Now = now()
-                });
+                }, tx);
+            // T4a：付款记录与核销投影同事务提交
+            SyncInvoiceAllocations(db, id, invoiceDetails, tx);
+            tx.Commit();
             return Common.Ok(id);
         });
 
@@ -332,6 +341,7 @@ public static class InvoiceEndpoints
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var invoiceDetails = body.TryGetProperty("invoiceDetails", out var iv) ? (iv.ValueKind == System.Text.Json.JsonValueKind.String ? iv.GetString() : iv.GetRawText()) : null;
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
             // R9-13 方案丙更新侧：授权项目跨人可改 + audit（B15）
             // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
@@ -349,6 +359,9 @@ public static class InvoiceEndpoints
             if (access == RowWriteOutcome.Denied) return Results.Forbid();
 
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
+            // T4a：核销超额校验（排除本付款记录已核销部分；等额允许）
+            var allocationError = ValidateInvoiceAllocationLimit(ctx, db, recordId, invoiceDetails);
+            if (allocationError != null) return Common.Fail(allocationError, 400);
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE payment_records SET type=@Type,amount=@Amount,record_date=@RecordDate,
                 project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
@@ -361,7 +374,7 @@ public static class InvoiceEndpoints
                     ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
                     PartnerId = body.TryGetProperty("partnerId", out var pi) && pi.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)pi.GetInt64() : null,
                     ContractId = body.TryGetProperty("contractId", out var ci) && ci.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)ci.GetInt64() : null,
-                    InvoiceDetails = body.TryGetProperty("invoiceDetails", out var iv) ? (iv.ValueKind == System.Text.Json.JsonValueKind.String ? iv.GetString() : iv.GetRawText()) : null,
+                    InvoiceDetails = invoiceDetails,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     FileUrl = body.TryGetProperty("fileUrl", out var fu) ? fu.GetString() : null,
                     FileType = body.TryGetProperty("fileType", out var ft) ? ft.GetString() : null
@@ -371,6 +384,8 @@ public static class InvoiceEndpoints
                 // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
                 AuditWriter.CrossUserEdit(db, tx, ctx, "payment_records", recordId, "PUT /api/payment-records", createdBy, projectId);
             }
+            // T4a：更新与核销重建同事务（避免付款已改、核销未同步）
+            if (affected > 0) SyncInvoiceAllocations(db, recordId, invoiceDetails, tx);
             tx.Commit();
             // affected>0 → 200；竞态兜底走 WriteResult（404/403 现状语义）
             return await Common.WriteResult(affected, db, "payment_records", recordId);
@@ -382,9 +397,178 @@ public static class InvoiceEndpoints
             // G2 B4: 收付款记录 → invoices:delete
             if (!CurrentUser.HasPermission(ctx, db, "invoices:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            return (await db.ExecuteAsync("UPDATE payment_records SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
+            // T4a：软删除与清除核销投影同事务，避免余额被继续占用或删除成功但投影残留
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync("UPDATE payment_records SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() }, tx);
+            if (affected <= 0) return Results.Forbid();
+            await db.ExecuteAsync("DELETE FROM [invoice_allocations] WHERE [payment_id]=@Id", new { Id = id }, tx);
+            tx.Commit();
+            return Common.Ok();
+        });
+
+        // T4a：发票核销明细 + 已核销 / 未核销余额（分→元返回）
+        app.MapGet("/api/invoices/{id}/allocations", async (HttpContext ctx, long id, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // 与 GET /api/invoices 同口径的可见性（created_by / 管理员 / 项目授权），防越权读
+            var invoice = await db.QueryFirstOrDefaultAsync(
+                @"SELECT i.[id], i.[amount] FROM [invoices] i
+                  WHERE i.[id]=@Id AND i.[deleted_at] IS NULL
+                    AND (i.[created_by]=@Uid OR @IsAdmin=1
+                         OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=i.[project_id] AND user_id=@Uid))",
+                new { Id = id, Uid = uid, IsAdmin = isAdmin });
+            if (invoice == null) return Common.NotFound("发票不存在");
+
+            // 汇总按“全部未软删除付款”计算（财务口径不随查看者变化）；
+            // 明细再套用与 GET /api/payment-records 同款 user-dim，防越权读他人付款备注/金额。
+            var scope = CurrentUser.GetDataScope(ctx);
+            var visibleFilter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "pr.[project_id]", "pr.[created_by]");
+            var rows = (await db.QueryAsync(
+                $@"SELECT a.[payment_id] AS payment_id, pr.[record_date] AS record_date, pr.[type] AS type,
+                          a.[amount_fen] AS amount_fen, pr.[remarks] AS remarks,
+                          CASE WHEN {visibleFilter} THEN 1 ELSE 0 END AS is_visible
+                   FROM [invoice_allocations] a
+                   JOIN [payment_records] pr ON pr.[id]=a.[payment_id]
+                   WHERE a.[invoice_id]=@InvoiceId AND pr.[deleted_at] IS NULL
+                   ORDER BY pr.[record_date], pr.[id]",
+                new { InvoiceId = id, Uid = uid, IsAdmin = isAdmin })).ToList();
+
+            long amountFen = ToFenFromDb(invoice.amount);
+            long allocatedFen = 0;
+            var items = new List<object>();
+            var itemsFiltered = false;
+            foreach (var r in rows)
+            {
+                allocatedFen += Convert.ToInt64(r.amount_fen);
+                var isVisible = Convert.ToInt64(r.is_visible) == 1;
+                if (!isVisible) { itemsFiltered = true; continue; }
+                items.Add(new
+                {
+                    paymentId = Convert.ToInt64(r.payment_id),
+                    recordDate = r.record_date as string,
+                    type = r.type as string,
+                    amount = MoneyUnit.ToYuan(Convert.ToInt64(r.amount_fen)),
+                    remarks = r.remarks as string
+                });
+            }
+            return Common.Ok(new
+            {
+                invoiceId = id,
+                amount = MoneyUnit.ToYuan(amountFen),
+                allocated = MoneyUnit.ToYuan(allocatedFen),
+                outstanding = MoneyUnit.ToYuan(amountFen - allocatedFen),
+                itemsFiltered,
+                items
+            });
         });
     }
+
+    /// <summary>
+    /// T4a：把 payment_records.invoice_details JSON（paymentAmount 单位元）投影到
+    /// invoice_allocations（amount_fen 单位分）。先删本付款记录旧行再重建，
+    /// 因而 PUT 改金额/换发票不会残留旧行；重复 invoiceId 先累加避免唯一索引冲突。
+    /// 容错：null/空/非法 JSON/非数组 → 视为无核销（只清旧行）。
+    /// </summary>
+    private static void SyncInvoiceAllocations(IDbConnection db, long paymentId, string? invoiceDetailsJson, IDbTransaction tx)
+    {
+        // 由调用方事务统一提交：先删后建，中途失败整体回滚，不留“零核销”中间态
+        db.Execute("DELETE FROM [invoice_allocations] WHERE [payment_id]=@PaymentId", new { PaymentId = paymentId }, tx);
+        var allocations = ParseInvoiceAllocations(invoiceDetailsJson);
+        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        foreach (var pair in allocations)
+        {
+            db.Execute(
+                @"INSERT INTO [invoice_allocations] ([invoice_id],[payment_id],[amount_fen],[created_at],[updated_at])
+                  VALUES (@InvoiceId,@PaymentId,@AmountFen,@Now,@Now)",
+                new { InvoiceId = pair.Key, PaymentId = paymentId, AmountFen = pair.Value, Now = now }, tx);
+        }
+    }
+
+    /// <summary>
+    /// T4a：解析 invoice_details JSON → { invoiceId: 分 }。元→分走 MoneyUnit.ToFen（四舍五入）。
+    /// 容错：非法 JSON/非数组返回空；invoiceId&lt;=0 或金额&lt;=0 的条目丢弃；同一 invoiceId 累加。
+    /// </summary>
+    private static Dictionary<long, long> ParseInvoiceAllocations(string? invoiceDetailsJson)
+    {
+        var result = new Dictionary<long, long>();
+        if (string.IsNullOrWhiteSpace(invoiceDetailsJson)) return result;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(invoiceDetailsJson);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) return result;
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                if (item.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+                if (!item.TryGetProperty("invoiceId", out var idEl)
+                    || idEl.ValueKind != System.Text.Json.JsonValueKind.Number
+                    || !idEl.TryGetInt64(out var invoiceId)
+                    || invoiceId <= 0) continue;
+                if (!item.TryGetProperty("paymentAmount", out var amtEl)) continue;
+                decimal amountYuan;
+                if (amtEl.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    if (!amtEl.TryGetDecimal(out amountYuan)) continue;
+                }
+                else if (amtEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    if (!decimal.TryParse(amtEl.GetString(), System.Globalization.NumberStyles.Number,
+                            System.Globalization.CultureInfo.InvariantCulture, out amountYuan)) continue;
+                }
+                else continue;
+                // 先按 2 位四舍五入（AwayFromZero，与 SQLite ROUND 同口径），再转分，避免 3 位小数差 1 分
+                var amountYuanRounded = Math.Round(amountYuan, 2, MidpointRounding.AwayFromZero);
+                var amountFen = MoneyUnit.ToFen((decimal?)amountYuanRounded) ?? 0;
+                if (amountFen <= 0) continue;
+                result[invoiceId] = result.GetValueOrDefault(invoiceId) + amountFen;
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new Dictionary<long, long>();
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// T4a：超额校验。「除本付款记录外已核销合计 + 本次」&gt; 发票 amount（分）→ 返回可读错误；
+    /// 相等允许。paymentId 为 null（新建）时不排除任何记录。发票不存在/已删除不在此拦截。
+    /// </summary>
+    private static string? ValidateInvoiceAllocationLimit(HttpContext ctx, IDbConnection db, long? paymentId, string? invoiceDetailsJson)
+    {
+        var allocations = ParseInvoiceAllocations(invoiceDetailsJson);
+        if (allocations.Count == 0) return null;
+        var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+        var scope = CurrentUser.GetDataScope(ctx);
+        // 与 GET /api/invoices 同口径：不可见的发票既不能挂核销，也不能通过错误信息泄露余额
+        var visibility = CurrentUser.UserFilterWithAuthorizedProjects(scope, "i.[project_id]", "i.[created_by]");
+        foreach (var pair in allocations)
+        {
+            var invoice = db.QueryFirstOrDefault(
+                $@"SELECT i.[amount] FROM [invoices] i
+                   WHERE i.[id]=@Id AND i.[deleted_at] IS NULL AND {visibility}",
+                new { Id = pair.Key, Uid = uid });
+            if (invoice == null) return $"发票 #{pair.Key} 不存在或无权访问";
+            var invoiceAmountFen = ToFenFromDb(invoice.amount);
+            // 排除本付款记录；已软删除付款记录的残留行不占额度
+            var otherAllocatedFen = db.ExecuteScalar<long>(
+                @"SELECT COALESCE(SUM(a.[amount_fen]),0)
+                  FROM [invoice_allocations] a
+                  JOIN [payment_records] pr ON pr.[id]=a.[payment_id]
+                  WHERE a.[invoice_id]=@InvoiceId AND a.[payment_id]<>@PaymentId AND pr.[deleted_at] IS NULL",
+                new { InvoiceId = pair.Key, PaymentId = paymentId ?? 0 });
+            if (otherAllocatedFen + pair.Value > invoiceAmountFen)
+            {
+                var remainingFen = Math.Max(0, invoiceAmountFen - otherAllocatedFen);
+                return $"核销金额超过发票金额（发票 #{pair.Key} 剩余 {MoneyUnit.ToYuanDecimal(remainingFen):0.00} 元）";
+            }
+        }
+        return null;
+    }
+
+    /// <summary>DB 金额列（分，兼容 INTEGER/REAL 亲和性）→ long 分。</summary>
+    private static long ToFenFromDb(object? v) =>
+        v == null || v is DBNull ? 0 : (long)Math.Round(Convert.ToDouble(v));
 
     /// <summary>
     /// FP02 后端校验（与前端 validateInvoiceNumber 同规则）：
