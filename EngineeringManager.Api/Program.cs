@@ -525,6 +525,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // T1 税率主数据与规则
         app.RegisterTaxEndpoints();
+
+        // T5a 凭证模板与凭证预览
+        app.RegisterVoucherEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()
