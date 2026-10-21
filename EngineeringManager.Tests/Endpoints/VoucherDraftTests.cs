@@ -297,6 +297,52 @@ public class VoucherDraftTests : ApiTestBase
         Assert.Equal(113000L, debit);
         Assert.Equal(113000L, credit);
     }
+
+    // T6a P3：DELETE 的归属与状态分支
+
+    [Fact]
+    public async Task Delete_DraftCreatedByAnotherUser_Returns403()
+    {
+        await AuthAdminAsync();
+        var invoiceId = await CreateInvoiceAsync("invoice_out", 1060m, 1000m, 60m);
+        var draft = await ReadData(await CreateDraftAsync(invoiceId));
+        var voucherId = draft.GetProperty("id").GetInt64();
+
+        SeedUser("2", "acc1", "accountant");
+        SetAuth(await LoginAsync("acc1"));
+
+        var resp = await Client.DeleteAsync($"/api/vouchers/{voucherId}");
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+
+        // 未被误删
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        Assert.Equal(1L, conn.ExecuteScalar<long>("SELECT COUNT(*) FROM [vouchers] WHERE [id]=@Id", new { Id = voucherId }));
+    }
+
+    [Fact]
+    public async Task Delete_NonDraftVoucher_Returns400()
+    {
+        await AuthAdminAsync();
+        var invoiceId = await CreateInvoiceAsync("invoice_out", 1060m, 1000m, 60m);
+        var draft = await ReadData(await CreateDraftAsync(invoiceId));
+        var voucherId = draft.GetProperty("id").GetInt64();
+
+        // 直接改成 posted（本轮无过账端点，模拟 T6b 后的状态）
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            conn.Execute("UPDATE [vouchers] SET [status]='posted' WHERE [id]=@Id", new { Id = voucherId });
+        }
+
+        var resp = await Client.DeleteAsync($"/api/vouchers/{voucherId}");
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("仅草稿", await ReadError(resp));
+
+        using var conn2 = new SqliteConnection(ConnectionString);
+        conn2.Open();
+        Assert.Equal(1L, conn2.ExecuteScalar<long>("SELECT COUNT(*) FROM [vouchers] WHERE [id]=@Id", new { Id = voucherId }));
+    }
 }
 
 /// <summary>
@@ -355,6 +401,37 @@ public class VoucherPermissionMigrationTests : IDisposable
             Assert.Equal(1, perms.Count(p => p == "vouchers:create"));
             Assert.Equal(1, perms.Count(p => p == "vouchers:read"));
             Assert.Equal(1, perms.Count(p => p == "vouchers:delete"));
+        }
+    }
+
+    // 069 边界：permissions 为 NULL / '' / '[]' 时也能正确初始化三码
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("[]")]
+    public void Migration069_HandlesEmptyOrNullPermissions(string? seed)
+    {
+        EngineeringManager.Api.Migrations.MigrationRunner.Run(_connectionString, "069_AddVoucherPermissions.sql");
+
+        using (var conn = new SqliteConnection(_connectionString))
+        {
+            conn.Open();
+            conn.Execute("UPDATE [roles] SET [permissions]=@P WHERE [id] IN ('admin','accountant')", new { P = seed });
+        }
+
+        EngineeringManager.Api.Migrations.MigrationRunner.Run(_connectionString);
+
+        using (var conn = new SqliteConnection(_connectionString))
+        {
+            conn.Open();
+            foreach (var roleId in new[] { "admin", "accountant" })
+            {
+                var json = conn.ExecuteScalar<string>("SELECT [permissions] FROM [roles] WHERE [id]=@R", new { R = roleId })!;
+                var perms = JsonSerializer.Deserialize<string[]>(json)!;
+                Assert.Contains("vouchers:create", perms);
+                Assert.Contains("vouchers:read", perms);
+                Assert.Contains("vouchers:delete", perms);
+            }
         }
     }
 
