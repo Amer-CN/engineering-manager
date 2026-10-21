@@ -221,6 +221,35 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
         </div>
       </div>
 
+      {/* T8 收票字段骨架：校验码 / 销方税号 / 开票人 / 收款人 / 复核人（均非必填，空值归一为 null） */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Input label="校验码" type="text" value={formData.verifyCode}
+            onChange={e => setFormData({ ...formData, verifyCode: e.target.value })}
+            size="sm" className="font-mono" maxLength={32} />
+        </div>
+        <div>
+          <Input label="销方税号" type="text" value={formData.sellerTaxNo}
+            onChange={e => setFormData({ ...formData, sellerTaxNo: e.target.value })}
+            size="sm" className="font-mono" maxLength={32} />
+        </div>
+        <div>
+          <Input label="开票人" type="text" value={formData.drawer}
+            onChange={e => setFormData({ ...formData, drawer: e.target.value })}
+            size="sm" maxLength={32} />
+        </div>
+        <div>
+          <Input label="收款人" type="text" value={formData.payee}
+            onChange={e => setFormData({ ...formData, payee: e.target.value })}
+            size="sm" maxLength={32} />
+        </div>
+        <div>
+          <Input label="复核人" type="text" value={formData.reviewer}
+            onChange={e => setFormData({ ...formData, reviewer: e.target.value })}
+            size="sm" maxLength={32} />
+        </div>
+      </div>
+
       <div>
         <Input label="发票名称" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} size="sm" placeholder="如: 工程款、材料款" required />
       </div>

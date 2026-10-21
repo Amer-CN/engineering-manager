@@ -32,6 +32,12 @@ export interface InvoiceFormData {
   // T3 税收分类编码 / 优惠政策：非必填，空串由后端归一为 null
   taxCode: string
   taxPolicy: string
+  // T8 收票字段骨架（均可选，空串由后端归一为 null）
+  verifyCode: string
+  sellerTaxNo: string
+  drawer: string
+  payee: string
+  reviewer: string
   name: string
   amount: number
   priceAmount: number

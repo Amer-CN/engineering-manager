@@ -818,6 +818,12 @@ export interface Invoice {
   taxCode?: string | null
   // T3 优惠政策标识（金蝶 FTAXPOLICY 口径）：可选，≤64 位
   taxPolicy?: string | null
+  // T8 收票字段骨架：校验码 / 销方税号 / 开票人 / 收款人 / 复核人（均可选）
+  verifyCode?: string | null
+  sellerTaxNo?: string | null
+  drawer?: string | null
+  payee?: string | null
+  reviewer?: string | null
   name: string                   // 发票名称/摘要
   amount: number                 // 价税合计（含税金额）
   taxAmount: number             // 税额

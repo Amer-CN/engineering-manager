@@ -176,7 +176,9 @@ record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long
     bool? IsDeducted, string? DeductDate, string? DeductPeriod, double? DeductibleTax,
     // T3：税收分类编码（金蝶 FTAXCODE / PT IV_GTTAXCODE）与优惠政策标识（金蝶 FTAXPOLICY）；
     // 均为可选，空白归一为 null，落库列 tax_code / tax_policy（064 迁移）
-    string? TaxCode, string? TaxPolicy);
+    string? TaxCode, string? TaxPolicy,
+    // T8：收票字段骨架（校验码 / 销方税号 / 开票人 / 收款人 / 复核人）；空白归一为 null
+    string? VerifyCode, string? SellerTaxNo, string? Drawer, string? Payee, string? Reviewer);
 record PaymentRecordDto(long? Id, string? Type, double? Amount, string? RecordDate, long? ProjectId, long? PartnerId, long? ContractId, string? InvoiceDetails, string? Remarks, string? FileUrl, string? FileType);
 record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWorkerId, string YearMonth, double? WorkDays, int? DaysOff, bool? IsFullAttendance, string? DailyStatus, string? FileUrl, string? FileName);
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);

@@ -113,6 +113,11 @@ describe('InvoiceForm', () => {
     invoiceCode: '',
     taxCode: '',
     taxPolicy: '',
+    verifyCode: '',
+    sellerTaxNo: '',
+    drawer: '',
+    payee: '',
+    reviewer: '',
     name: '',
     amount: 0,
     priceAmount: 0,
@@ -170,6 +175,42 @@ describe('InvoiceForm', () => {
     expect(screen.getByText('取消')).toBeInTheDocument()
     // 创建按钮
     expect(screen.getByText('创建')).toBeInTheDocument()
+  })
+
+  it('T8: 渲染收票字段并随提交传递', async () => {
+    const { InvoiceForm } = await importModule()
+    const { container } = render(
+      <InvoiceForm
+        initialData={createInitialData()}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    expect(screen.getByLabelText('校验码')).toBeInTheDocument()
+    expect(screen.getByLabelText('销方税号')).toBeInTheDocument()
+    expect(screen.getByLabelText('开票人')).toBeInTheDocument()
+    expect(screen.getByLabelText('收款人')).toBeInTheDocument()
+    expect(screen.getByLabelText('复核人')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('校验码'), { target: { value: '12345678901234567890' } })
+    fireEvent.change(screen.getByLabelText('销方税号'), { target: { value: '91310000MA1FL1234X' } })
+    fireEvent.change(screen.getByLabelText('开票人'), { target: { value: '张三' } })
+    fireEvent.change(screen.getByLabelText('收款人'), { target: { value: '李四' } })
+    fireEvent.change(screen.getByLabelText('复核人'), { target: { value: '王五' } })
+
+    fireEvent.submit(container.querySelector('form')!)
+
+    expect(mockOnSubmit).toHaveBeenCalledTimes(1)
+    const payload = mockOnSubmit.mock.calls[0][0]
+    expect(payload.verifyCode).toBe('12345678901234567890')
+    expect(payload.sellerTaxNo).toBe('91310000MA1FL1234X')
+    expect(payload.drawer).toBe('张三')
+    expect(payload.payee).toBe('李四')
+    expect(payload.reviewer).toBe('王五')
   })
 
   it('renders in edit mode with initialData', async () => {

@@ -101,6 +101,12 @@ export const defaultInvoiceFormData: InvoiceFormData = {
   // T3 税收分类编码 / 优惠政策：非必填，空串由服务端归一为 null
   taxCode: '',
   taxPolicy: '',
+  // T8 收票字段骨架：非必填
+  verifyCode: '',
+  sellerTaxNo: '',
+  drawer: '',
+  payee: '',
+  reviewer: '',
   name: '',
   amount: 0,
   priceAmount: 0,
@@ -151,6 +157,11 @@ export function getInvoiceFormData(editingInvoice: Invoice | null): InvoiceFormD
     // T3：编辑回填两字段，否则保存一次会把库内 tax_code/tax_policy 清成 null
     taxCode: editingInvoice.taxCode || '',
     taxPolicy: editingInvoice.taxPolicy || '',
+    verifyCode: editingInvoice.verifyCode || '',
+    sellerTaxNo: editingInvoice.sellerTaxNo || '',
+    drawer: editingInvoice.drawer || '',
+    payee: editingInvoice.payee || '',
+    reviewer: editingInvoice.reviewer || '',
     name: editingInvoice.name || '',
     amount: editingInvoice.amount || 0,
     priceAmount: editingInvoice.priceAmount || editingInvoice.amount || 0,
