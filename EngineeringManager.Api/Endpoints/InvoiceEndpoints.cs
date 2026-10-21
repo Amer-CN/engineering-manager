@@ -27,7 +27,10 @@ public static class InvoiceEndpoints
             // v1.1.0 P0-4 Phase 2: 鍐呰仈 SQL 閬垮厤 JOIN partners/projects 涔熸湁 created_by 鍒楃殑鍐茬獊
             var sql = @"SELECT i.*, p.name as project_name,
                                seller.name as sellerName, buyer.name as buyerName,
-                               CASE WHEN i.type='invoice_in' THEN seller.name ELSE buyer.name END as partner_name
+                               CASE WHEN i.type='invoice_in' THEN seller.name ELSE buyer.name END as partner_name,
+                               COALESCE((SELECT SUM(a.[amount_fen]) FROM [invoice_allocations] a
+                                         JOIN [payment_records] pr ON pr.[id]=a.[payment_id]
+                                         WHERE a.[invoice_id]=i.[id] AND pr.[deleted_at] IS NULL), 0) AS allocated_amount
                         FROM invoices i
                         LEFT JOIN projects p ON i.project_id=p.id
                         LEFT JOIN partners seller ON i.seller_id=seller.id
@@ -36,7 +39,7 @@ public static class InvoiceEndpoints
             if (projectId.HasValue) sql += " AND i.project_id=@ProjectId";
             sql += " ORDER BY i.created_at DESC";
             // P0-b：deductible_tax 分→元；is_deducted 归一为 JSON bool（前端 Invoice.isDeducted）
-            var rows = MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount", "price_amount", "tax_amount", "received_amount", "deductible_tax");
+            var rows = MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount", "price_amount", "tax_amount", "received_amount", "deductible_tax", "allocated_amount");
             foreach (var row in rows)
                 if (row.TryGetValue("is_deducted", out var deductedFlag) && deductedFlag != null && !(deductedFlag is DBNull))
                     row["is_deducted"] = Convert.ToInt64(deductedFlag) != 0;
@@ -307,8 +310,17 @@ public static class InvoiceEndpoints
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var invoiceDetails = body.TryGetProperty("invoiceDetails", out var iv) ? (iv.ValueKind == System.Text.Json.JsonValueKind.String ? iv.GetString() : iv.GetRawText()) : null;
             // T4a：核销超额校验（新建尚无 payment_id，其他付款记录全部计入；等额允许）
+            var paymentAmountFen = body.TryGetProperty("amount", out var payAmt) && payAmt.ValueKind == System.Text.Json.JsonValueKind.Number
+                ? MoneyUnit.ToFen((decimal?)payAmt.GetDouble())
+                : null;
             var allocationError = ValidateInvoiceAllocationLimit(ctx, db, null, invoiceDetails);
             if (allocationError != null) return Common.Fail(allocationError, 400);
+            // T4b：0 元付款不得登记核销（PUT 为兼容历史数据仍跳过；新建必须拒绝，堵 API 旁路）
+            if ((paymentAmountFen ?? 0) <= 0 && ParseInvoiceAllocations(invoiceDetails).Count > 0)
+                return Common.Fail("付款金额必须大于 0 才能登记核销", 400);
+            // T4b：核销合计不得超过付款记录金额（付款金额为 0 时跳过，兼容历史/未填数据）
+            var allocationTotalError = ValidateAllocationTotalWithinPayment(invoiceDetails, paymentAmountFen);
+            if (allocationTotalError != null) return Common.Fail(allocationTotalError, 400);
             // 付款记录与核销投影同一事务：任一失败都不留“付款已存、核销缺失”
             using var tx = db.BeginTransaction();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO payment_records (type,amount,record_date,project_id,partner_id,contract_id,invoice_details,remarks,file_url,file_type,created_by,created_at, last_modified_at) VALUES (@Type,@Amount,@RecordDate,@ProjectId,@PartnerId,@ContractId,@InvoiceDetails,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now, @Now);
@@ -360,8 +372,14 @@ public static class InvoiceEndpoints
 
             // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
             // T4a：核销超额校验（排除本付款记录已核销部分；等额允许）
+            var paymentAmountFen = body.TryGetProperty("amount", out var payAmt) && payAmt.ValueKind == System.Text.Json.JsonValueKind.Number
+                ? MoneyUnit.ToFen((decimal?)payAmt.GetDouble())
+                : null;
             var allocationError = ValidateInvoiceAllocationLimit(ctx, db, recordId, invoiceDetails);
             if (allocationError != null) return Common.Fail(allocationError, 400);
+            // T4b：核销合计不得超过付款记录金额（付款金额为 0 时跳过，兼容历史/未填数据）
+            var allocationTotalError = ValidateAllocationTotalWithinPayment(invoiceDetails, paymentAmountFen);
+            if (allocationTotalError != null) return Common.Fail(allocationTotalError, 400);
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE payment_records SET type=@Type,amount=@Amount,record_date=@RecordDate,
                 project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
@@ -564,6 +582,20 @@ public static class InvoiceEndpoints
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// T4b：核销合计不得超过付款记录金额。paymentAmountFen 为 null/0 时跳过（历史/未填付款金额）；
+    /// 核销合计与付款金额均以【分】比较，避免浮点误差。
+    /// </summary>
+    private static string? ValidateAllocationTotalWithinPayment(string? invoiceDetailsJson, long? paymentAmountFen)
+    {
+        if (!paymentAmountFen.HasValue || paymentAmountFen.Value <= 0) return null;
+        var allocations = ParseInvoiceAllocations(invoiceDetailsJson);
+        if (allocations.Count == 0) return null;
+        var totalFen = allocations.Values.Sum();
+        if (totalFen <= paymentAmountFen.Value) return null;
+        return $"核销合计（{MoneyUnit.ToYuanDecimal(totalFen):0.00} 元）不得超过付款金额（{MoneyUnit.ToYuanDecimal(paymentAmountFen.Value):0.00} 元）";
     }
 
     /// <summary>DB 金额列（分，兼容 INTEGER/REAL 亲和性）→ long 分。</summary>

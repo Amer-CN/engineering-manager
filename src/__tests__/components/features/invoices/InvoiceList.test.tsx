@@ -171,4 +171,38 @@ describe('InvoiceList', () => {
     expect(screen.queryByText('已抵扣')).toBeNull()
     expect(screen.queryByText('未抵扣')).toBeNull()
   })
+
+  test('T4b：allocatedAmount 有值时渲染「已核销」与「未核销」', () => {
+    render(React.createElement(InvoiceList, {
+      invoices: [
+        { id: 9, name: '部分核销发票', type: 'invoice_in', invoiceKind: 'paper_special', taxRate: 0.06, amount: 1000, taxAmount: 60, receivedAmount: 100, allocatedAmount: 400, status: 'issued' } as any,
+      ],
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+      onPrint: vi.fn(),
+      onPreview: vi.fn(),
+    }))
+    expect(screen.getByText('已核销')).toBeTruthy()
+    expect(screen.getByText('¥400')).toBeTruthy()
+    expect(screen.getByText('未核销 ¥600')).toBeTruthy()
+    // 既有「已收金额」列保留，不与核销列混淆
+    expect(screen.getByText('已收金额')).toBeTruthy()
+    expect(screen.getByText('¥100')).toBeTruthy()
+  })
+
+  test('T4b：核销金额等于开票金额时不显示「未核销」', () => {
+    render(React.createElement(InvoiceList, {
+      invoices: [
+        { id: 10, name: '已核销发票', type: 'invoice_in', invoiceKind: 'paper_special', taxRate: 0.06, amount: 1000, taxAmount: 60, receivedAmount: 100, allocatedAmount: 1000, status: 'issued' } as any,
+      ],
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+      onPrint: vi.fn(),
+      onPreview: vi.fn(),
+    }))
+    expect(screen.getAllByText('¥1,000').length).toBeGreaterThan(0)
+    expect(screen.queryByText(/未核销/)).toBeNull()
+  })
 })

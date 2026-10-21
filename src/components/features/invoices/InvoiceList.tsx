@@ -152,6 +152,26 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       )
     },
     {
+      key: 'allocatedAmount',
+      title: '已核销',
+      align: 'right',
+      render: (item) => {
+        const allocated = item.allocatedAmount ?? 0
+        return (
+          <>
+            <div className="font-bold font-mono tabular-nums tracking-tight" style={{ color: allocated > 0 ? 'var(--success)' : 'var(--muted)' }}>
+              ¥{formatMoney(allocated)}
+            </div>
+            {item.amount > 0 && allocated < item.amount && (
+              <div className="text-xs mt-0.5 font-mono tabular-nums" style={{ color: 'var(--danger)' }}>
+                未核销 ¥{formatMoney(item.amount - allocated)}
+              </div>
+            )}
+          </>
+        )
+      }
+    },
+    {
       key: 'status',
       title: '状态',
       align: 'center',

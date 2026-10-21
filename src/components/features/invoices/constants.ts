@@ -169,6 +169,20 @@ export function getInvoiceFormData(editingInvoice: Invoice | null): InvoiceFormD
 
 export function getPaymentFormData(editingPayment: PaymentRecord | null): PaymentFormData {
   if (!editingPayment) return { ...defaultPaymentFormData }
+  // HTTP 模式下 GET /api/payment-records 的 invoice_details 是 JSON 字符串（Electron 模式是数组），
+  // 这里统一归一为数组，否则编辑付款时 PaymentForm 的 reduce/map 会崩。
+  const rawDetails: unknown = editingPayment.invoiceDetails
+  let invoiceDetails: { invoiceId: number; paymentAmount: number }[] = []
+  if (Array.isArray(rawDetails)) {
+    invoiceDetails = rawDetails as { invoiceId: number; paymentAmount: number }[]
+  } else if (typeof rawDetails === 'string') {
+    try {
+      const parsed = JSON.parse(rawDetails)
+      if (Array.isArray(parsed)) invoiceDetails = parsed
+    } catch {
+      invoiceDetails = []
+    }
+  }
   return {
     type: editingPayment.type || 'invoice_in',
     amount: editingPayment.amount || 0,
@@ -177,7 +191,7 @@ export function getPaymentFormData(editingPayment: PaymentRecord | null): Paymen
     partnerId: editingPayment.partnerId || '',
     contractId: editingPayment.contractId || '',
     remarks: editingPayment.remarks || '',
-    invoiceDetails: editingPayment.invoiceDetails || [],
+    invoiceDetails,
     fileUrl: '',
     fileType: ''
   }

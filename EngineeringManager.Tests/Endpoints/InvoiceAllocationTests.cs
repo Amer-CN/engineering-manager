@@ -271,6 +271,89 @@ public class InvoiceAllocationTests : ApiTestBase
         });
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
+
+    // 8. T4b：核销合计 > 付款金额 → 400（发票余额充足，命中付款金额一致性校验）
+    [Fact]
+    public async Task AllocationsExceedPaymentAmount_Returns400()
+    {
+        await AuthAsync();
+        var invoiceId = await CreateInvoiceAsync(1000m);
+
+        var resp = await Client.PostAsJsonAsync("/api/payment-records", new
+        {
+            type = "invoice_in",
+            amount = 100m,
+            recordDate = "2026-10-06",
+            invoiceDetails = Details((invoiceId, 150m))
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var error = await ReadError(resp);
+        Assert.Contains("不得超过付款金额", error);
+        Assert.Contains("150.00", error);
+        Assert.Contains("100.00", error);
+    }
+
+    // 9. T4b：核销合计 == 付款金额 → 200（等于放行）
+    [Fact]
+    public async Task AllocationsEqualPaymentAmount_Returns200()
+    {
+        await AuthAsync();
+        var invoiceId = await CreateInvoiceAsync(1000m);
+        var paymentId = await CreatePaymentAsync(Details((invoiceId, 100m)), amount: 100m);
+
+        var row = Assert.Single(QueryAllocations(paymentId));
+        Assert.Equal(10000, row.AmountFen);   // 100 元 == 10000 分，等于放行且金额正确
+    }
+
+    // 9a. T4b：0 元付款带核销明细 → 400（堵 API 旁路）
+    [Fact]
+    public async Task CreatePaymentRecord_ZeroAmountWithAllocations_Returns400()
+    {
+        await AuthAsync();
+        var invoiceId = await CreateInvoiceAsync(1000m);
+
+        var resp = await Client.PostAsJsonAsync("/api/payment-records", new
+        {
+            type = "invoice_in",
+            amount = 0m,
+            recordDate = "2026-10-05",
+            invoiceDetails = Details((invoiceId, 100m))
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("付款金额必须大于 0", await ReadError(resp));
+    }
+
+    // 9b. T4b：PUT 同样校验核销合计 ≤ 付款金额
+    [Fact]
+    public async Task UpdatePaymentRecord_AllocationsExceedPaymentAmount_Returns400()
+    {
+        await AuthAsync();
+        var invoiceId = await CreateInvoiceAsync(1000m);
+        var paymentId = await CreatePaymentAsync(Details((invoiceId, 100m)), amount: 100m);
+
+        var resp = await UpdatePaymentAsync(paymentId, Details((invoiceId, 100m)), amount: 80m);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("不得超过付款金额", await ReadError(resp));
+    }
+
+    // 10. T4b：GET /api/invoices 返回 allocated_amount（与核销额一致）
+    [Fact]
+    public async Task GetInvoices_ReturnsAllocatedAmount()
+    {
+        await AuthAsync();
+        var invoiceId = await CreateInvoiceAsync(500m);
+        await CreatePaymentAsync(Details((invoiceId, 120.5m)), amount: 120.5m);
+
+        var resp = await Client.GetAsync("/api/invoices");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var rows = (await resp.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("data").EnumerateArray().ToList();
+        var row = rows.Single(r => r.GetProperty("id").GetInt64() == invoiceId);
+        Assert.Equal(120.5m, row.GetProperty("allocated_amount").GetDecimal());
+    }
 }
 
 /// <summary>

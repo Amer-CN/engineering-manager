@@ -779,6 +779,7 @@ export interface Invoice {
   projectId: number | null      // 关联项目
   contractId: number | null     // 关联合同（可选）
   receivedAmount: number        // 已收款金额
+  allocatedAmount?: number      // 已核销金额（元；T4b 由 GET /api/invoices 的 allocated_amount 子查询列提供）
   fileUrl?: string              // 发票文件（Base64）
   fileType?: string             // 文件类型：image/pdf
   remarks: string
