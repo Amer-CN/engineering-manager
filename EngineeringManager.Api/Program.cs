@@ -531,6 +531,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // T6 项目维度只读聚合
         app.RegisterProjectSummaryEndpoints();
+
+        // T7 申报数据准备（进项/销项汇总导出）
+        app.RegisterTaxSummaryEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()
