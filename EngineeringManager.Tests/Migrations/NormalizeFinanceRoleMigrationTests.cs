@@ -18,6 +18,18 @@ namespace EngineeringManager.Tests.Migrations;
 /// </summary>
 public class NormalizeFinanceRoleMigrationTests : IDisposable
 {
+    /// <summary>
+    /// 038 迁移里 accountant 权限 JSON 的冻结字面量。
+    /// 历史迁移不可改写，测试必须比对这一份，而不是动态的 GetDefaultPermissions
+    /// （后者随新功能追加权限码，会导致 038 测试误红——T6a 新增 vouchers:* 即如此）。
+    /// </summary>
+    private const string Frozen038AccountantPermissions =
+        "[\"dashboard:read\",\"projects:read\",\"contracts:read\",\"contracts:export\",\"members:read\"," +
+        "\"wages:create\",\"wages:read\",\"wages:update\",\"settlement:read\",\"settlement:approve\"," +
+        "\"invoices:create\",\"invoices:read\",\"invoices:update\",\"costLedger:create\",\"costLedger:read\"," +
+        "\"costLedger:update\",\"settings:read\",\"audit_logs:read\",\"audit_logs:export\"," +
+        "\"reports:create\",\"reports:read\",\"labor:read\"]";
+
     private readonly string _dbPath;
     private readonly string _connStr;
 
@@ -138,8 +150,7 @@ public class NormalizeFinanceRoleMigrationTests : IDisposable
         var accPerms = accountant.Permissions;
         Assert.Equal("accountant", accId);
         Assert.Equal("财务", accName);
-        var expectedJson = System.Text.Json.JsonSerializer.Serialize(
-            EngineeringManager.Api.Common.GetDefaultPermissions("accountant"));
+        var expectedJson = Frozen038AccountantPermissions;
         Assert.Equal(expectedJson, accPerms);
 
         // finance 用户已重映射
@@ -262,9 +273,7 @@ public class NormalizeFinanceRoleMigrationTests : IDisposable
         Assert.NotNull(accountant);
         Assert.Equal("accountant", accountant.Id);
         Assert.Equal("财务", accountant.Name);
-        var expectedJson = System.Text.Json.JsonSerializer.Serialize(
-            EngineeringManager.Api.Common.GetDefaultPermissions("accountant"));
-        Assert.Equal(expectedJson, accountant.Permissions);
+        Assert.Equal(Frozen038AccountantPermissions, accountant.Permissions);
 
         // finance 用户重映射、finance 行删除
         Assert.Equal("accountant", conn.ExecuteScalar<string>("SELECT role_id FROM users WHERE username='finuser'"));

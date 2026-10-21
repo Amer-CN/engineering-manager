@@ -24,7 +24,7 @@ import type {
   ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair, ParsedBankReceipt,
   StoredAuth,
   TaxRate, TaxRateResolution,
-  VoucherPreview,
+  VoucherPreview, Voucher, VoucherDraft,
 } from '../types/electron';
 
 // ============ 导出的 API ============
@@ -416,6 +416,15 @@ export const tauriAPI = {
   // POST /api/voucher-templates/{code}/generate-preview（T5b）：只读计算，不落库。
   previewVoucher: (code: string, invoiceId: number) =>
     apiClient.post<VoucherPreview>(`/api/voucher-templates/${code}/generate-preview`, { invoiceId }),
+
+  // ────────── 凭证草稿（T6a） ──────────
+  // 只落 draft，不过账；同一发票重复生成由服务端返回 400「该发票已生成凭证草稿」。
+  createVoucherDraft: (invoiceId: number, templateCode?: string) =>
+    apiClient.post<VoucherDraft>('/api/vouchers/from-invoice', { invoiceId, templateCode }),
+  getVouchers: (period?: string) =>
+    apiClient.get<Voucher[]>('/api/vouchers', { period }),
+  deleteVoucher: (id: number) =>
+    apiClient.del<void>(`/api/vouchers/${id}`),
 
   // ────────── 模板 ──────────
   getTemplates: () => apiClient.get<Template[]>('/api/templates'),

@@ -231,6 +231,10 @@ function createMockAPI() {
     resolveTaxRate: async () => ({ success: true, data: { rateId: null, code: null, rate: null, matchedBy: 'none' as const } }),
     // 凭证预览（T5b）：mock 无后端模板，明确失败由 UI 展示错误，不伪造分录
     previewVoucher: async () => ({ success: false, error: '浏览器预览模式不支持凭证预览' }),
+    // 凭证草稿（T6a）：mock 无后端 → 明确失败，不伪造草稿/凭证号
+    createVoucherDraft: async () => ({ success: false, error: '浏览器预览模式不支持生成凭证草稿（需连接后端 API）' }),
+    getVouchers: async () => ({ success: false, error: '浏览器预览模式不支持查询凭证（需连接后端 API）' }),
+    deleteVoucher: async () => ({ success: false, error: '浏览器预览模式不支持删除凭证（需连接后端 API）' }),
     createSupervisor: async () => ({ success: true, data: { id: 1 } }),
     updateSupervisor: async () => ({ success: true }),
     deleteSupervisor: async () => ({ success: true }),

@@ -715,6 +715,39 @@ export interface VoucherPreview {
   totalCredit: number     // 元
 }
 
+/** 凭证分录（T6a 草稿）：金额为元，库内真源为分。 */
+export interface VoucherEntry {
+  lineNo: number
+  dc: number              // 1=借, -1=贷
+  accountCode: string
+  accountName: string
+  summary: string
+  amount: number          // 元
+}
+
+/** 凭证（T6a）：本轮只生成草稿，status 恒为 draft。 */
+export interface Voucher {
+  id: number
+  voucherNo: string       // 记-YYYYMM-####
+  voucherDate: string
+  period: string          // YYYYMM
+  sourceType: string      // 'invoice'
+  sourceId: number
+  templateCode: string
+  status: string          // 本轮只有 draft
+  totalDebit: number      // 元
+  totalCredit: number     // 元
+  entries: VoucherEntry[]
+}
+
+/** 生成凭证草稿的响应（T6a）。 */
+export interface VoucherDraft {
+  id: number
+  voucherNo: string
+  totalDebit: number      // 元
+  totalCredit: number     // 元
+}
+
 export interface TaxRule {
   id: number
   businessType: string | null      // 业务类型维度；null = 不限
@@ -1133,6 +1166,12 @@ export interface ElectronAPI {
   // 凭证预览（T5b）：POST 只读计算端点，不落库、不生成凭证号。
   previewVoucher: (code: string, invoiceId: number) =>
     Promise<{ success: boolean; data?: VoucherPreview; error?: string }>
+  // 凭证草稿（T6a）：只落 draft，不过账；同一发票重复生成由服务端 400。
+  createVoucherDraft: (invoiceId: number, templateCode?: string) =>
+    Promise<{ success: boolean; data?: VoucherDraft; error?: string }>
+  getVouchers: (period?: string) =>
+    Promise<{ success: boolean; data?: Voucher[]; error?: string }>
+  deleteVoucher: (id: number) => Promise<{ success: boolean; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

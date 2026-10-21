@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import type { Invoice } from '@/types/electron'
 import { Drawer } from '../../ui/Drawer'
 import { Button } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
 import { useVoucherPreview } from '@/hooks/data/useVoucherPreview'
+import { usePermission } from '@/hooks/usePermission'
+import { useToastStore } from '@/store/toastStore'
+import { getAPI } from '@/services/api-adapter'
 
 interface VoucherPreviewDrawerProps {
   invoice: Invoice
@@ -17,18 +20,40 @@ export function voucherTemplateCodeFor(invoiceType: string): string {
 }
 
 /**
- * 凭证预览抽屉（T5b）。
+ * 凭证预览抽屉（T5b/T6a）。
  *
- * 只读：调用后端 POST generate-preview 计算分录，不落库、不生成凭证号、不过账；
- * 报错（科目无命中 / 借贷不平 / 价税合计不一致）直接展示服务端文案。
+ * 预览只读：调用后端 POST generate-preview 计算分录，不落库、不生成凭证号；
+ * T6a 增加「生成凭证草稿」：仅落 draft（不过账），成功后提示凭证号并关闭；
+ * 失败（含同一发票已生成）原样展示服务端文案，不关闭、不伪造草稿。
  */
 export const VoucherPreviewDrawer: React.FC<VoucherPreviewDrawerProps> = ({ invoice, onClose }) => {
   const { mutate, data, error, isPending } = useVoucherPreview()
+  const { can } = usePermission()
+  const showToast = useToastStore(state => state.showToast)
+  const [saving, setSaving] = useState(false)
+  const [draftError, setDraftError] = useState<string | null>(null)
   const code = voucherTemplateCodeFor(invoice.type)
 
   useEffect(() => {
     mutate({ code, invoiceId: invoice.id })
   }, [mutate, code, invoice.id])
+
+  const handleCreateDraft = async () => {
+    if (!data || saving) return
+    setSaving(true)
+    setDraftError(null)
+    try {
+      const api = await getAPI()
+      const res = await api.createVoucherDraft(invoice.id, data.templateCode)
+      if (!res.success || !res.data) throw new Error(res.error || '生成凭证草稿失败')
+      showToast(`已生成凭证草稿 ${res.data.voucherNo}`, 'success')
+      setSaving(false)
+      onClose()
+    } catch (err) {
+      setDraftError((err as Error).message || '生成凭证草稿失败')
+      setSaving(false)
+    }
+  }
 
   return (
     <Drawer
@@ -39,6 +64,11 @@ export const VoucherPreviewDrawer: React.FC<VoucherPreviewDrawerProps> = ({ invo
       footer={
         <div className="flex items-center justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>关闭</Button>
+          {can('vouchers:create') && data && (
+            <Button type="button" variant="primary" loading={saving} onClick={handleCreateDraft}>
+              生成凭证草稿
+            </Button>
+          )}
         </div>
       }
     >
@@ -97,9 +127,15 @@ export const VoucherPreviewDrawer: React.FC<VoucherPreviewDrawerProps> = ({ invo
               </table>
             </div>
 
+            {draftError && (
+              <div className="text-sm" style={{ color: 'var(--danger)' }}>
+                生成凭证草稿失败：{draftError}
+              </div>
+            )}
+
             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted)' }}>
               <Icon name="Info" size={14} />
-              <span>仅预览，不会生成凭证或过账；金额口径以发票价税合计为准。</span>
+              <span>仅生成草稿，不会过账；金额口径以发票价税合计为准。</span>
             </div>
           </>
         )}
