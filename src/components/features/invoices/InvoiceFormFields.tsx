@@ -207,6 +207,20 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
         </div>
       )}
 
+      {/* T3 税收分类编码 / 优惠政策：均非必填；空值由服务端归一为 null */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Input label="税收分类编码" type="text" value={formData.taxCode}
+            onChange={e => setFormData({ ...formData, taxCode: e.target.value })}
+            size="sm" className="font-mono" maxLength={32} />
+        </div>
+        <div>
+          <Input label="优惠政策" type="text" value={formData.taxPolicy}
+            onChange={e => setFormData({ ...formData, taxPolicy: e.target.value })}
+            size="sm" maxLength={64} />
+        </div>
+      </div>
+
       <div>
         <Input label="发票名称" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} size="sm" placeholder="如: 工程款、材料款" required />
       </div>

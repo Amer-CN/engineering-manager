@@ -29,6 +29,9 @@ export interface InvoiceFormData {
   deductibleTax: number
   invoiceNo: string
   invoiceCode: string
+  // T3 税收分类编码 / 优惠政策：非必填，空串由后端归一为 null
+  taxCode: string
+  taxPolicy: string
   name: string
   amount: number
   priceAmount: number
@@ -73,7 +76,10 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       isDeducted: initialData.isDeducted ?? false,
       deductDate: initialData.deductDate ?? '',
       deductPeriod: initialData.deductPeriod ?? '',
-      deductibleTax: initialData.deductibleTax ?? 0
+      deductibleTax: initialData.deductibleTax ?? 0,
+      // T3：两字段非必填；缺省（旧数据/OCR 未回填）初始化为空串，提交时原样带上
+      taxCode: initialData.taxCode ?? '',
+      taxPolicy: initialData.taxPolicy ?? ''
     }
   })
   const [dragOverFile, setDragOverFile] = useState(false)

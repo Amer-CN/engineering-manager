@@ -72,12 +72,19 @@ public static class InvoiceEndpoints
             var persistedType = NormalizeInvoiceType(dto.Type);
             var deduction = ResolveInvoiceDeduction(dto.IsDeducted, dto.DeductDate, dto.DeductPeriod, dto.DeductibleTax, persistedType);
             if (deduction.Error != null) return Common.Fail(deduction.Error, 400);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO [invoices] (project_id,seller_id,buyer_id,contract_id,settlement_id,original_invoice_id,non_deductible_reason,is_deducted,deduct_date,deduct_period,deductible_tax,type,invoice_kind,invoice_medium,invoice_category,invoice_no,invoice_code,name,
-                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@OriginalInvoiceId,@NonDeductibleReason,@IsDeducted,@DeductDate,@DeductPeriod,@DeductibleTax,@Type,@InvoiceKind,@InvoiceMedium,@InvoiceCategory,@InvoiceNo,@InvoiceCode,@Name,
+            // T3：税收分类编码 / 优惠政策（空白归一为 null；格式不合法 400）
+            var taxCode = NormalizeTaxCode(dto.TaxCode);
+            if (!IsTaxCodeValid(taxCode))
+                return Common.Fail("税收分类编码格式不合法：最长 32 位，仅允许数字和字母", 400);
+            var taxPolicy = NormalizeTaxPolicy(dto.TaxPolicy);
+            if (!IsTaxPolicyValid(taxPolicy))
+                return Common.Fail("优惠政策标识格式不合法：最长 64 位，不能包含控制字符", 400);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO [invoices] (project_id,seller_id,buyer_id,contract_id,settlement_id,original_invoice_id,non_deductible_reason,is_deducted,deduct_date,deduct_period,deductible_tax,tax_code,tax_policy,type,invoice_kind,invoice_medium,invoice_category,invoice_no,invoice_code,name,
+                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@OriginalInvoiceId,@NonDeductibleReason,@IsDeducted,@DeductDate,@DeductPeriod,@DeductibleTax,@TaxCode,@TaxPolicy,@Type,@InvoiceKind,@InvoiceMedium,@InvoiceCategory,@InvoiceNo,@InvoiceCode,@Name,
                         @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReason,
-                      IsDeducted = deduction.IsDeducted ? 1 : 0, deduction.DeductDate, deduction.DeductPeriod, DeductibleTax = deduction.DeductibleTaxFen, Type = persistedType,
+                      IsDeducted = deduction.IsDeducted ? 1 : 0, deduction.DeductDate, deduction.DeductPeriod, DeductibleTax = deduction.DeductibleTaxFen, TaxCode = taxCode, TaxPolicy = taxPolicy, Type = persistedType,
                       InvoiceKind = kindFields.Kind, InvoiceMedium = kindFields.Medium, InvoiceCategory = kindFields.Category, dto.InvoiceNo, dto.InvoiceCode,
                       dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       Status = dto.Status ?? "pending", dto.Remarks, dto.FileUrl, dto.FileType, CreatedBy = uid, Now = now() });
@@ -156,6 +163,14 @@ public static class InvoiceEndpoints
             var deductionPut = ResolveInvoiceDeduction(dto.IsDeducted, dto.DeductDate, dto.DeductPeriod, dto.DeductibleTax, persistedTypePut);
             if (deductionPut.Error != null) return Common.Fail(deductionPut.Error, 400);
 
+            // T3：税收分类编码 / 优惠政策（空白归一为 null；格式不合法 400）
+            var taxCodePut = NormalizeTaxCode(dto.TaxCode);
+            if (!IsTaxCodeValid(taxCodePut))
+                return Common.Fail("税收分类编码格式不合法：最长 32 位，仅允许数字和字母", 400);
+            var taxPolicyPut = NormalizeTaxPolicy(dto.TaxPolicy);
+            if (!IsTaxPolicyValid(taxPolicyPut))
+                return Common.Fail("优惠政策标识格式不合法：最长 64 位，不能包含控制字符", 400);
+
             // FP06：仅状态发生变更时门控；普通字段更新（状态不变/未传状态）不受影响（保历史数据兼容）。
             var statusChanged = !string.IsNullOrWhiteSpace(dto.Status)
                 && !string.Equals(dto.Status.Trim(), (currentStatus ?? "").Trim(), StringComparison.Ordinal);
@@ -169,13 +184,13 @@ public static class InvoiceEndpoints
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE [invoices] SET project_id=@ProjectId,seller_id=@SellerId,
                 buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,original_invoice_id=COALESCE(@OriginalInvoiceId,original_invoice_id),non_deductible_reason=COALESCE(@NonDeductibleReason,non_deductible_reason),
-                is_deducted=@IsDeducted,deduct_date=@DeductDate,deduct_period=@DeductPeriod,deductible_tax=@DeductibleTax,type=@Type,invoice_kind=@InvoiceKind,
+                is_deducted=@IsDeducted,deduct_date=@DeductDate,deduct_period=@DeductPeriod,deductible_tax=@DeductibleTax,tax_code=@TaxCode,tax_policy=@TaxPolicy,type=@Type,invoice_kind=@InvoiceKind,
                 invoice_medium=@InvoiceMedium,invoice_category=@InvoiceCategory,
                 invoice_no=@InvoiceNo,invoice_code=@InvoiceCode,name=@Name,amount=@Amount,price_amount=@PriceAmount,
                 tax_rate=@TaxRate,tax_amount=@TaxAmount,received_amount=@ReceivedAmount,issue_date=@IssueDate,
                 status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.OriginalInvoiceId, NonDeductibleReason = nonDeductReasonPut,
-                      IsDeducted = deductionPut.IsDeducted ? 1 : 0, deductionPut.DeductDate, deductionPut.DeductPeriod, DeductibleTax = deductionPut.DeductibleTaxFen, Type = persistedTypePut,
+                      IsDeducted = deductionPut.IsDeducted ? 1 : 0, deductionPut.DeductDate, deductionPut.DeductPeriod, DeductibleTax = deductionPut.DeductibleTaxFen, TaxCode = taxCodePut, TaxPolicy = taxPolicyPut, Type = persistedTypePut,
                       InvoiceKind = kindFieldsPut.Kind, InvoiceMedium = kindFieldsPut.Medium, InvoiceCategory = kindFieldsPut.Category, dto.InvoiceNo,
                       dto.InvoiceCode, dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() }, tx);
@@ -525,6 +540,33 @@ public static class InvoiceEndpoints
     /// </summary>
     private static string? NormalizeInvoiceType(string? v) =>
         string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+    /// <summary>
+    /// T3：税收分类编码归一（空/空白 → null；否则 Trim）。
+    /// 与 InvoiceMedium 等同模式：校验与落库必须共用同一归一值。
+    /// </summary>
+    private static string? NormalizeTaxCode(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+    /// <summary>
+    /// T3：优惠政策标识归一（空/空白 → null；否则 Trim）。
+    /// </summary>
+    private static string? NormalizeTaxPolicy(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+    /// <summary>
+    /// T3：税收分类编码校验（金蝶 FTAXCODE 口径）：
+    /// 空放行；非空须长度 ≤32 且仅 [0-9A-Za-z]（编码为纯数字/字母，不含分隔符与空格）。
+    /// </summary>
+    private static bool IsTaxCodeValid(string? v) =>
+        v == null || (v.Length <= 32 && v.All(c => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')));
+
+    /// <summary>
+    /// T3：优惠政策标识校验（金蝶 FTAXPOLICY 口径）：
+    /// 空放行；非空须长度 ≤64 且不含控制字符（政策文本可含中文/空格/标点）。
+    /// </summary>
+    private static bool IsTaxPolicyValid(string? v) =>
+        v == null || (v.Length <= 64 && !v.Any(char.IsControl));
 
     private static bool IsNonDeductibleReasonValid(string? v) =>
         v == null || NonDeductibleReasons.Contains(v);

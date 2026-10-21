@@ -170,7 +170,10 @@ record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long
     // P0-a' 阶段 1：票种两维（介质 + 票种细分类）；与 InvoiceKind 双向派生由端点单点负责
     string? InvoiceMedium, string? InvoiceCategory,
     // P0-b：进项抵扣四字段（DeductibleTax 为元；落库分由端点经 MoneyUnit 换算）
-    bool? IsDeducted, string? DeductDate, string? DeductPeriod, double? DeductibleTax);
+    bool? IsDeducted, string? DeductDate, string? DeductPeriod, double? DeductibleTax,
+    // T3：税收分类编码（金蝶 FTAXCODE / PT IV_GTTAXCODE）与优惠政策标识（金蝶 FTAXPOLICY）；
+    // 均为可选，空白归一为 null，落库列 tax_code / tax_policy（064 迁移）
+    string? TaxCode, string? TaxPolicy);
 record PaymentRecordDto(long? Id, string? Type, double? Amount, string? RecordDate, long? ProjectId, long? PartnerId, long? ContractId, string? InvoiceDetails, string? Remarks, string? FileUrl, string? FileType);
 record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWorkerId, string YearMonth, double? WorkDays, int? DaysOff, bool? IsFullAttendance, string? DailyStatus, string? FileUrl, string? FileName);
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);

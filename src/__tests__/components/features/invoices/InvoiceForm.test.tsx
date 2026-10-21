@@ -111,6 +111,8 @@ describe('InvoiceForm', () => {
     deductibleTax: 0,
     invoiceNo: '',
     invoiceCode: '',
+    taxCode: '',
+    taxPolicy: '',
     name: '',
     amount: 0,
     priceAmount: 0,
@@ -206,14 +208,13 @@ describe('InvoiceForm', () => {
       />
     )
 
-    // 输入发票号码（第一个 textbox）
-    const inputs = screen.getAllByRole('textbox')
-    const noInput = inputs[0]
+    // 按 label 取输入框（T3 新增两字段后 textbox 位置索引不再稳定）
+    const noInput = screen.getByLabelText(/发票号码/)
     await user.type(noInput, 'INV-2024-001')
     expect(noInput).toHaveValue('INV-2024-001')
 
-    // 输入发票名称（第二个 textbox）
-    const nameInput = inputs[1]
+    // 输入发票名称
+    const nameInput = screen.getByLabelText(/发票名称/)
     await user.type(nameInput, '新发票名称')
     expect(nameInput).toHaveValue('新发票名称')
   })
@@ -299,13 +300,12 @@ describe('InvoiceForm', () => {
       />
     )
 
-    // 填写发票名称（第二个 textbox）
-    const inputs = screen.getAllByRole('textbox')
-    const nameInput = inputs[1]
+    // 填写发票名称
+    const nameInput = screen.getByLabelText(/发票名称/)
     await user.type(nameInput, '测试发票')
 
-    // 填写发票号码（第一个 textbox）
-    const noInput = inputs[0]
+    // 填写发票号码
+    const noInput = screen.getByLabelText(/发票号码/)
     await user.type(noInput, 'INV-001')
 
     // 移除 required 属性（jsdom 中会阻止表单提交）
@@ -341,9 +341,8 @@ describe('InvoiceForm', () => {
     await user.selectOptions(selects[1], 'electronic')
     await user.selectOptions(selects[2], 'passenger_transport')
 
-    const inputs = screen.getAllByRole('textbox')
-    await user.type(inputs[0], 'INV-2026-001')
-    await user.type(inputs[1], '旅客运输发票')
+    await user.type(screen.getByLabelText(/发票号码/), 'INV-2026-001')
+    await user.type(screen.getByLabelText(/发票名称/), '旅客运输发票')
 
     document.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'))
     await user.click(screen.getByText('创建'))
@@ -452,6 +451,105 @@ describe('InvoiceForm', () => {
     // FileDropZone 应被渲染
     expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument()
     expect(screen.getByText('上传发票')).toBeInTheDocument()
+  })
+
+  // ═════════════════════════════════════
+  // T3：税收分类编码 / 优惠政策（非必填；空串由服务端归一为 null）
+  // ═════════════════════════════════════
+  it('T3：渲染税收分类编码/优惠政策两输入框，可输入且提交 payload 带值', async () => {
+    const user = userEvent.setup()
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData()}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    const taxCodeInput = screen.getByLabelText(/税收分类编码/) as HTMLInputElement
+    const taxPolicyInput = screen.getByLabelText(/优惠政策/) as HTMLInputElement
+    expect(taxCodeInput).toBeInTheDocument()
+    expect(taxPolicyInput).toBeInTheDocument()
+    // 非必填：不因空值阻断提交
+    expect(taxCodeInput).not.toHaveAttribute('required')
+    expect(taxPolicyInput).not.toHaveAttribute('required')
+    // 前端长度上限与服务端校验同口径
+    expect(taxCodeInput).toHaveAttribute('maxLength', '32')
+    expect(taxPolicyInput).toHaveAttribute('maxLength', '64')
+
+    await user.type(taxCodeInput, '1090101020000000000')
+    await user.type(taxPolicyInput, '小微企业免税')
+    expect(taxCodeInput).toHaveValue('1090101020000000000')
+    expect(taxPolicyInput).toHaveValue('小微企业免税')
+
+    await user.type(screen.getByLabelText(/发票号码/), 'INV-2026-TAX')
+    await user.type(screen.getByLabelText(/发票名称/), '编码政策票')
+
+    document.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'))
+    await user.click(screen.getByText('创建'))
+
+    await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1))
+    const submitted = mockOnSubmit.mock.calls[0]?.[0]
+    expect(submitted?.taxCode).toBe('1090101020000000000')
+    expect(submitted?.taxPolicy).toBe('小微企业免税')
+  })
+
+  it('T3：两字段非必填，留空也能提交（空串由后端归一为 null）', async () => {
+    const user = userEvent.setup()
+    const { InvoiceForm } = await importModule()
+    render(
+      <InvoiceForm
+        initialData={createInitialData()}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.type(screen.getByLabelText(/发票号码/), 'INV-2026-NOTAX')
+    await user.type(screen.getByLabelText(/发票名称/), '不带编码票')
+
+    document.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'))
+    await user.click(screen.getByText('创建'))
+
+    await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1))
+    const submitted = mockOnSubmit.mock.calls[0]?.[0]
+    expect(submitted?.taxCode).toBe('')
+    expect(submitted?.taxPolicy).toBe('')
+  })
+
+  it('T3：编辑态回填两字段（getInvoiceFormData 映射，避免保存时清空库值）', async () => {
+    const { InvoiceForm } = await importModule()
+    const editData = getInvoiceFormData({
+      id: 1, type: 'invoice_in', status: 'issued', invoiceNo: 'INV-001', invoiceCode: '',
+      invoiceKind: 'electronic_special', invoiceMedium: 'electronic', invoiceCategory: 'special',
+      name: '已有发票', amount: 100, priceAmount: 100, taxAmount: 0, taxRate: 0.13,
+      issueDate: '2026-01-01', sellerId: 1, buyerId: 2, projectId: null, contractId: null,
+      receivedAmount: 0, remarks: '', createdAt: '', updatedAt: '',
+      taxCode: 'ABC123', taxPolicy: '即征即退',
+    } as any)
+
+    expect(editData.taxCode).toBe('ABC123')
+    expect(editData.taxPolicy).toBe('即征即退')
+
+    render(
+      <InvoiceForm
+        initialData={editData}
+        projects={mockProjects}
+        partners={mockPartners}
+        contracts={mockContracts}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+    expect(screen.getByLabelText(/税收分类编码/)).toHaveValue('ABC123')
+    expect(screen.getByLabelText(/优惠政策/)).toHaveValue('即征即退')
   })
 
   it('renders partner selects (seller and buyer)', async () => {

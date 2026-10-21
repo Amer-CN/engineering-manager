@@ -98,6 +98,9 @@ export const defaultInvoiceFormData: InvoiceFormData = {
   deductibleTax: 0,
   invoiceNo: '',
   invoiceCode: '',
+  // T3 税收分类编码 / 优惠政策：非必填，空串由服务端归一为 null
+  taxCode: '',
+  taxPolicy: '',
   name: '',
   amount: 0,
   priceAmount: 0,
@@ -145,6 +148,9 @@ export function getInvoiceFormData(editingInvoice: Invoice | null): InvoiceFormD
     deductibleTax: editingInvoice.deductibleTax || 0,
     invoiceNo: editingInvoice.invoiceNo || '',
     invoiceCode: editingInvoice.invoiceCode || '',
+    // T3：编辑回填两字段，否则保存一次会把库内 tax_code/tax_policy 清成 null
+    taxCode: editingInvoice.taxCode || '',
+    taxPolicy: editingInvoice.taxPolicy || '',
     name: editingInvoice.name || '',
     amount: editingInvoice.amount || 0,
     priceAmount: editingInvoice.priceAmount || editingInvoice.amount || 0,

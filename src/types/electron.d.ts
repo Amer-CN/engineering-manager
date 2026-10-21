@@ -763,6 +763,10 @@ export interface Invoice {
   deductibleTax?: number         // 可抵扣税额（元；库内 INTEGER 分）
   invoiceNo: string              // 发票号码
   invoiceCode: string           // 发票代码
+  // T3 税收分类编码（金蝶 FTAXCODE / PT IV_GTTAXCODE 口径）：可选，≤32 位数字字母
+  taxCode?: string | null
+  // T3 优惠政策标识（金蝶 FTAXPOLICY 口径）：可选，≤64 位
+  taxPolicy?: string | null
   name: string                   // 发票名称/摘要
   amount: number                 // 价税合计（含税金额）
   taxAmount: number             // 税额
