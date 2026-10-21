@@ -7,8 +7,9 @@ import { printInvoiceList, printPaymentList, exportInvoiceList, handlePrint, pri
 import { formatMoney } from '../utils/format'
 import {
   InvoiceStats, InvoiceFilters, InvoiceList, InvoiceForm,
-  PaymentList, PaymentForm, PaymentStats,
+  PaymentList, PaymentForm, PaymentStats, VoucherPreviewDrawer,
 } from './features/invoices'
+import type { Invoice } from '@/types/electron'
 import { getInvoiceFormData, getPaymentFormData } from './features/invoices/constants'
 import { FilePreviewModal } from './features/invoices/FilePreviewModal'
 import { useDuplicateInvoices } from './features/invoices/useDuplicateInvoices'
@@ -23,6 +24,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   const { can } = usePermission()
   const h = useInvoicePage(refresh)
   const [showDuplicates, setShowDuplicates] = useState(false)
+  const [voucherInvoice, setVoucherInvoice] = useState<Invoice | null>(null)
 
   const duplicateInvoices = useDuplicateInvoices(h.invoices)
 
@@ -95,7 +97,8 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   <div className="px-6 pb-6 max-w-[1400px] mx-auto w-full">
   {h.activeTab === 'invoices' && (
   <InvoiceList invoices={h.filteredInvoices} onEdit={h.handleEditInvoice} onDelete={h.handleDeleteInvoice}
-  onStatusChange={h.handleStatusChange} onPrint={(inv) => printInvoiceList([inv])} onPreview={h.handlePreview} />
+  onStatusChange={h.handleStatusChange} onPrint={(inv) => printInvoiceList([inv])} onPreview={h.handlePreview}
+  onVoucherPreview={setVoucherInvoice} />
   )}
   {h.activeTab === 'payments' && (
   <PaymentList records={h.filteredPayments} onEdit={h.handleEditPayment} onDelete={h.handleDeletePayment}
@@ -116,6 +119,9 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   onCancel={() => { h.setShowPaymentModal(false); h.setEditingPayment(null) }} />
   )}
   {h.previewFile && <FilePreviewModal file={h.previewFile} onClose={() => h.setPreviewFile(null)} />}
+  {voucherInvoice && (
+  <VoucherPreviewDrawer invoice={voucherInvoice} onClose={() => setVoucherInvoice(null)} />
+  )}
 
   {/* 重复发票弹窗 */}
   {showDuplicates && (

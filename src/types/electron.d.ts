@@ -697,6 +697,24 @@ export interface TaxRateResolution {
   matchedBy: 'rule' | 'default' | 'none'
 }
 
+/** 凭证预览（T5b）：服务端纯计算返回，不落库、不生成凭证号。 */
+export interface VoucherPreviewLine {
+  lineNo: number
+  dc: number              // 1=借, -1=贷
+  accountCode: string
+  accountName: string
+  summary: string
+  amount: number          // 元
+}
+
+export interface VoucherPreview {
+  templateCode: string
+  invoiceId: number
+  lines: VoucherPreviewLine[]
+  totalDebit: number      // 元
+  totalCredit: number     // 元
+}
+
 export interface TaxRule {
   id: number
   businessType: string | null      // 业务类型维度；null = 不限
@@ -1112,6 +1130,9 @@ export interface ElectronAPI {
   // undefined/null 维度由 api-client 自动过滤，不下发空 query。
   resolveTaxRate: (params: { date?: string; businessType?: string; partnerTaxType?: string; itemCategory?: string }) =>
     Promise<{ success: boolean; data?: TaxRateResolution; error?: string }>
+  // 凭证预览（T5b）：POST 只读计算端点，不落库、不生成凭证号。
+  previewVoucher: (code: string, invoiceId: number) =>
+    Promise<{ success: boolean; data?: VoucherPreview; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

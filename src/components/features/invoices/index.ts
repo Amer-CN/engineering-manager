@@ -14,6 +14,9 @@ export { InvoiceFilters } from './InvoiceFilters'
 export { InvoiceList } from './InvoiceList'
 export type { InvoiceListProps } from './InvoiceList'
 
+// 凭证预览（T5b）
+export { VoucherPreviewDrawer, voucherTemplateCodeFor } from './VoucherPreviewDrawer'
+
 // 发票表单
 export { InvoiceForm } from './InvoiceForm'
 export { taxRateOptions, invoiceKindOptions } from './constants'

@@ -20,6 +20,8 @@ export interface InvoiceListProps {
   onStatusChange: (id: number, status: InvoiceStatus) => void
   onPrint: (invoice: Invoice) => void
   onPreview: (data: string, type: 'image' | 'pdf', title: string, category?: string, subCategory?: string, projectName?: string | null, projectId?: number) => void
+  /** T5b：凭证预览（只读，不落库） */
+  onVoucherPreview?: (invoice: Invoice) => void
 }
 
 export const InvoiceList: React.FC<InvoiceListProps> = ({
@@ -28,7 +30,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   onDelete,
   onStatusChange,
   onPrint,
-  onPreview
+  onPreview,
+  onVoucherPreview
 }) => {
   // 红冲经全量路径成功后需本地刷新本行（不再走 onStatusChange 快捷路径）
   const [, forceRefresh] = React.useReducer((x: number) => x + 1, 0)
@@ -266,6 +269,15 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               className="p-1.5 rounded transition-colors text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)]"
             >
               <Icon name="Printer" size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip content="凭证预览" position="top" delay={300}>
+            <button
+              onClick={() => onVoucherPreview?.(item)}
+              aria-label="凭证预览"
+              className="p-1.5 rounded transition-colors text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)]"
+            >
+              <Icon name="FileText" size={14} />
             </button>
           </Tooltip>
           {item.status !== 'cancelled' && item.status !== 'red_flushed' && (

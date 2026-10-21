@@ -229,6 +229,8 @@ function createMockAPI() {
     getTaxRates: async () => ({ success: true, data: [] }),
     // 默认税率解析（P1 / T1b）：mock 无规则库 → matchedBy='none'（不猜值，调用点据此不改税率）
     resolveTaxRate: async () => ({ success: true, data: { rateId: null, code: null, rate: null, matchedBy: 'none' as const } }),
+    // 凭证预览（T5b）：mock 无后端模板，明确失败由 UI 展示错误，不伪造分录
+    previewVoucher: async () => ({ success: false, error: '浏览器预览模式不支持凭证预览' }),
     createSupervisor: async () => ({ success: true, data: { id: 1 } }),
     updateSupervisor: async () => ({ success: true }),
     deleteSupervisor: async () => ({ success: true }),

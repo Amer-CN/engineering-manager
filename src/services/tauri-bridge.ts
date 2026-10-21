@@ -24,6 +24,7 @@ import type {
   ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair, ParsedBankReceipt,
   StoredAuth,
   TaxRate, TaxRateResolution,
+  VoucherPreview,
 } from '../types/electron';
 
 // ============ 导出的 API ============
@@ -411,6 +412,10 @@ export const tauriAPI = {
   getTaxRates: () => apiClient.get<TaxRate[]>('/api/tax-rates'),
   resolveTaxRate: (params: { date?: string; businessType?: string; partnerTaxType?: string; itemCategory?: string }) =>
     apiClient.get<TaxRateResolution>('/api/tax-rates/resolve', params),
+
+  // POST /api/voucher-templates/{code}/generate-preview（T5b）：只读计算，不落库。
+  previewVoucher: (code: string, invoiceId: number) =>
+    apiClient.post<VoucherPreview>(`/api/voucher-templates/${code}/generate-preview`, { invoiceId }),
 
   // ────────── 模板 ──────────
   getTemplates: () => apiClient.get<Template[]>('/api/templates'),
