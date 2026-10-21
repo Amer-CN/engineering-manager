@@ -78,6 +78,49 @@ describe('useInvoicePage', () => {
     expect(result.current.contracts.expense).toHaveLength(1)
   })
 
+  // 服务端 400（如税收分类编码非法 / 超长）不能被当成成功：不关抽屉、不刷新、不误报
+  it('保存返回 success:false 时保留抽屉且不刷新列表', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const beforeCalls = (ea.getInvoices as any).mock.calls.length
+    ea.createInvoice = vi.fn().mockResolvedValue({ success: false, error: '税收分类编码需为 32 位以内数字或字母' })
+    act(() => { result.current.setShowInvoiceModal(true) })
+
+    await act(async () => {
+      await result.current.handleSubmitInvoice({
+        name: '非法编码票', amount: 1, type: 'invoice_in', fileUrl: '', fileType: '',
+      } as any)
+    })
+
+    expect(result.current.showInvoiceModal).toBe(true)
+    expect((ea.getInvoices as any).mock.calls.length).toBe(beforeCalls)
+    expect((ea.createInvoice as any)).toHaveBeenCalledTimes(1)
+  })
+
+  // 编辑路径同样不能被 400 当成成功
+  it('编辑保存返回 success:false 时保留抽屉且不刷新列表', async () => {
+    const { useInvoicePage } = await import('@/hooks/useInvoicePage')
+    const { result } = renderHook(() => useInvoicePage())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const beforeCalls = (ea.getInvoices as any).mock.calls.length
+    ea.updateInvoice = vi.fn().mockResolvedValue({ success: false, error: '优惠政策长度不能超过 64 个字符' })
+    act(() => { result.current.handleEditInvoice(mockInvoices[0] as any) })
+    expect(result.current.showInvoiceModal).toBe(true)
+
+    await act(async () => {
+      await result.current.handleSubmitInvoice({
+        name: '编辑票', amount: 1, type: 'invoice_in', fileUrl: '', fileType: '',
+      } as any)
+    })
+
+    expect(result.current.showInvoiceModal).toBe(true)
+    expect((ea.getInvoices as any).mock.calls.length).toBe(beforeCalls)
+    expect((ea.updateInvoice as any)).toHaveBeenCalledTimes(1)
+  })
+
   it('filteredInvoices 按 type 筛选', async () => {
     const { useInvoicePage } = await import('@/hooks/useInvoicePage')
     const { result } = renderHook(() => useInvoicePage())
