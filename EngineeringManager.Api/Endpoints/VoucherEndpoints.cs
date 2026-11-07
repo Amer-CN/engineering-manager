@@ -11,8 +11,9 @@ namespace EngineeringManager.Api;
 /// <summary>
 /// 凭证模板、凭证预览（T5a/T5b）与凭证草稿（T6a）端点。
 ///
-/// T6a 只落草稿：不做过账/反过账/凭证编辑，[vouchers].[status] 恒为 'draft'；
-/// 凭证号 记-YYYYMM-#### 由 [voucher_sequences] 在同一事务内分配。
+/// T6a 只落草稿；T6b 增加过账（draft → posted）：过账即终态，不提供反过账/凭证编辑，
+/// 过账后凭证行与分录的不可变由 071 触发器兜底。
+/// 凭证号 记-YYYYMM-#### 由 [voucher_sequences] 在同一事务内分配（过账不改号）。
 /// 金额：库内一律 long 分，仅在响应时转元（2 位）；借贷平衡校验在分上做。
 /// </summary>
 public static class VoucherEndpoints
@@ -213,7 +214,8 @@ public static class VoucherEndpoints
             var rows = (await db.QueryAsync(
                 @"SELECT v.[id],v.[voucher_no] AS voucherNo,v.[voucher_date] AS voucherDate,v.[period] AS period,
                          v.[source_type] AS sourceType,v.[source_id] AS sourceId,v.[template_code] AS templateCode,
-                         v.[status] AS status,v.[total_debit_fen] AS totalDebitFen,v.[total_credit_fen] AS totalCreditFen
+                         v.[status] AS status,v.[total_debit_fen] AS totalDebitFen,v.[total_credit_fen] AS totalCreditFen,
+                         v.[posted_at] AS postedAt,v.[posted_by] AS postedBy
                   FROM [vouchers] v
                   JOIN [invoices] i ON i.[id]=v.[source_id] AND v.[source_type]='invoice'
                   WHERE (i.[created_by]=@Uid OR @IsAdmin=1
@@ -242,6 +244,8 @@ public static class VoucherEndpoints
                     sourceId = Convert.ToInt64(v.sourceId),
                     templateCode = v.templateCode as string,
                     status = v.status as string,
+                    postedAt = v.postedAt as string,
+                    postedBy = v.postedBy as string,
                     totalDebit = Convert.ToInt64(v.totalDebitFen) / 100m,
                     totalCredit = Convert.ToInt64(v.totalCreditFen) / 100m,
                     entries = entries.Select(e => new
@@ -256,6 +260,96 @@ public static class VoucherEndpoints
                 });
             }
             return Common.Ok(result);
+        });
+
+        // 过账（T6b）：draft → posted。过账即终态（不提供反过账）；
+        // 分录只读由「无编辑端点 + 071 触发器」双保险。
+        app.MapPost("/api/vouchers/{id}/post", async (HttpContext ctx, IDbConnection db, long id) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 门禁 5：写端点必须有权限检查；过账用独立权限码，不复用 create/delete
+            if (!CurrentUser.HasPermission(ctx, db, "vouchers:approve")) return Results.Forbid();
+
+            using var tx = BeginWriteTransaction(db);
+            try
+            {
+                var voucher = await db.QueryFirstOrDefaultAsync<VoucherPostRow>(
+                    @"SELECT [id] AS Id,[voucher_no] AS VoucherNo,[period] AS Period,[status] AS Status,
+                             [total_debit_fen] AS TotalDebitFen,[total_credit_fen] AS TotalCreditFen,
+                             [source_type] AS SourceType,[source_id] AS SourceId,
+                             [created_by] AS CreatedBy,[project_id] AS ProjectId
+                      FROM [vouchers] WHERE [id]=@Id", new { Id = id }, tx);
+                if (voucher == null)
+                {
+                    tx.Rollback();
+                    return Common.NotFound("凭证不存在");
+                }
+
+                // 行级写入门：与 DELETE 同口径（本人 / 管理员 / 授权项目），防跨人过账
+                if (RowWriteGate.Classify(ctx, db, voucher.CreatedBy, voucher.ProjectId) == RowWriteOutcome.Denied)
+                {
+                    tx.Rollback();
+                    return Results.Forbid();
+                }
+
+                if (!string.Equals(voucher.Status, "draft", StringComparison.Ordinal))
+                {
+                    tx.Rollback();
+                    return Common.Fail("仅草稿凭证可过账", 400);
+                }
+
+                // 源发票已软删 → 拒绝过账（与 GET /api/vouchers 的 deleted_at 过滤同口径）
+                if (string.Equals(voucher.SourceType, "invoice", StringComparison.Ordinal))
+                {
+                    var invoiceDeleted = await db.ExecuteScalarAsync<int?>(
+                        "SELECT CASE WHEN [deleted_at] IS NULL THEN 0 ELSE 1 END FROM [invoices] WHERE [id]=@Id",
+                        new { Id = voucher.SourceId }, tx);
+                    if (invoiceDeleted is null || invoiceDeleted == 1)
+                    {
+                        tx.Rollback();
+                        return Common.Fail("源发票已删除，禁止过账", 400);
+                    }
+                }
+
+                var postedAt = Common.NowString();
+                var postResult = VoucherService.Post(
+                    db, tx, id, voucher.TotalDebitFen, voucher.TotalCreditFen, uid, postedAt);
+
+                // 审计：与过账同事务，写不进则整体回滚（fail-closed）
+                await db.ExecuteAsync(
+                    @"INSERT INTO [audit_logs]
+                        ([action],[level],[user_id],[user_name],[resource],[resource_id],[details],[ip_address],[created_at])
+                      VALUES ('voucher.post','info',@UserId,@UserName,'vouchers',@ResourceId,@Details,@Ip,@CreatedAt)",
+                    new
+                    {
+                        UserId = uid,
+                        UserName = uid,
+                        ResourceId = id.ToString(),
+                        Details = $"voucherNo={voucher.VoucherNo}; period={voucher.Period}; debitFen={postResult.DebitFen}; creditFen={postResult.CreditFen}",
+                        Ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "",
+                        CreatedAt = postedAt
+                    }, tx);
+
+                tx.Commit();
+                return Common.Ok(new
+                {
+                    id,
+                    voucherNo = voucher.VoucherNo,
+                    status = "posted",
+                    postedAt
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                tx.Rollback();
+                return Common.Fail(Common.Sanitize(ex.Message), 400);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[VoucherPost] id={id}: {ex.Message}");
+                tx.Rollback();
+                throw;
+            }
         });
 
         // 删除凭证草稿：仅 draft；先删 entries 再删 voucher（同一事务）。
@@ -438,6 +532,28 @@ public static class VoucherEndpoints
     /// <summary>库内金额列（分，兼容 INTEGER/REAL 亲和性）→ long 分。</summary>
     private static long ToFen(object? v) =>
         v == null || v is DBNull ? 0 : (long)Math.Round(Convert.ToDouble(v));
+
+    /// <summary>
+    /// 写事务统一用 IMMEDIATE（同 InvoiceEndpoints 先例）：SQLite 默认 DEFERRED 先拿读锁、
+    /// 写时再升级，会让「读状态 → 校验 → 过账」出现并发窗口（两个请求同时通过 draft 校验）。
+    /// </summary>
+    private static IDbTransaction BeginWriteTransaction(IDbConnection db) =>
+        db is SqliteConnection sqlite ? sqlite.BeginTransaction(deferred: false) : db.BeginTransaction();
+
+    /// <summary>过账端点用的强类型行（避免 Dapper dynamic 传入 VoucherService.Post 造成动态调用）。</summary>
+    private sealed class VoucherPostRow
+    {
+        public long Id { get; set; }
+        public string? VoucherNo { get; set; }
+        public string? Period { get; set; }
+        public string? Status { get; set; }
+        public long TotalDebitFen { get; set; }
+        public long TotalCreditFen { get; set; }
+        public string? SourceType { get; set; }
+        public long SourceId { get; set; }
+        public string? CreatedBy { get; set; }
+        public long? ProjectId { get; set; }
+    }
 
     private sealed record LoadedInvoiceTemplate(
         long TemplateId,

@@ -725,7 +725,7 @@ export interface VoucherEntry {
   amount: number          // 元
 }
 
-/** 凭证（T6a）：本轮只生成草稿，status 恒为 draft。 */
+/** 凭证（T6a 草稿 / T6b 过账）：status 为 draft | posted；过账即终态、过账后只读。 */
 export interface Voucher {
   id: number
   voucherNo: string       // 记-YYYYMM-####
@@ -734,7 +734,9 @@ export interface Voucher {
   sourceType: string      // 'invoice'
   sourceId: number
   templateCode: string
-  status: string          // 本轮只有 draft
+  status: string          // draft | posted
+  postedAt: string | null // 过账时间（草稿为 null）
+  postedBy: string | null // 过账人 user id（草稿为 null）
   totalDebit: number      // 元
   totalCredit: number     // 元
   entries: VoucherEntry[]
@@ -746,6 +748,14 @@ export interface VoucherDraft {
   voucherNo: string
   totalDebit: number      // 元
   totalCredit: number     // 元
+}
+
+/** 凭证过账的响应（T6b）：status 恒为 posted。 */
+export interface VoucherPostResult {
+  id: number
+  voucherNo: string
+  status: string
+  postedAt: string
 }
 
 export interface TaxRule {
@@ -1178,6 +1188,8 @@ export interface ElectronAPI {
   getVouchers: (period?: string) =>
     Promise<{ success: boolean; data?: Voucher[]; error?: string }>
   deleteVoucher: (id: number) => Promise<{ success: boolean; error?: string }>
+  postVoucher: (id: number) =>
+    Promise<{ success: boolean; data?: VoucherPostResult; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

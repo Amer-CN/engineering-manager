@@ -5,16 +5,18 @@ using EngineeringManager.Api.Services;
 namespace EngineeringManager.Api.Services;
 
 /// <summary>
-/// 凭证草稿落库（T6a）。
+/// 凭证草稿（T6a）与过账（T6b）。
 ///
-/// 只做草稿：不写账簿、不生成过账状态；金额全程 long 分。
-/// 凭证号 记-YYYYMM-#### 由 [voucher_sequences] 按期间在同一事务内分配：
+/// 金额全程 long 分；凭证号 记-YYYYMM-#### 由 [voucher_sequences] 按期间在同一事务内分配：
 /// 先 INSERT ... ON CONFLICT DO UPDATE SET next_no=next_no+1，再 SELECT next_no-1。
 /// 同一事务内天然串行；事务回滚时号段一并回滚（重复生成不会吃掉号）。
+/// 过账即终态：不提供反过账；posted 行与分录的不可变由 071 触发器兜底。
 /// </summary>
 public static class VoucherService
 {
     public sealed record DraftResult(long Id, string VoucherNo);
+
+    public sealed record PostResult(long DebitFen, long CreditFen);
 
     /// <summary>分配本期凭证号（调用方必须传入已开启的事务）。</summary>
     public static string AllocateVoucherNo(IDbConnection db, IDbTransaction tx, string period)
@@ -100,5 +102,44 @@ public static class VoucherService
         }
 
         return new DraftResult(voucherId, voucherNo);
+    }
+
+    /// <summary>
+    /// 过账（T6b）：校验分录合计后把 draft 置为 posted（调用方负责事务提交/回滚）。
+    /// 过账即终态：不提供反过账；posted 行与分录的不可变由 071 触发器兜底。
+    /// 并发：调用方必须用 IMMEDIATE 事务；UPDATE 再带 [status]='draft' 双保险。
+    /// 失败抛 InvalidOperationException，由端点转 400。
+    /// </summary>
+    public static PostResult Post(
+        IDbConnection db,
+        IDbTransaction tx,
+        long voucherId,
+        long expectedDebitFen,
+        long expectedCreditFen,
+        string? postedBy,
+        string postedAt)
+    {
+        var debit = db.ExecuteScalar<long>(
+            "SELECT COALESCE(SUM([amount_fen]),0) FROM [voucher_entries] WHERE [voucher_id]=@Id AND [dc]=1",
+            new { Id = voucherId }, tx);
+        var credit = db.ExecuteScalar<long>(
+            "SELECT COALESCE(SUM([amount_fen]),0) FROM [voucher_entries] WHERE [voucher_id]=@Id AND [dc]=-1",
+            new { Id = voucherId }, tx);
+
+        if (debit != credit)
+            throw new InvalidOperationException(
+                $"凭证借贷不平衡：借 {debit / 100m:0.00} 元，贷 {credit / 100m:0.00} 元，禁止过账");
+        if (debit != expectedDebitFen || credit != expectedCreditFen)
+            throw new InvalidOperationException("凭证分录合计与凭证表合计不一致，禁止过账");
+
+        var affected = db.Execute(
+            @"UPDATE [vouchers]
+                 SET [status]='posted',[posted_at]=@PostedAt,[posted_by]=@PostedBy
+               WHERE [id]=@Id AND [status]='draft'",
+            new { Id = voucherId, PostedAt = postedAt, PostedBy = postedBy }, tx);
+        if (affected == 0)
+            throw new InvalidOperationException("仅草稿凭证可过账");
+
+        return new PostResult(debit, credit);
     }
 }
