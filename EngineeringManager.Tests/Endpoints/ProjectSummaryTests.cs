@@ -12,7 +12,7 @@ namespace EngineeringManager.Tests.Endpoints;
 
 /// <summary>
 /// T6：项目维度只读聚合（成本台账 / 发票 / 结算）。
-/// 单位口径：invoices.amount 为分；cost_ledger.amount / settlements.amount 为元（REAL）。
+/// 单位口径：invoices.amount、cost_ledger.amount、settlements.amount 均为 INTEGER 分（053 迁移后），接口输出元。
 /// </summary>
 public class ProjectSummaryTests : ApiTestBase
 {
@@ -78,22 +78,22 @@ public class ProjectSummaryTests : ApiTestBase
         return json.GetProperty("data").GetInt64();
     }
 
-    private void InsertCost(long projectId, decimal yuan, bool deleted = false)
+    private void InsertCost(long projectId, long fen, bool deleted = false)
     {
         using var conn = new SqliteConnection(ConnectionString);
         conn.Open();
         conn.Execute(@"INSERT INTO [cost_ledger] ([project_id],[amount],[date],[deleted_at],[created_at],[updated_at])
             VALUES (@P,@A,'2026-10-01',@Deleted,datetime('now'),datetime('now'))",
-            new { P = projectId, A = yuan, Deleted = deleted ? "2026-10-02 00:00:00" : null });
+            new { P = projectId, A = fen, Deleted = deleted ? "2026-10-02 00:00:00" : null });
     }
 
-    private void InsertSettlement(long projectId, decimal yuan, bool deleted = false)
+    private void InsertSettlement(long projectId, long fen, bool deleted = false)
     {
         using var conn = new SqliteConnection(ConnectionString);
         conn.Open();
         conn.Execute(@"INSERT INTO [settlements] ([project_id],[name],[amount],[status],[date],[deleted_at],[created_at],[updated_at])
             VALUES (@P,'结算单',@A,'confirmed','2026-10-01',@Deleted,datetime('now'),datetime('now'))",
-            new { P = projectId, A = yuan, Deleted = deleted ? "2026-10-02 00:00:00" : null });
+            new { P = projectId, A = fen, Deleted = deleted ? "2026-10-02 00:00:00" : null });
     }
 
     private async Task<JsonElement> GetSummaryAsync(string query = "")
@@ -108,9 +108,9 @@ public class ProjectSummaryTests : ApiTestBase
     {
         await AuthAdminAsync();
         var projectId = await CreateProjectAsync("聚合项目A");
-        InsertCost(projectId, 100.25m);
-        InsertCost(projectId, 20m);
-        InsertSettlement(projectId, 50.5m);
+        InsertCost(projectId, 10025);
+        InsertCost(projectId, 2000);
+        InsertSettlement(projectId, 5050);
         await CreateInvoiceAsync(projectId, 1060m);
 
         var data = await GetSummaryAsync($"?projectId={projectId}");
@@ -132,10 +132,10 @@ public class ProjectSummaryTests : ApiTestBase
     {
         await AuthAdminAsync();
         var projectId = await CreateProjectAsync("聚合项目-软删");
-        InsertCost(projectId, 100m);
-        InsertCost(projectId, 999m, deleted: true);
-        InsertSettlement(projectId, 50m);
-        InsertSettlement(projectId, 888m, deleted: true);
+        InsertCost(projectId, 10000);
+        InsertCost(projectId, 99900, deleted: true);
+        InsertSettlement(projectId, 5000);
+        InsertSettlement(projectId, 88800, deleted: true);
 
         var row = Assert.Single((await GetSummaryAsync($"?projectId={projectId}")).EnumerateArray());
         Assert.Equal(10000L, row.GetProperty("costFen").GetInt64());
@@ -183,7 +183,7 @@ public class ProjectSummaryTests : ApiTestBase
     {
         await AuthAdminAsync();
         var projectId = await CreateProjectAsync("聚合项目-隔离");
-        InsertCost(projectId, 100m);
+        InsertCost(projectId, 10000);
 
         SeedUser("2", "acc1", "accountant");
         SetAuth(await LoginAsync("acc1"));
