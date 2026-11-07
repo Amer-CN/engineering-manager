@@ -592,7 +592,7 @@ export const tauriAPI = {
   ocrBaiduIdCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>
     apiClient.post<{ text?: string; idCard?: { number: string; name?: string; gender?: string; ethnicity?: string; birthDate?: string; address?: string; issueAuthority?: string; validDate?: string } }>('/api/ocr/id-card', { imageBase64, config }),
   ocrBaiduInvoice: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>
-    apiClient.post<{ text?: string; invoice?: { invoiceNum: string; invoiceCode: string; invoiceDate: string; invoiceType: string; totalAmount: number; amountWithoutTax: number; totalTax: number; taxRate: number; sellerName: string; purchaserName: string; checkCode: string; itemName: string; remarks: string } }>('/api/ocr/invoice', { imageBase64, config }),
+    apiClient.post<{ text?: string; invoice?: { invoiceNum: string; invoiceCode: string; invoiceDate: string; invoiceType: string; totalAmount: number; amountWithoutTax: number; totalTax: number; taxRate: number; sellerName: string; purchaserName: string; checkCode: string; verifyCode?: string; sellerTaxNo?: string; purchaserTaxNo?: string; drawer?: string; payee?: string; reviewer?: string; taxCode?: string; itemName: string; remarks: string } }>('/api/ocr/invoice', { imageBase64, config }),
   ocrBaiduBankCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>
     apiClient.post<{ text?: string; bankCard?: { cardNumber: string; bankName: string; cardType: string; validDate: string } }>('/api/ocr/bank-card', { imageBase64, config }),
   ocrBaiduBusinessLicense: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>

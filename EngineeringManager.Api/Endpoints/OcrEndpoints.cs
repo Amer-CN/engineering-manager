@@ -1,6 +1,7 @@
 using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
+using EngineeringManager.Api.Services;
 
 namespace EngineeringManager.Api;
 
@@ -97,40 +98,35 @@ public static class OcrEndpoints
                 var ocrData = await CallBaiduOcr(httpClient, "/rest/2.0/ocr/v1/vat_invoice", dto.ImageBase64);
                 var words = ocrData.TryGetProperty("words_result", out var wr) ? wr : default;
 
-                string GetStr(string key) => words.TryGetProperty(key, out var v) && v.TryGetProperty("word", out var w) ? w.GetString() ?? "" : "";
-                decimal GetDec(string key) => decimal.TryParse(GetStr(key).Replace("¥", "").Replace("%", ""), out var d) ? d : 0;
-
-                var taxRateStr = words.TryGetProperty("CommodityTaxRate", out var trArr) && trArr.GetArrayLength() > 0
-                    ? trArr[0].TryGetProperty("word", out var tw) ? tw.GetString() ?? "0" : "0" : "0";
-                var taxRate = decimal.TryParse(taxRateStr.Replace("%", ""), out var tr) ? tr / 100 : 0;
-
-                var itemName = words.TryGetProperty("CommodityName", out var cnArr) && cnArr.GetArrayLength() > 0
-                    ? cnArr[0].TryGetProperty("word", out var iw) ? iw.GetString() ?? "" : "" : "";
-
-                var invoiceDate = GetStr("InvoiceDate");
-                if (invoiceDate.Contains("年"))
-                    invoiceDate = invoiceDate.Replace("年", "-").Replace("月", "-").Replace("日", "");
-
-                // FP03 待复核注意点：数电票是否取消校验码/收款人/复核人未定，checkCode 暂收（仅透传不校验）
+                // FP03（2026-11-07 取证）：数电票取消校验码/收款人/复核人，仅历史票样可能返回；
+                // 映射不到一律留空，不伪造。纯函数见 Services/InvoiceOcrMapper。
+                var m = InvoiceOcrMapper.Map(words);
                 var result = new
                 {
                     success = true,
                     text = words.ToString(),
                     invoice = new
                     {
-                        invoiceNum = GetStr("InvoiceNum"),
-                        invoiceCode = GetStr("InvoiceCode"),
-                        invoiceDate,
-                        invoiceType = words.TryGetProperty("InvoiceType", out var it) ? it.GetString() ?? "" : words.TryGetProperty("InvoiceTypeOrg", out var ito) ? ito.GetString() ?? "" : "",
-                        totalAmount = GetDec("AmountInFiguers"),
-                        amountWithoutTax = GetDec("TotalAmount"),
-                        totalTax = GetDec("TotalTax"),
-                        taxRate,
-                        sellerName = GetStr("SellerName"),
-                        purchaserName = GetStr("PurchaserName"),
-                        checkCode = GetStr("CheckCode"),
-                        itemName,
-                        remarks = GetStr("Remarks")
+                        invoiceNum = m.InvoiceNum,
+                        invoiceCode = m.InvoiceCode,
+                        invoiceDate = m.InvoiceDate,
+                        invoiceType = m.InvoiceType,
+                        totalAmount = m.TotalAmount,
+                        amountWithoutTax = m.AmountWithoutTax,
+                        totalTax = m.TotalTax,
+                        taxRate = m.TaxRate,
+                        sellerName = m.SellerName,
+                        sellerTaxNo = m.SellerTaxNo,
+                        purchaserName = m.PurchaserName,
+                        purchaserTaxNo = m.PurchaserTaxNo,
+                        verifyCode = m.VerifyCode,
+                        checkCode = m.VerifyCode, // 兼容旧字段名
+                        drawer = m.Drawer,
+                        payee = m.Payee,
+                        reviewer = m.Reviewer,
+                        taxCode = m.TaxCode,
+                        itemName = m.ItemName,
+                        remarks = m.Remarks
                     }
                 };
                 IncrementOcrStat("invoice");

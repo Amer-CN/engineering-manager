@@ -38,6 +38,17 @@ export interface OCRResult {
     sellerName: string
     purchaserName: string
     checkCode: string
+    /** T8：校验码（与 checkCode 同义，后端新字段名） */
+    verifyCode?: string
+    /** T8：销方/购方纳税人识别号（数电票仍有；旧票样可能只有名称） */
+    sellerTaxNo?: string
+    purchaserTaxNo?: string
+    /** T8：开票人（数电票保留）；收款人/复核人仅历史票样可能存在 */
+    drawer?: string
+    payee?: string
+    reviewer?: string
+    /** T3/T8：税收分类编码（OCR 不一定返回） */
+    taxCode?: string
     itemName: string
     remarks: string
   }

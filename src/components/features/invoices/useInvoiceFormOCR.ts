@@ -67,6 +67,12 @@ export function useInvoiceFormOCR(
             invoiceKind: deriveInvoiceKind(ocrDims.medium, invoiceCategory),
             invoiceNo: result.invoiceNo || prev.invoiceNo,
             invoiceCode: result.invoiceCode || prev.invoiceCode,
+            taxCode: result.taxCode || prev.taxCode,
+            verifyCode: result.verifyCode || prev.verifyCode,
+            sellerTaxNo: result.sellerTaxNo || prev.sellerTaxNo,
+            drawer: result.drawer || prev.drawer,
+            payee: result.payee || prev.payee,
+            reviewer: result.reviewer || prev.reviewer,
             issueDate: result.issueDate || prev.issueDate,
             name: result.itemName || prev.name,
             amount: result.amount || prev.amount,
@@ -79,6 +85,13 @@ export function useInvoiceFormOCR(
             remarks: result.remarks || prev.remarks,
           }
         })
+        const filledCount = [
+          result.invoiceNo, result.invoiceCode, result.issueDate, result.invoiceType,
+          result.itemName, result.remarks, result.sellerName, result.purchaserName,
+          result.sellerTaxNo, result.purchaserTaxNo, result.verifyCode,
+          result.drawer, result.payee, result.reviewer, result.taxCode,
+          result.amount > 0, result.priceAmount > 0, result.taxAmount > 0, result.taxRate > 0,
+        ].filter(Boolean).length
         const summary = [
           result.invoiceNo ? `发票号: ${result.invoiceNo}` : null,
           result.amount ? `金额: ¥${result.amount.toLocaleString()}` : null,
@@ -87,7 +100,7 @@ export function useInvoiceFormOCR(
           matchedBuyer ? `购买方: ${matchedBuyer.name}` : null,
         ].filter(Boolean).join(' | ')
         setOcrResult(summary)
-        showToast('🎉 AI 识别成功！已自动填入 12 个字段', 'success')
+        showToast(`🎉 AI 识别成功！已自动填入 ${filledCount} 个字段`, 'success')
       }
     } catch (err: any) {
       showToast(`识别失败: ${err.message}`, 'error')
