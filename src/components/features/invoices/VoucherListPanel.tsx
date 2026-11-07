@@ -198,18 +198,20 @@ export const VoucherListPanel: React.FC = () => {
   return (
     <div>
       <div className="flex items-center gap-3 mb-3">
-        <Select
-          options={periodOptions}
-          value={period}
-          onChange={(value) => setPeriod(String(value))}
-          placeholder="全部期间"
-          className="w-40"
-        />
-        <span className="text-xs" style={{ color: 'var(--muted)' }}>共 {rows.length} 张凭证</span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="w-44 shrink-0">
+          <Select
+            options={periodOptions}
+            value={period}
+            onChange={(value) => setPeriod(String(value))}
+            placeholder="全部期间"
+          />
+        </div>
+        <span className="text-xs whitespace-nowrap shrink-0" style={{ color: 'var(--muted)' }}>共 {rows.length} 张凭证</span>
+        <div className="ml-auto flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             variant="secondary"
+            className="whitespace-nowrap"
             disabled={rows.length === 0}
             onClick={() => exportVoucherCsv(rows, period || undefined)}
           >
@@ -218,6 +220,7 @@ export const VoucherListPanel: React.FC = () => {
           <Button
             size="sm"
             variant="secondary"
+            className="whitespace-nowrap"
             disabled={rows.length === 0}
             onClick={() => printVoucherList(rows, period ? `${period.slice(0, 4)}-${period.slice(4)}` : '全部期间')}
           >

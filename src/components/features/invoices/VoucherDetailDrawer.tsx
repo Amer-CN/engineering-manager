@@ -110,7 +110,7 @@ export const VoucherDetailDrawer: React.FC<VoucherDetailDrawerProps> = ({ vouche
                 <thead>
                   <tr style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>
                     <th className="text-left px-3 py-2 font-medium w-10">#</th>
-                    <th className="text-left px-3 py-2 font-medium w-12">方向</th>
+                    <th className="text-left px-3 py-2 font-medium w-16 whitespace-nowrap">方向</th>
                     <th className="text-left px-3 py-2 font-medium">科目</th>
                     <th className="text-left px-3 py-2 font-medium">摘要</th>
                     <th className="text-right px-3 py-2 font-medium">金额</th>
