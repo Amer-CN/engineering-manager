@@ -352,6 +352,45 @@ public static class VoucherEndpoints
             }
         });
 
+        // 凭证期间汇总（只读）：张数 / 草稿 / 已过账 / 借贷合计（元）；与列表同口径可见性。
+        app.MapGet("/api/vouchers/summary", async (HttpContext ctx, IDbConnection db, string? period) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.HasPermission(ctx, db, "vouchers:read")) return Results.Forbid();
+
+            var periodFilter = string.IsNullOrWhiteSpace(period) ? null : period.Trim();
+            if (periodFilter != null && (periodFilter.Length != 6 || !periodFilter.All(char.IsDigit)))
+                return Common.Fail("period 格式应为 YYYYMM", 400);
+
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var row = await db.QuerySingleAsync<VoucherSummaryRow>(
+                @"SELECT COUNT(*) AS TotalCount,
+                         COALESCE(SUM(CASE WHEN v.[status]='draft' THEN 1 ELSE 0 END),0) AS DraftCount,
+                         COALESCE(SUM(CASE WHEN v.[status]='posted' THEN 1 ELSE 0 END),0) AS PostedCount,
+                         COALESCE(SUM(v.[total_debit_fen]),0) AS TotalDebitFen,
+                         COALESCE(SUM(v.[total_credit_fen]),0) AS TotalCreditFen
+                  FROM [vouchers] v
+                  JOIN [invoices] i ON i.[id]=v.[source_id] AND v.[source_type]='invoice'
+                  WHERE (i.[created_by]=@Uid OR @IsAdmin=1
+                         OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=i.[project_id] AND user_id=@Uid))
+                    AND i.[deleted_at] IS NULL
+                    AND (@Period IS NULL OR v.[period]=@Period)",
+                new { Uid = uid, IsAdmin = isAdmin, Period = periodFilter });
+
+            var totalDebitFen = row?.TotalDebitFen ?? 0;
+            var totalCreditFen = row?.TotalCreditFen ?? 0;
+            return Common.Ok(new
+            {
+                period = periodFilter,
+                totalCount = row?.TotalCount ?? 0,
+                draftCount = row?.DraftCount ?? 0,
+                postedCount = row?.PostedCount ?? 0,
+                totalDebit = totalDebitFen / 100m,
+                totalCredit = totalCreditFen / 100m,
+                balanced = totalDebitFen == totalCreditFen
+            });
+        });
+
         // 删除凭证草稿：仅 draft；先删 entries 再删 voucher（同一事务）。
         app.MapDelete("/api/vouchers/{id}", async (HttpContext ctx, IDbConnection db, long id) =>
         {
@@ -553,6 +592,16 @@ public static class VoucherEndpoints
         public long SourceId { get; set; }
         public string? CreatedBy { get; set; }
         public long? ProjectId { get; set; }
+    }
+
+    /// <summary>期间汇总行（Dapper 强类型映射，需可写属性）。</summary>
+    private sealed class VoucherSummaryRow
+    {
+        public long TotalCount { get; set; }
+        public long DraftCount { get; set; }
+        public long PostedCount { get; set; }
+        public long TotalDebitFen { get; set; }
+        public long TotalCreditFen { get; set; }
     }
 
     private sealed record LoadedInvoiceTemplate(

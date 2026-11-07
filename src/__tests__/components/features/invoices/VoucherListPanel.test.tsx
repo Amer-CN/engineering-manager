@@ -11,6 +11,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
 const vouchersState: { data?: any[]; isLoading?: boolean; error?: any } = {}
+const summaryState: { data?: any } = {}
 const postMutate = vi.fn()
 const deleteMutate = vi.fn()
 const permission = { allowed: new Set(['vouchers:approve', 'vouchers:delete']) }
@@ -30,6 +31,7 @@ vi.mock('@/hooks/data/useVouchers', () => ({
     isLoading: vouchersState.isLoading ?? false,
     error: vouchersState.error,
   }),
+  useVoucherSummary: () => ({ data: summaryState.data }),
   usePostVoucher: () => ({ mutateAsync: postMutate, isPending: false }),
   useDeleteVoucher: () => ({ mutateAsync: deleteMutate, isPending: false }),
 }))
@@ -78,6 +80,7 @@ afterEach(() => {
   vouchersState.data = undefined
   vouchersState.isLoading = false
   vouchersState.error = undefined
+  summaryState.data = undefined
   postMutate.mockReset()
   deleteMutate.mockReset()
   confirmMock.mockClear()
@@ -169,6 +172,22 @@ describe('VoucherListPanel（T6c）', () => {
     render(<VoucherListPanel />)
 
     expect(screen.getByText(/获取凭证失败：数据库连接失败/)).toBeTruthy()
+  })
+
+  test('汇总条展示张数与借贷合计；不平衡时给警告', () => {
+    vouchersState.data = [draftVoucher, postedVoucher]
+    summaryState.data = {
+      period: '202605', totalCount: 2, draftCount: 1, postedCount: 1,
+      totalDebit: 3180, totalCredit: 3180, balanced: true,
+    }
+    const { rerender } = render(<VoucherListPanel />)
+
+    expect(screen.getAllByText(/3,180/).length).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByText('借贷不平衡')).toBeNull()
+
+    summaryState.data = { ...summaryState.data, balanced: false }
+    rerender(<VoucherListPanel />)
+    expect(screen.getByText('借贷不平衡')).toBeTruthy()
   })
 
   test('导出 CSV 与打印：按当前筛选结果调用', () => {

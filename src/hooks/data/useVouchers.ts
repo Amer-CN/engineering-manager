@@ -15,6 +15,20 @@ export function useVouchers(period?: string) {
   })
 }
 
+/** 凭证期间汇总（T6f）：张数/草稿/已过账/借贷合计（元）+ 是否平衡。 */
+export function useVoucherSummary(period?: string) {
+  return useQuery({
+    queryKey: ['vouchers', 'summary', period ?? 'all'],
+    queryFn: async () => {
+      const api = await getAPI()
+      const res = await api.getVoucherSummary(period)
+      if (!res.success) throw new Error(res.error || '获取凭证汇总失败')
+      return res.data
+    },
+    staleTime: 30_000,
+  })
+}
+
 /** 过账（T6b）：draft → posted；失败时抛出后端 error（如「仅草稿凭证可过账」）。 */
 export function usePostVoucher() {
   const queryClient = useQueryClient()

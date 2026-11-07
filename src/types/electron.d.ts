@@ -758,6 +758,17 @@ export interface VoucherPostResult {
   postedAt: string
 }
 
+/** 凭证期间汇总（T6f，只读）：金额为元；balance 按分比较。 */
+export interface VoucherSummary {
+  period: string | null
+  totalCount: number
+  draftCount: number
+  postedCount: number
+  totalDebit: number
+  totalCredit: number
+  balanced: boolean
+}
+
 export interface TaxRule {
   id: number
   businessType: string | null      // 业务类型维度；null = 不限
@@ -1190,6 +1201,8 @@ export interface ElectronAPI {
   deleteVoucher: (id: number) => Promise<{ success: boolean; error?: string }>
   postVoucher: (id: number) =>
     Promise<{ success: boolean; data?: VoucherPostResult; error?: string }>
+  getVoucherSummary: (period?: string) =>
+    Promise<{ success: boolean; data?: VoucherSummary; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

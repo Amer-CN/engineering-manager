@@ -24,7 +24,7 @@ import type {
   ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair, ParsedBankReceipt,
   StoredAuth,
   TaxRate, TaxRateResolution,
-  VoucherPreview, Voucher, VoucherDraft, VoucherPostResult,
+  VoucherPreview, Voucher, VoucherDraft, VoucherPostResult, VoucherSummary,
 } from '../types/electron';
 
 // ============ 导出的 API ============
@@ -428,6 +428,9 @@ export const tauriAPI = {
   // POST /api/vouchers/{id}/post（T6b）：draft → posted；过账即终态，失败返回 400。
   postVoucher: (id: number) =>
     apiClient.post<VoucherPostResult>(`/api/vouchers/${id}/post`, {}),
+  // GET /api/vouchers/summary（T6f）：期间汇总/试算平衡（只读，与列表同口径可见性）。
+  getVoucherSummary: (period?: string) =>
+    apiClient.get<VoucherSummary>('/api/vouchers/summary', { period }),
 
   // ────────── 模板 ──────────
   getTemplates: () => apiClient.get<Template[]>('/api/templates'),

@@ -13,7 +13,7 @@ import { Button } from '../../ui/Button'
 import { usePermission } from '@/hooks/usePermission'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
-import { useDeleteVoucher, usePostVoucher, useVouchers } from '@/hooks/data/useVouchers'
+import { useDeleteVoucher, usePostVoucher, useVoucherSummary, useVouchers } from '@/hooks/data/useVouchers'
 import { VoucherDetailDrawer } from './VoucherDetailDrawer'
 import { exportVoucherCsv, printVoucherList } from './voucherPrintExport'
 
@@ -43,11 +43,12 @@ export const VoucherListPanel: React.FC = () => {
 
   const [period, setPeriod] = useState('')
   const [detailVoucher, setDetailVoucher] = useState<Voucher | null>(null)
-  const { data, isLoading, error } = useVouchers()
+  const { data: vouchersData, isLoading, error } = useVouchers()
+  const { data: summary } = useVoucherSummary(period || undefined)
   const postVoucher = usePostVoucher()
   const deleteVoucher = useDeleteVoucher()
 
-  const vouchers: Voucher[] = data ?? []
+  const vouchers = vouchersData ?? []
 
   const periodOptions = useMemo(() => {
     const periods: string[] = Array.from(new Set<string>(vouchers.map((v: Voucher) => v.period))).sort().reverse()
@@ -224,6 +225,17 @@ export const VoucherListPanel: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {summary && (
+        <div className="flex flex-wrap items-center gap-4 mb-3 text-xs" style={{ color: 'var(--muted)' }}>
+          <span>凭证 <span className="font-mono tabular-nums" style={{ color: 'var(--fg-2)' }}>{summary.totalCount}</span> 张</span>
+          <span>草稿 <span className="font-mono tabular-nums" style={{ color: 'var(--fg-2)' }}>{summary.draftCount}</span></span>
+          <span>已过账 <span className="font-mono tabular-nums" style={{ color: 'var(--fg-2)' }}>{summary.postedCount}</span></span>
+          <span>借方合计 <span className="font-mono tabular-nums" style={{ color: 'var(--fg-2)' }}>¥{formatMoney(summary.totalDebit)}</span></span>
+          <span>贷方合计 <span className="font-mono tabular-nums" style={{ color: 'var(--fg-2)' }}>¥{formatMoney(summary.totalCredit)}</span></span>
+          {!summary.balanced && <span style={{ color: 'var(--danger)' }}>借贷不平衡</span>}
+        </div>
+      )}
 
       <DataTable
         data={rows}
