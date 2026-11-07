@@ -321,7 +321,7 @@ describe('VoucherListPanel（T6c）', () => {
     unlockMutate.mockResolvedValue({ period: currentPeriod, locked: false })
     render(<VoucherListPanel />)
 
-    expect(screen.getByText('期间已锁定')).toBeTruthy()
+    expect(screen.getByText(new RegExp(`${currentPeriod.slice(0, 4)}-${currentPeriod.slice(4)} 已锁定`))).toBeTruthy()
     expect(screen.getByRole('button', { name: '解锁期间' })).toBeTruthy()
     expect((screen.getByRole('button', { name: '期初余额' }) as HTMLButtonElement).disabled).toBe(true)
 

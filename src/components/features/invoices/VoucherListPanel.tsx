@@ -255,13 +255,13 @@ export const VoucherListPanel: React.FC = () => {
         </div>
         <span className="text-xs whitespace-nowrap shrink-0" style={{ color: 'var(--muted)' }}>共 {rows.length} 张凭证</span>
         {periodLocked && (
-          <span
-            className="px-2 py-0.5 rounded-full text-xs whitespace-nowrap shrink-0"
-            style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}
-          >
-            期间已锁定
-          </span>
-        )}
+            <span
+              className="px-2 py-0.5 rounded-full text-xs whitespace-nowrap shrink-0"
+              style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}
+            >
+              {currentPeriod.slice(0, 4)}-{currentPeriod.slice(4)} 已锁定
+            </span>
+          )}
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {isAdmin() && (
             <Button

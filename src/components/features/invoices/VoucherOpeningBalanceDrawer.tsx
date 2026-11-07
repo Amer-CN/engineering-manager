@@ -101,7 +101,7 @@ export const VoucherOpeningBalanceDrawer: React.FC<VoucherOpeningBalanceDrawerPr
                 <th className="text-left px-3 py-2 font-medium">科目名称</th>
                 <th className="text-right px-3 py-2 font-medium w-32">借方(元)</th>
                 <th className="text-right px-3 py-2 font-medium w-32">贷方(元)</th>
-                <th className="w-14" />
+                <th className="w-20" />
               </tr>
             </thead>
             <tbody>
@@ -150,7 +150,7 @@ export const VoucherOpeningBalanceDrawer: React.FC<VoucherOpeningBalanceDrawerPr
                     />
                   </td>
                   <td className="px-3 py-1.5 text-right">
-                    <Button size="sm" variant="ghost" onClick={() => setRows(prev => prev.filter((_, i) => i !== index))}>
+                    <Button size="sm" variant="ghost" className="whitespace-nowrap" onClick={() => setRows(prev => prev.filter((_, i) => i !== index))}>
                       删除
                     </Button>
                   </td>
