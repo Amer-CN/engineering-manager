@@ -534,6 +534,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // T7 申报数据准备（进项/销项汇总导出）
         app.RegisterTaxSummaryEndpoints();
+
+        // T7b 期初余额（建账期初）
+        app.RegisterOpeningBalanceEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()

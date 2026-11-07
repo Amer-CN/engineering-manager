@@ -776,6 +776,23 @@ export interface VoucherSummary {
   balanced: boolean
 }
 
+/** 期初余额行（T7b）：接口金额为元，库内为分。 */
+export interface OpeningBalanceRow {
+  accountCode: string
+  accountName: string
+  debit: number
+  credit: number
+}
+
+/** 期初余额汇总（T7b）。 */
+export interface OpeningBalanceSummary {
+  period: string
+  rows: OpeningBalanceRow[]
+  totalDebit: number
+  totalCredit: number
+  balanced: boolean
+}
+
 export interface TaxRule {
   id: number
   businessType: string | null      // 业务类型维度；null = 不限
@@ -1212,6 +1229,10 @@ export interface ElectronAPI {
     Promise<{ success: boolean; data?: VoucherUnpostResult; error?: string }>
   getVoucherSummary: (period?: string) =>
     Promise<{ success: boolean; data?: VoucherSummary; error?: string }>
+  getOpeningBalances: (period: string) =>
+    Promise<{ success: boolean; data?: OpeningBalanceSummary; error?: string }>
+  saveOpeningBalances: (period: string, rows: OpeningBalanceRow[]) =>
+    Promise<{ success: boolean; data?: OpeningBalanceSummary; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

@@ -12,9 +12,11 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 
 const vouchersState: { data?: any[]; isLoading?: boolean; error?: any } = {}
 const summaryState: { data?: any } = {}
+const openingState: { data?: any } = {}
 const postMutate = vi.fn()
 const unpostMutate = vi.fn()
 const deleteMutate = vi.fn()
+const saveOpeningMutate = vi.fn()
 const permission = { allowed: new Set(['vouchers:approve', 'vouchers:delete']) }
 const confirmMock = vi.fn(async (..._args: any[]) => true)
 const showToast = vi.fn()
@@ -36,6 +38,8 @@ vi.mock('@/hooks/data/useVouchers', () => ({
   usePostVoucher: () => ({ mutateAsync: postMutate, isPending: false }),
   useUnpostVoucher: () => ({ mutateAsync: unpostMutate, isPending: false }),
   useDeleteVoucher: () => ({ mutateAsync: deleteMutate, isPending: false }),
+  useOpeningBalances: () => ({ data: openingState.data }),
+  useSaveOpeningBalances: () => ({ mutateAsync: saveOpeningMutate, isPending: false }),
 }))
 
 vi.mock('@/components/ui/Drawer', () => ({
@@ -88,6 +92,8 @@ afterEach(() => {
   vouchersState.isLoading = false
   vouchersState.error = undefined
   summaryState.data = undefined
+  openingState.data = undefined
+  saveOpeningMutate.mockReset()
   postMutate.mockReset()
   unpostMutate.mockReset()
   deleteMutate.mockReset()
@@ -222,6 +228,75 @@ describe('VoucherListPanel（T6c）', () => {
     render(<VoucherListPanel />)
 
     expect(screen.queryByRole('button', { name: '反过账' })).toBeNull()
+  })
+
+  test('期初余额：展示已有科目，平衡时可保存并调用接口', async () => {
+    const now = new Date()
+    const expectedPeriod = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
+    vouchersState.data = []
+    openingState.data = {
+      period: expectedPeriod,
+      rows: [
+        { accountCode: '1001', accountName: '库存现金', debit: 100, credit: 0 },
+        { accountCode: '2001', accountName: '短期借款', debit: 0, credit: 100 },
+      ],
+      totalDebit: 100, totalCredit: 100, balanced: true,
+    }
+    saveOpeningMutate.mockResolvedValue(openingState.data)
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '期初余额' }))
+    await waitFor(() => expect(screen.getByDisplayValue('1001')).toBeTruthy())
+
+    const saveBtn = screen.getByRole('button', { name: '保存期初余额' }) as HTMLButtonElement
+    expect(saveBtn.disabled).toBe(false)
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => expect(saveOpeningMutate).toHaveBeenCalledTimes(1))
+    const payload = saveOpeningMutate.mock.calls[0][0]
+    expect(payload.period).toBe(expectedPeriod)
+    expect(payload.rows).toHaveLength(2)
+    await waitFor(() => expect(showToast).toHaveBeenCalled())
+  })
+
+  test('期初余额：借贷不平衡时保存禁用并提示', async () => {
+    vouchersState.data = []
+    openingState.data = {
+      period: '202611',
+      rows: [
+        { accountCode: '1001', accountName: '库存现金', debit: 100, credit: 0 },
+        { accountCode: '2001', accountName: '短期借款', debit: 0, credit: 90 },
+      ],
+      totalDebit: 100, totalCredit: 90, balanced: false,
+    }
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '期初余额' }))
+    await screen.findByText('借贷不平衡')
+    const saveBtn = screen.getByRole('button', { name: '保存期初余额' }) as HTMLButtonElement
+    expect(saveBtn.disabled).toBe(true)
+  })
+
+  test('期初余额：可添加与删除科目行', async () => {
+    vouchersState.data = []
+    openingState.data = { period: '202611', rows: [], totalDebit: 0, totalCredit: 0, balanced: true }
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '期初余额' }))
+    await screen.findByText(/暂无期初余额/)
+    fireEvent.click(screen.getByRole('button', { name: '+ 添加科目' }))
+    expect(screen.getByPlaceholderText('1001')).toBeTruthy()
+
+    fireEvent.change(screen.getByPlaceholderText('1001'), { target: { value: '1001' } })
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    expect(screen.queryByPlaceholderText('1001')).toBeNull()
+  })
+
+  test('无 vouchers:approve 权限时不显示期初余额', () => {
+    permission.allowed = new Set(['vouchers:read'])
+    vouchersState.data = []
+    render(<VoucherListPanel />)
+    expect(screen.queryByRole('button', { name: '期初余额' })).toBeNull()
   })
 
   test('导出 CSV 与打印：按当前筛选结果调用', () => {

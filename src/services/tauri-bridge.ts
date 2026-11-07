@@ -25,6 +25,7 @@ import type {
   StoredAuth,
   TaxRate, TaxRateResolution,
   VoucherPreview, Voucher, VoucherDraft, VoucherPostResult, VoucherUnpostResult, VoucherSummary,
+  OpeningBalanceRow, OpeningBalanceSummary,
 } from '../types/electron';
 
 // ============ 导出的 API ============
@@ -434,6 +435,11 @@ export const tauriAPI = {
   // GET /api/vouchers/summary（T6f）：期间汇总/试算平衡（只读，与列表同口径可见性）。
   getVoucherSummary: (period?: string) =>
     apiClient.get<VoucherSummary>('/api/vouchers/summary', { period }),
+  // GET/PUT /api/opening-balances（T7b）：期初余额整期保存（借贷必须平衡）。
+  getOpeningBalances: (period: string) =>
+    apiClient.get<OpeningBalanceSummary>('/api/opening-balances', { period }),
+  saveOpeningBalances: (period: string, rows: OpeningBalanceRow[]) =>
+    apiClient.put<OpeningBalanceSummary>(`/api/opening-balances?period=${encodeURIComponent(period)}`, { rows }),
 
   // ────────── 模板 ──────────
   getTemplates: () => apiClient.get<Template[]>('/api/templates'),

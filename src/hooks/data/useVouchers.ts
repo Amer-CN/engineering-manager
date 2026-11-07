@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getAPI } from '../../services/api-adapter'
+import type { OpeningBalanceRow } from '@/types/electron'
 
 /** 凭证列表（T6a/T6b）：period 可选（YYYYMM）；不传返回全部可见凭证。 */
 export function useVouchers(period?: string) {
@@ -41,6 +42,37 @@ export function usePostVoucher() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['vouchers'] })
+    },
+  })
+}
+
+/** 期初余额（T7b）：period 为 null 时不查询。 */
+export function useOpeningBalances(period: string | null) {
+  return useQuery({
+    queryKey: ['opening-balances', period],
+    queryFn: async () => {
+      const api = await getAPI()
+      const res = await api.getOpeningBalances(period!)
+      if (!res.success) throw new Error(res.error || '获取期初余额失败')
+      return res.data
+    },
+    enabled: !!period,
+    staleTime: 30_000,
+  })
+}
+
+/** 保存期初余额（整期替换；借贷不平衡会由后端 400）。 */
+export function useSaveOpeningBalances() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ period, rows }: { period: string; rows: OpeningBalanceRow[] }) => {
+      const api = await getAPI()
+      const res = await api.saveOpeningBalances(period, rows)
+      if (!res.success) throw new Error(res.error || '保存期初余额失败')
+      return res.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['opening-balances'] })
     },
   })
 }
