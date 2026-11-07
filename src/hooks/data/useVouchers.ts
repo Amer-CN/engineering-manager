@@ -45,6 +45,22 @@ export function usePostVoucher() {
   })
 }
 
+/** 反过账（T7a）：posted → draft，原因必填；成功后失效缓存。 */
+export function useUnpostVoucher() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      const api = await getAPI()
+      const res = await api.unpostVoucher(id, reason)
+      if (!res.success) throw new Error(res.error || '反过账失败')
+      return res.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vouchers'] })
+    },
+  })
+}
+
 /** 删除凭证草稿（仅 draft；posted 由后端 400 拒绝）。 */
 export function useDeleteVoucher() {
   const queryClient = useQueryClient()

@@ -13,6 +13,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 const vouchersState: { data?: any[]; isLoading?: boolean; error?: any } = {}
 const summaryState: { data?: any } = {}
 const postMutate = vi.fn()
+const unpostMutate = vi.fn()
 const deleteMutate = vi.fn()
 const permission = { allowed: new Set(['vouchers:approve', 'vouchers:delete']) }
 const confirmMock = vi.fn(async (..._args: any[]) => true)
@@ -33,7 +34,13 @@ vi.mock('@/hooks/data/useVouchers', () => ({
   }),
   useVoucherSummary: () => ({ data: summaryState.data }),
   usePostVoucher: () => ({ mutateAsync: postMutate, isPending: false }),
+  useUnpostVoucher: () => ({ mutateAsync: unpostMutate, isPending: false }),
   useDeleteVoucher: () => ({ mutateAsync: deleteMutate, isPending: false }),
+}))
+
+vi.mock('@/components/ui/Drawer', () => ({
+  Drawer: ({ open, title, children, footer }: { open: boolean; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode }) =>
+    open ? <div><h2>{title}</h2>{children}{footer}</div> : null,
 }))
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -82,6 +89,7 @@ afterEach(() => {
   vouchersState.error = undefined
   summaryState.data = undefined
   postMutate.mockReset()
+  unpostMutate.mockReset()
   deleteMutate.mockReset()
   confirmMock.mockClear()
   confirmMock.mockImplementation(async (..._args: any[]) => true)
@@ -188,6 +196,32 @@ describe('VoucherListPanel（T6c）', () => {
     summaryState.data = { ...summaryState.data, balanced: false }
     rerender(<VoucherListPanel />)
     expect(screen.getByText('借贷不平衡')).toBeTruthy()
+  })
+
+  test('反过账：填写原因后调用 unpost 并 toast', async () => {
+    vouchersState.data = [postedVoucher]
+    unpostMutate.mockResolvedValue({ id: 12, voucherNo: '记-202605-0002', status: 'draft' })
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '反过账' }))
+    expect(screen.getByText('反过账 - 记-202605-0002')).toBeTruthy()
+
+    const confirmBtn = screen.getByRole('button', { name: '确认反过账' }) as HTMLButtonElement
+    expect(confirmBtn.disabled).toBe(true)
+
+    fireEvent.change(screen.getByPlaceholderText(/反过账原因/), { target: { value: '发票信息有误' } })
+    fireEvent.click(confirmBtn)
+
+    await waitFor(() => expect(unpostMutate).toHaveBeenCalledWith({ id: 12, reason: '发票信息有误' }))
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('已反过账 记-202605-0002', 'success'))
+  })
+
+  test('无 vouchers:approve 权限时不显示反过账', () => {
+    permission.allowed = new Set(['vouchers:read'])
+    vouchersState.data = [postedVoucher]
+    render(<VoucherListPanel />)
+
+    expect(screen.queryByRole('button', { name: '反过账' })).toBeNull()
   })
 
   test('导出 CSV 与打印：按当前筛选结果调用', () => {

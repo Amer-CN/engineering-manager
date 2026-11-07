@@ -758,6 +758,13 @@ export interface VoucherPostResult {
   postedAt: string
 }
 
+/** 反过账响应（T7a）：status 回到 draft。 */
+export interface VoucherUnpostResult {
+  id: number
+  voucherNo: string
+  status: string
+}
+
 /** 凭证期间汇总（T6f，只读）：金额为元；balance 按分比较。 */
 export interface VoucherSummary {
   period: string | null
@@ -1201,6 +1208,8 @@ export interface ElectronAPI {
   deleteVoucher: (id: number) => Promise<{ success: boolean; error?: string }>
   postVoucher: (id: number) =>
     Promise<{ success: boolean; data?: VoucherPostResult; error?: string }>
+  unpostVoucher: (id: number, reason: string) =>
+    Promise<{ success: boolean; data?: VoucherUnpostResult; error?: string }>
   getVoucherSummary: (period?: string) =>
     Promise<{ success: boolean; data?: VoucherSummary; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>

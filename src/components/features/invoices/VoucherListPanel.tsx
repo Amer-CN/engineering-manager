@@ -10,10 +10,11 @@ import { formatMoney } from '@/utils/format'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Select } from '@/components/ui/Select/Select'
 import { Button } from '../../ui/Button'
+import { Drawer } from '../../ui/Drawer'
 import { usePermission } from '@/hooks/usePermission'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
-import { useDeleteVoucher, usePostVoucher, useVoucherSummary, useVouchers } from '@/hooks/data/useVouchers'
+import { useDeleteVoucher, usePostVoucher, useUnpostVoucher, useVoucherSummary, useVouchers } from '@/hooks/data/useVouchers'
 import { VoucherDetailDrawer } from './VoucherDetailDrawer'
 import { exportVoucherCsv, printVoucherList } from './voucherPrintExport'
 
@@ -43,9 +44,13 @@ export const VoucherListPanel: React.FC = () => {
 
   const [period, setPeriod] = useState('')
   const [detailVoucher, setDetailVoucher] = useState<Voucher | null>(null)
+  const [unpostTarget, setUnpostTarget] = useState<Voucher | null>(null)
+  const [unpostReason, setUnpostReason] = useState('')
+  const [unpostError, setUnpostError] = useState<string | null>(null)
   const { data: vouchersData, isLoading, error } = useVouchers()
   const { data: summary } = useVoucherSummary(period || undefined)
   const postVoucher = usePostVoucher()
+  const unpostVoucher = useUnpostVoucher()
   const deleteVoucher = useDeleteVoucher()
 
   const vouchers = vouchersData ?? []
@@ -89,6 +94,34 @@ export const VoucherListPanel: React.FC = () => {
       showToast(`已删除 ${voucher.voucherNo}`, 'success')
     } catch (e) {
       showToast((e as Error).message || '删除凭证失败', 'error')
+    }
+  }
+
+  const openUnpost = (voucher: Voucher) => {
+    setUnpostTarget(voucher)
+    setUnpostReason('')
+    setUnpostError(null)
+  }
+
+  const closeUnpost = () => {
+    setUnpostTarget(null)
+    setUnpostReason('')
+    setUnpostError(null)
+  }
+
+  const submitUnpost = async () => {
+    if (!unpostTarget) return
+    const reason = unpostReason.trim()
+    if (!reason) {
+      setUnpostError('请填写反过账原因')
+      return
+    }
+    try {
+      await unpostVoucher.mutateAsync({ id: unpostTarget.id, reason })
+      showToast(`已反过账 ${unpostTarget.voucherNo}`, 'success')
+      closeUnpost()
+    } catch (e) {
+      setUnpostError((e as Error).message || '反过账失败')
     }
   }
 
@@ -158,16 +191,23 @@ export const VoucherListPanel: React.FC = () => {
       key: 'actions',
       title: '操作',
       align: 'right',
-      width: '250px',
+      width: '320px',
       render: (v) => (
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" variant="ghost" onClick={() => setDetailVoucher(v)}>
             详情
           </Button>
           {v.status === 'posted' ? (
-            <span className="text-xs font-mono tabular-nums" style={{ color: 'var(--muted)' }}>
-              {v.postedAt ?? ''}
-            </span>
+            <>
+              {can('vouchers:approve') && (
+                <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => openUnpost(v)}>
+                  反过账
+                </Button>
+              )}
+              <span className="text-xs font-mono tabular-nums" style={{ color: 'var(--muted)' }}>
+                {v.postedAt ?? ''}
+              </span>
+            </>
           ) : (
             <>
               {can('vouchers:approve') && (
@@ -250,6 +290,46 @@ export const VoucherListPanel: React.FC = () => {
 
       {ConfirmDialog}
       <VoucherDetailDrawer voucher={detailVoucher} onClose={() => setDetailVoucher(null)} />
+
+      <Drawer
+        open={!!unpostTarget}
+        onClose={closeUnpost}
+        icon="FileText"
+        width={420}
+        title={`反过账 - ${unpostTarget?.voucherNo ?? ''}`}
+        footer={
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="secondary" onClick={closeUnpost}>取消</Button>
+            <Button
+              variant="danger"
+              loading={unpostVoucher.isPending}
+              disabled={!unpostReason.trim()}
+              onClick={() => void submitUnpost()}
+            >
+              确认反过账
+            </Button>
+          </div>
+        }
+      >
+        <div className="px-6 py-4 space-y-3">
+          <p className="text-sm" style={{ color: 'var(--fg-2)' }}>
+            反过账后凭证回到草稿：分录保留但可修改/删除；操作会记入审计日志。
+          </p>
+          <textarea
+            value={unpostReason}
+            onChange={e => setUnpostReason(e.target.value)}
+            maxLength={200}
+            rows={3}
+            placeholder="请填写反过账原因（必填，≤200 字）"
+            className="w-full rounded-lg px-3 py-2 text-sm resize-none"
+            style={{ background: 'var(--card)', color: 'var(--fg)', border: '1px solid var(--border)' }}
+          />
+          <div className="flex items-center justify-between text-xs" style={{ color: 'var(--muted)' }}>
+            <span>{unpostError ? <span style={{ color: 'var(--danger)' }}>{unpostError}</span> : '原因会写入审计日志'}</span>
+            <span className="font-mono tabular-nums">{unpostReason.length}/200</span>
+          </div>
+        </div>
+      </Drawer>
     </div>
   )
 }

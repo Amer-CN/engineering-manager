@@ -202,6 +202,93 @@ public static class VoucherEndpoints
             }
         });
 
+        // 反过账（T7a）：posted → draft，原因必填并落审计；分录保留、随后可编辑/删除。
+        app.MapPost("/api/vouchers/{id}/unpost", async (HttpContext ctx, IDbConnection db, long id) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.HasPermission(ctx, db, "vouchers:approve")) return Results.Forbid();
+
+            using var reader = new StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            JsonElement body;
+            try
+            {
+                body = JsonSerializer.Deserialize<JsonElement>(bodyText);
+            }
+            catch (JsonException)
+            {
+                return Common.Fail("请求体不是合法 JSON", 400);
+            }
+            if (body.ValueKind != JsonValueKind.Object)
+                return Common.Fail("请求体必须是 JSON 对象", 400);
+            if (!body.TryGetProperty("reason", out var reasonEl) || reasonEl.ValueKind != JsonValueKind.String)
+                return Common.Fail("反过账原因必填", 400);
+            var reason = (reasonEl.GetString() ?? "").Trim();
+            if (reason.Length == 0) return Common.Fail("反过账原因必填", 400);
+            if (reason.Length > 200) return Common.Fail("反过账原因不得超过 200 字", 400);
+
+            using var tx = BeginWriteTransaction(db);
+            try
+            {
+                var voucher = await db.QueryFirstOrDefaultAsync<VoucherPostRow>(
+                    @"SELECT [id] AS Id,[voucher_no] AS VoucherNo,[period] AS Period,[status] AS Status,
+                             [posted_at] AS PostedAt,[posted_by] AS PostedBy,
+                             [created_by] AS CreatedBy,[project_id] AS ProjectId
+                      FROM [vouchers] WHERE [id]=@Id", new { Id = id }, tx);
+                if (voucher == null)
+                {
+                    tx.Rollback();
+                    return Common.NotFound("凭证不存在");
+                }
+
+                // 行级写入门：与过账/删除同口径（本人 / 管理员 / 授权项目）
+                if (RowWriteGate.Classify(ctx, db, voucher.CreatedBy, voucher.ProjectId) == RowWriteOutcome.Denied)
+                {
+                    tx.Rollback();
+                    return Results.Forbid();
+                }
+
+                if (!string.Equals(voucher.Status, "posted", StringComparison.Ordinal))
+                {
+                    tx.Rollback();
+                    return Common.Fail("仅已过账凭证可反过账", 400);
+                }
+
+                var affected = await db.ExecuteAsync(
+                    @"UPDATE [vouchers] SET [status]='draft',[posted_at]=NULL,[posted_by]=NULL
+                      WHERE [id]=@Id AND [status]='posted'", new { Id = id }, tx);
+                if (affected == 0)
+                {
+                    tx.Rollback();
+                    return Common.Fail("仅已过账凭证可反过账", 400);
+                }
+
+                // 审计：warning 级，记录原因与原过账信息；与状态变更同事务（fail-closed）
+                await db.ExecuteAsync(
+                    @"INSERT INTO [audit_logs]
+                        ([action],[level],[user_id],[user_name],[resource],[resource_id],[details],[ip_address],[created_at])
+                      VALUES ('voucher.unpost','warning',@UserId,@UserName,'vouchers',@ResourceId,@Details,@Ip,@CreatedAt)",
+                    new
+                    {
+                        UserId = uid,
+                        UserName = uid,
+                        ResourceId = id.ToString(),
+                        Details = $"voucherNo={voucher.VoucherNo}; period={voucher.Period}; reason={reason}; originalPostedAt={voucher.PostedAt}; originalPostedBy={voucher.PostedBy}",
+                        Ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "",
+                        CreatedAt = Common.NowString()
+                    }, tx);
+
+                tx.Commit();
+                return Common.Ok(new { id, voucherNo = voucher.VoucherNo, status = "draft" });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[VoucherUnpost] id={id}: {ex.Message}");
+                tx.Rollback();
+                throw;
+            }
+        });
+
         // 凭证列表（草稿）：按 period 过滤；entries 直接嵌套（本轮不分页）。
         app.MapGet("/api/vouchers", async (HttpContext ctx, IDbConnection db, string? period) =>
         {
@@ -592,6 +679,8 @@ public static class VoucherEndpoints
         public long SourceId { get; set; }
         public string? CreatedBy { get; set; }
         public long? ProjectId { get; set; }
+        public string? PostedAt { get; set; }
+        public string? PostedBy { get; set; }
     }
 
     /// <summary>期间汇总行（Dapper 强类型映射，需可写属性）。</summary>
