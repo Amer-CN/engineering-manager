@@ -16,6 +16,13 @@ const deleteMutate = vi.fn()
 const permission = { allowed: new Set(['vouchers:approve', 'vouchers:delete']) }
 const confirmMock = vi.fn(async (..._args: any[]) => true)
 const showToast = vi.fn()
+const exportCsv = vi.fn()
+const printList = vi.fn()
+
+vi.mock('@/components/features/invoices/voucherPrintExport', () => ({
+  exportVoucherCsv: (...args: any[]) => exportCsv(...args),
+  printVoucherList: (...args: any[]) => printList(...args),
+}))
 
 vi.mock('@/hooks/data/useVouchers', () => ({
   useVouchers: () => ({
@@ -76,6 +83,8 @@ afterEach(() => {
   confirmMock.mockClear()
   confirmMock.mockImplementation(async (..._args: any[]) => true)
   showToast.mockClear()
+  exportCsv.mockClear()
+  printList.mockClear()
   permission.allowed = new Set(['vouchers:approve', 'vouchers:delete'])
 })
 
@@ -160,5 +169,18 @@ describe('VoucherListPanel（T6c）', () => {
     render(<VoucherListPanel />)
 
     expect(screen.getByText(/获取凭证失败：数据库连接失败/)).toBeTruthy()
+  })
+
+  test('导出 CSV 与打印：按当前筛选结果调用', () => {
+    vouchersState.data = [draftVoucher, postedVoucher]
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '导出 CSV' }))
+    expect(exportCsv).toHaveBeenCalledTimes(1)
+    expect((exportCsv.mock.calls[0][0] as unknown[]).length).toBe(2)
+
+    fireEvent.click(screen.getByRole('button', { name: '打印' }))
+    expect(printList).toHaveBeenCalledTimes(1)
+    expect((printList.mock.calls[0][0] as unknown[]).length).toBe(2)
   })
 })

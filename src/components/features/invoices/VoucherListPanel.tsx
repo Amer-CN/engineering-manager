@@ -15,6 +15,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
 import { useDeleteVoucher, usePostVoucher, useVouchers } from '@/hooks/data/useVouchers'
 import { VoucherDetailDrawer } from './VoucherDetailDrawer'
+import { exportVoucherCsv, printVoucherList } from './voucherPrintExport'
 
 const STATUS_LABEL: Record<string, string> = {
   draft: '草稿',
@@ -204,6 +205,24 @@ export const VoucherListPanel: React.FC = () => {
           className="w-40"
         />
         <span className="text-xs" style={{ color: 'var(--muted)' }}>共 {rows.length} 张凭证</span>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={rows.length === 0}
+            onClick={() => exportVoucherCsv(rows, period || undefined)}
+          >
+            导出 CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={rows.length === 0}
+            onClick={() => printVoucherList(rows, period ? `${period.slice(0, 4)}-${period.slice(4)}` : '全部期间')}
+          >
+            打印
+          </Button>
+        </div>
       </div>
 
       <DataTable
