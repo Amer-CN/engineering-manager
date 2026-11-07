@@ -5,7 +5,7 @@
  * 过账/反过账/期初余额权限与后端一致（vouchers:approve）；金额库内分、展示元。
  */
 import React, { useMemo, useState } from 'react'
-import type { Voucher } from '@/types/electron'
+import type { PeriodLock, Voucher } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Select } from '@/components/ui/Select/Select'
@@ -13,7 +13,7 @@ import { Button } from '../../ui/Button'
 import { usePermission } from '@/hooks/usePermission'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
-import { useDeleteVoucher, usePostVoucher, useVoucherSummary, useVouchers } from '@/hooks/data/useVouchers'
+import { useDeleteVoucher, useLockPeriod, usePeriodLocks, usePostVoucher, useUnlockPeriod, useVoucherSummary, useVouchers } from '@/hooks/data/useVouchers'
 import { VoucherDetailDrawer } from './VoucherDetailDrawer'
 import { VoucherUnpostDrawer } from './VoucherUnpostDrawer'
 import { VoucherOpeningBalanceDrawer } from './VoucherOpeningBalanceDrawer'
@@ -39,7 +39,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export const VoucherListPanel: React.FC = () => {
-  const { can } = usePermission()
+  const { can, isAdmin } = usePermission()
   const { confirm, ConfirmDialog } = useConfirm()
   const showToast = useToastStore(s => s.showToast)
 
@@ -51,12 +51,19 @@ export const VoucherListPanel: React.FC = () => {
   const { data: summary } = useVoucherSummary(period || undefined)
   const postVoucher = usePostVoucher()
   const deleteVoucher = useDeleteVoucher()
+  const { data: periodLocks } = usePeriodLocks()
+  const lockPeriod = useLockPeriod()
+  const unlockPeriod = useUnlockPeriod()
 
   const currentPeriod = useMemo(() => {
     if (period) return period
     const now = new Date()
     return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
   }, [period])
+
+  const periodLocked = (periodLocks ?? []).some((lock: PeriodLock) => lock.period === currentPeriod)
+  const isRowLocked = (voucher: Voucher) =>
+    (periodLocks ?? []).some((lock: PeriodLock) => lock.period === voucher.period)
 
   const vouchers = vouchersData ?? []
 
@@ -99,6 +106,29 @@ export const VoucherListPanel: React.FC = () => {
       showToast(`已删除 ${voucher.voucherNo}`, 'success')
     } catch (e) {
       showToast((e as Error).message || '删除凭证失败', 'error')
+    }
+  }
+
+  const togglePeriodLock = async () => {
+    const action = periodLocked ? '解锁' : '锁定'
+    const ok = await confirm({
+      title: `确认${action}期间 ${currentPeriod}`,
+      content: periodLocked
+        ? '解锁后该期间可以继续新增凭证、过账、反过账与修改期初余额。'
+        : '锁定后该期间禁止新增凭证、过账、反过账、删除草稿与修改期初余额。',
+      confirmText: action,
+      confirmVariant: periodLocked ? 'primary' : 'danger',
+    })
+    if (!ok) return
+    try {
+      if (periodLocked) {
+        await unlockPeriod.mutateAsync({ period: currentPeriod })
+      } else {
+        await lockPeriod.mutateAsync({ period: currentPeriod })
+      }
+      showToast(`已${action}期间 ${currentPeriod}`, 'success')
+    } catch (e) {
+      showToast((e as Error).message || `${action}期间失败`, 'error')
     }
   }
 
@@ -177,7 +207,7 @@ export const VoucherListPanel: React.FC = () => {
           {v.status === 'posted' ? (
             <>
               {can('vouchers:approve') && (
-                <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => setUnpostTarget(v)}>
+                <Button size="sm" variant="secondary" className="whitespace-nowrap" disabled={isRowLocked(v)} onClick={() => setUnpostTarget(v)}>
                   反过账
                 </Button>
               )}
@@ -188,12 +218,12 @@ export const VoucherListPanel: React.FC = () => {
           ) : (
             <>
               {can('vouchers:approve') && (
-                <Button size="sm" variant="primary" onClick={() => void handlePost(v)} loading={postVoucher.isPending}>
+                <Button size="sm" variant="primary" onClick={() => void handlePost(v)} loading={postVoucher.isPending} disabled={isRowLocked(v)}>
                   过账
                 </Button>
               )}
               {can('vouchers:delete') && (
-                <Button size="sm" variant="danger" onClick={() => void handleDelete(v)} loading={deleteVoucher.isPending}>
+                <Button size="sm" variant="danger" onClick={() => void handleDelete(v)} loading={deleteVoucher.isPending} disabled={isRowLocked(v)}>
                   删除
                 </Button>
               )}
@@ -224,9 +254,34 @@ export const VoucherListPanel: React.FC = () => {
           />
         </div>
         <span className="text-xs whitespace-nowrap shrink-0" style={{ color: 'var(--muted)' }}>共 {rows.length} 张凭证</span>
+        {periodLocked && (
+          <span
+            className="px-2 py-0.5 rounded-full text-xs whitespace-nowrap shrink-0"
+            style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}
+          >
+            期间已锁定
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-2 shrink-0">
+          {isAdmin() && (
+            <Button
+              size="sm"
+              variant={periodLocked ? 'secondary' : 'ghost'}
+              className="whitespace-nowrap"
+              loading={lockPeriod.isPending || unlockPeriod.isPending}
+              onClick={() => void togglePeriodLock()}
+            >
+              {periodLocked ? '解锁期间' : '锁定期间'}
+            </Button>
+          )}
           {can('vouchers:approve') && (
-            <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => setOpeningOpen(true)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="whitespace-nowrap"
+              disabled={periodLocked}
+              onClick={() => setOpeningOpen(true)}
+            >
               期初余额
             </Button>
           )}

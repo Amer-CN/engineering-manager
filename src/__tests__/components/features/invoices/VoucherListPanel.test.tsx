@@ -13,11 +13,14 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 const vouchersState: { data?: any[]; isLoading?: boolean; error?: any } = {}
 const summaryState: { data?: any } = {}
 const openingState: { data?: any } = {}
+const periodLocksState: { data?: any[] } = {}
 const postMutate = vi.fn()
 const unpostMutate = vi.fn()
 const deleteMutate = vi.fn()
 const saveOpeningMutate = vi.fn()
-const permission = { allowed: new Set(['vouchers:approve', 'vouchers:delete']) }
+const lockMutate = vi.fn()
+const unlockMutate = vi.fn()
+const permission = { allowed: new Set(['vouchers:approve', 'vouchers:delete']), isAdmin: true }
 const confirmMock = vi.fn(async (..._args: any[]) => true)
 const showToast = vi.fn()
 const exportCsv = vi.fn()
@@ -40,6 +43,9 @@ vi.mock('@/hooks/data/useVouchers', () => ({
   useDeleteVoucher: () => ({ mutateAsync: deleteMutate, isPending: false }),
   useOpeningBalances: () => ({ data: openingState.data }),
   useSaveOpeningBalances: () => ({ mutateAsync: saveOpeningMutate, isPending: false }),
+  usePeriodLocks: () => ({ data: periodLocksState.data ?? [] }),
+  useLockPeriod: () => ({ mutateAsync: lockMutate, isPending: false }),
+  useUnlockPeriod: () => ({ mutateAsync: unlockMutate, isPending: false }),
 }))
 
 vi.mock('@/components/ui/Drawer', () => ({
@@ -48,7 +54,10 @@ vi.mock('@/components/ui/Drawer', () => ({
 }))
 
 vi.mock('@/hooks/usePermission', () => ({
-  usePermission: () => ({ can: (code: string) => permission.allowed.has(code) }),
+  usePermission: () => ({
+    can: (code: string) => permission.allowed.has(code),
+    isAdmin: () => permission.isAdmin,
+  }),
 }))
 
 vi.mock('@/hooks/useConfirm', () => ({
@@ -93,7 +102,11 @@ afterEach(() => {
   vouchersState.error = undefined
   summaryState.data = undefined
   openingState.data = undefined
+  periodLocksState.data = undefined
   saveOpeningMutate.mockReset()
+  lockMutate.mockReset()
+  unlockMutate.mockReset()
+  permission.isAdmin = true
   postMutate.mockReset()
   unpostMutate.mockReset()
   deleteMutate.mockReset()
@@ -297,6 +310,41 @@ describe('VoucherListPanel（T6c）', () => {
     vouchersState.data = []
     render(<VoucherListPanel />)
     expect(screen.queryByRole('button', { name: '期初余额' })).toBeNull()
+  })
+
+  test('期间锁定：当前期间锁定时显示徽标/解锁按钮，期初余额禁用', async () => {
+    const now = new Date()
+    const currentPeriod = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
+    permission.isAdmin = true
+    vouchersState.data = []
+    periodLocksState.data = [{ period: currentPeriod, lockedAt: '2026-11-08 00:00:00', lockedBy: '1', reason: '月结' }]
+    unlockMutate.mockResolvedValue({ period: currentPeriod, locked: false })
+    render(<VoucherListPanel />)
+
+    expect(screen.getByText('期间已锁定')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '解锁期间' })).toBeTruthy()
+    expect((screen.getByRole('button', { name: '期初余额' }) as HTMLButtonElement).disabled).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: '解锁期间' }))
+    await waitFor(() => expect(unlockMutate).toHaveBeenCalledWith({ period: currentPeriod }))
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(`已解锁期间 ${currentPeriod}`, 'success'))
+  })
+
+  test('期间锁定：锁定行的过账/删除按钮禁用', () => {
+    vouchersState.data = [draftVoucher]
+    periodLocksState.data = [{ period: '202605', lockedAt: '2026-11-08 00:00:00', lockedBy: '1', reason: '月结' }]
+    render(<VoucherListPanel />)
+
+    expect((screen.getByRole('button', { name: '过账' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: '删除' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  test('非管理员不显示锁定/解锁按钮', () => {
+    permission.isAdmin = false
+    vouchersState.data = []
+    render(<VoucherListPanel />)
+    expect(screen.queryByRole('button', { name: '锁定期间' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '解锁期间' })).toBeNull()
   })
 
   test('导出 CSV 与打印：按当前筛选结果调用', () => {

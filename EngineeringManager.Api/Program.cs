@@ -537,6 +537,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // T7b 期初余额（建账期初）
         app.RegisterOpeningBalanceEndpoints();
+
+        // T7c 期间锁定（结账前置）
+        app.RegisterPeriodLockEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()

@@ -95,6 +95,13 @@ public static class OpeningBalanceEndpoints
             var now = Common.NowString();
             try
             {
+                // T7c：锁定期间禁止修改期初余额
+                if (PeriodLockService.IsLocked(db, period, tx))
+                {
+                    tx.Rollback();
+                    return Common.Fail(PeriodLockService.LockedMessage(period), 400);
+                }
+
                 await db.ExecuteAsync("DELETE FROM [opening_balances] WHERE [period]=@Period",
                     new { Period = period }, tx);
                 foreach (var row in normalized)

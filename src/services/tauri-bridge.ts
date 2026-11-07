@@ -25,7 +25,7 @@ import type {
   StoredAuth,
   TaxRate, TaxRateResolution,
   VoucherPreview, Voucher, VoucherDraft, VoucherPostResult, VoucherUnpostResult, VoucherSummary,
-  OpeningBalanceRow, OpeningBalanceSummary,
+  OpeningBalanceRow, OpeningBalanceSummary, PeriodLock,
 } from '../types/electron';
 
 // ============ 导出的 API ============
@@ -440,6 +440,12 @@ export const tauriAPI = {
     apiClient.get<OpeningBalanceSummary>('/api/opening-balances', { period }),
   saveOpeningBalances: (period: string, rows: OpeningBalanceRow[]) =>
     apiClient.put<OpeningBalanceSummary>(`/api/opening-balances?period=${encodeURIComponent(period)}`, { rows }),
+  // GET/POST /api/period-locks（T7c）：admin 锁定/解锁期间；锁定期间写操作由后端拦截。
+  getPeriodLocks: () => apiClient.get<PeriodLock[]>('/api/period-locks'),
+  lockPeriod: (period: string, reason?: string) =>
+    apiClient.post<{ period: string; locked: boolean }>(`/api/period-locks/${period}/lock`, { reason }),
+  unlockPeriod: (period: string, reason?: string) =>
+    apiClient.post<{ period: string; locked: boolean }>(`/api/period-locks/${period}/unlock`, { reason }),
 
   // ────────── 模板 ──────────
   getTemplates: () => apiClient.get<Template[]>('/api/templates'),

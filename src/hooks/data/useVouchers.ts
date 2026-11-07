@@ -46,6 +46,52 @@ export function usePostVoucher() {
   })
 }
 
+/** 期间锁定（T7c）：列表 + 锁定/解锁（admin）。 */
+export function usePeriodLocks() {
+  return useQuery({
+    queryKey: ['period-locks'],
+    queryFn: async () => {
+      const api = await getAPI()
+      const res = await api.getPeriodLocks()
+      if (!res.success) throw new Error(res.error || '获取期间锁定状态失败')
+      return res.data
+    },
+    staleTime: 30_000,
+  })
+}
+
+export function useLockPeriod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ period, reason }: { period: string; reason?: string }) => {
+      const api = await getAPI()
+      const res = await api.lockPeriod(period, reason)
+      if (!res.success) throw new Error(res.error || '锁定期间失败')
+      return res.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['period-locks'] })
+      void queryClient.invalidateQueries({ queryKey: ['vouchers'] })
+    },
+  })
+}
+
+export function useUnlockPeriod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ period, reason }: { period: string; reason?: string }) => {
+      const api = await getAPI()
+      const res = await api.unlockPeriod(period, reason)
+      if (!res.success) throw new Error(res.error || '解锁期间失败')
+      return res.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['period-locks'] })
+      void queryClient.invalidateQueries({ queryKey: ['vouchers'] })
+    },
+  })
+}
+
 /** 期初余额（T7b）：period 为 null 时不查询。 */
 export function useOpeningBalances(period: string | null) {
   return useQuery({

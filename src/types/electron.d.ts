@@ -793,6 +793,14 @@ export interface OpeningBalanceSummary {
   balanced: boolean
 }
 
+/** 期间锁定（T7c）。 */
+export interface PeriodLock {
+  period: string
+  lockedAt: string
+  lockedBy: string | null
+  reason: string | null
+}
+
 export interface TaxRule {
   id: number
   businessType: string | null      // 业务类型维度；null = 不限
@@ -1233,6 +1241,11 @@ export interface ElectronAPI {
     Promise<{ success: boolean; data?: OpeningBalanceSummary; error?: string }>
   saveOpeningBalances: (period: string, rows: OpeningBalanceRow[]) =>
     Promise<{ success: boolean; data?: OpeningBalanceSummary; error?: string }>
+  getPeriodLocks: () => Promise<{ success: boolean; data?: PeriodLock[]; error?: string }>
+  lockPeriod: (period: string, reason?: string) =>
+    Promise<{ success: boolean; data?: { period: string; locked: boolean }; error?: string }>
+  unlockPeriod: (period: string, reason?: string) =>
+    Promise<{ success: boolean; data?: { period: string; locked: boolean }; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>

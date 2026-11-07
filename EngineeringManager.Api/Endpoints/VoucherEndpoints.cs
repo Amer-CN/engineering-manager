@@ -174,6 +174,13 @@ public static class VoucherEndpoints
             using var tx = db.BeginTransaction();
             try
             {
+                // T7c：锁定期间禁止新增凭证
+                if (PeriodLockService.IsLocked(db, period, tx))
+                {
+                    tx.Rollback();
+                    return Common.Fail(PeriodLockService.LockedMessage(period), 400);
+                }
+
                 var draft = VoucherService.SaveDraft(
                     db, tx, loaded.InvoiceId, loaded.ProjectId, loaded.TemplateCode,
                     period, voucherDate, lines, uid);
@@ -252,6 +259,13 @@ public static class VoucherEndpoints
                 {
                     tx.Rollback();
                     return Common.Fail("仅已过账凭证可反过账", 400);
+                }
+
+                // T7c：锁定期间禁止反过账
+                if (PeriodLockService.IsLocked(db, voucher.Period, tx))
+                {
+                    tx.Rollback();
+                    return Common.Fail(PeriodLockService.LockedMessage(voucher.Period), 400);
                 }
 
                 var affected = await db.ExecuteAsync(
@@ -385,6 +399,13 @@ public static class VoucherEndpoints
                     return Common.Fail("仅草稿凭证可过账", 400);
                 }
 
+                // T7c：锁定期间禁止过账
+                if (PeriodLockService.IsLocked(db, voucher.Period, tx))
+                {
+                    tx.Rollback();
+                    return Common.Fail(PeriodLockService.LockedMessage(voucher.Period), 400);
+                }
+
                 // 源发票已软删 → 拒绝过账（与 GET /api/vouchers 的 deleted_at 过滤同口径）
                 if (string.Equals(voucher.SourceType, "invoice", StringComparison.Ordinal))
                 {
@@ -490,7 +511,7 @@ public static class VoucherEndpoints
             {
                 // 校验与删除同事务，避免「entries 已删、voucher 未删」的 TOCTOU
                 var voucher = await db.QueryFirstOrDefaultAsync(
-                    "SELECT [id],[status],[created_by] AS createdBy FROM [vouchers] WHERE [id]=@Id",
+                    "SELECT [id],[status],[created_by] AS createdBy,[period] AS period FROM [vouchers] WHERE [id]=@Id",
                     new { Id = id }, tx);
                 if (voucher == null)
                 {
@@ -507,6 +528,13 @@ public static class VoucherEndpoints
                 {
                     tx.Rollback();
                     return Common.Fail("仅草稿凭证可删除", 400);
+                }
+
+                // T7c：锁定期间禁止删除草稿（同一期间锁定语义）
+                if (PeriodLockService.IsLocked(db, voucher.period as string, tx))
+                {
+                    tx.Rollback();
+                    return Common.Fail(PeriodLockService.LockedMessage(voucher.period as string), 400);
                 }
 
                 var affected = await db.ExecuteAsync(
