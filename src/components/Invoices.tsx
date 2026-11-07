@@ -13,6 +13,7 @@ import type { Invoice } from '@/types/electron'
 import { getInvoiceFormData, getPaymentFormData } from './features/invoices/constants'
 import { FilePreviewModal } from './features/invoices/FilePreviewModal'
 import { useDuplicateInvoices } from './features/invoices/useDuplicateInvoices'
+import { VoucherListPanel } from './features/invoices/VoucherListPanel'
 import { usePermission } from '@/hooks/usePermission'
 import { Icon } from './ui/Icon'
 import { Button } from './ui/Button'
@@ -71,12 +72,15 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   <button onClick={() => h.setActiveTab('payments')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97]" style={h.activeTab === 'payments' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   回款/付款记录
   </button>
+  <button onClick={() => h.setActiveTab('vouchers')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97]" style={h.activeTab === 'vouchers' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+  记账凭证
+  </button>
   </div>
 
   {h.activeTab === 'invoices' && <InvoiceStats invoices={h.invoices} filteredInvoices={h.filteredInvoices} />}
   {h.activeTab === 'payments' && <PaymentStats records={h.paymentRecords} filteredRecords={h.filteredPayments} invoices={h.invoices} />}
 
-  <InvoiceFilters
+  {h.activeTab !== 'vouchers' && (<InvoiceFilters
   filterType={h.filterType} filterStatus={h.filterStatus} filterProject={h.filterProject}
   filterPaymentType={h.filterPaymentType} filterPaymentProject={h.filterPaymentProject}
   filterDateStart={h.filterDateStart} filterDateEnd={h.filterDateEnd}
@@ -90,7 +94,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   onPrint={h.activeTab === 'invoices' ? () => printInvoiceList(h.filteredInvoices) : () => printPaymentRecordList(h.filteredPayments, showToast as (msg: string, type?: string, duration?: number) => void, formatMoney, handlePrint)}
   onExportExcel={h.activeTab === 'invoices' ? () => exportInvoiceList(h.filteredInvoices) : () => exportPaymentRecordList(h.filteredPayments, showToast as (msg: string) => void)}
   isPaymentFilter={h.activeTab === 'payments'}
-  />
+  />)}
   </div>
 
   <HoverScrollbar className="flex-1 min-h-0">
@@ -104,6 +108,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   <PaymentList records={h.filteredPayments} onEdit={h.handleEditPayment} onDelete={h.handleDeletePayment}
   onPrint={(rec) => printPaymentList([rec])} onPreview={h.handlePreview} />
   )}
+  {h.activeTab === 'vouchers' && <VoucherListPanel />}
   </div>
   </HoverScrollbar>
 

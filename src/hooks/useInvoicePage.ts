@@ -11,7 +11,7 @@ export function useInvoicePage(refresh?: () => void) {
   const originalFileRef = useRef<Record<number, string>>({})
   const originalPaymentFileRef = useRef<Record<number, string>>({})
 
-  const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices')
+  const [activeTab, setActiveTab] = useState<'invoices' | 'payments' | 'vouchers'>('invoices')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([])
   const [projects, setProjects] = useState<Project[]>([])

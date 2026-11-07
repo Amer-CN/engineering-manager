@@ -1,0 +1,164 @@
+/**
+ * VoucherListPanel（T6c）测试
+ * - 渲染草稿/已过账凭证与借贷合计
+ * - 已过账行只读：不显示过账/删除按钮，显示 postedAt
+ * - 过账：二次确认 → postVoucher(id) → 成功 toast；失败展示后端 error
+ * - 删除：确认 → deleteVoucher(id) → toast
+ * - 无 vouchers:approve / vouchers:delete 权限时隐藏按钮
+ */
+import React from 'react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+
+const vouchersState: { data?: any[]; isLoading?: boolean; error?: any } = {}
+const postMutate = vi.fn()
+const deleteMutate = vi.fn()
+const permission = { allowed: new Set(['vouchers:approve', 'vouchers:delete']) }
+const confirmMock = vi.fn(async (..._args: any[]) => true)
+const showToast = vi.fn()
+
+vi.mock('@/hooks/data/useVouchers', () => ({
+  useVouchers: () => ({
+    data: vouchersState.data,
+    isLoading: vouchersState.isLoading ?? false,
+    error: vouchersState.error,
+  }),
+  usePostVoucher: () => ({ mutateAsync: postMutate, isPending: false }),
+  useDeleteVoucher: () => ({ mutateAsync: deleteMutate, isPending: false }),
+}))
+
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => ({ can: (code: string) => permission.allowed.has(code) }),
+}))
+
+vi.mock('@/hooks/useConfirm', () => ({
+  useConfirm: () => ({ confirm: confirmMock, ConfirmDialog: null }),
+}))
+
+vi.mock('@/store/toastStore', () => ({
+  useToastStore: (selector: (s: { showToast: typeof showToast }) => unknown) => selector({ showToast }),
+}))
+
+import { VoucherListPanel } from '@/components/features/invoices/VoucherListPanel'
+
+const draftVoucher = {
+  id: 11,
+  voucherNo: '记-202605-0001',
+  voucherDate: '2026-05-18',
+  period: '202605',
+  sourceType: 'invoice',
+  sourceId: 5,
+  templateCode: 'INV_REVENUE',
+  status: 'draft',
+  postedAt: null,
+  postedBy: null,
+  totalDebit: 1060,
+  totalCredit: 1060,
+  entries: [{}, {}, {}],
+}
+
+const postedVoucher = {
+  ...draftVoucher,
+  id: 12,
+  voucherNo: '记-202605-0002',
+  status: 'posted',
+  postedAt: '2026-05-19 10:00:00',
+  postedBy: '1',
+}
+
+afterEach(() => {
+  cleanup()
+  vouchersState.data = undefined
+  vouchersState.isLoading = false
+  vouchersState.error = undefined
+  postMutate.mockReset()
+  deleteMutate.mockReset()
+  confirmMock.mockClear()
+  confirmMock.mockImplementation(async (..._args: any[]) => true)
+  showToast.mockClear()
+  permission.allowed = new Set(['vouchers:approve', 'vouchers:delete'])
+})
+
+describe('VoucherListPanel（T6c）', () => {
+  test('渲染草稿与已过账凭证、状态与借贷合计', () => {
+    vouchersState.data = [draftVoucher, postedVoucher]
+    render(<VoucherListPanel />)
+
+    expect(screen.getByText('记-202605-0001')).toBeTruthy()
+    expect(screen.getByText('记-202605-0002')).toBeTruthy()
+    expect(screen.getByText('草稿')).toBeTruthy()
+    expect(screen.getByText('已过账')).toBeTruthy()
+    expect(screen.getAllByText(/1,060/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('3 行').length).toBe(2)
+  })
+
+  test('已过账行只读：不显示过账按钮，显示过账时间', () => {
+    vouchersState.data = [postedVoucher]
+    render(<VoucherListPanel />)
+
+    expect(screen.queryByRole('button', { name: '过账' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '删除' })).toBeNull()
+    expect(screen.getByText('2026-05-19 10:00:00')).toBeTruthy()
+  })
+
+  test('过账：二次确认后调用 postVoucher 并 toast 凭证号', async () => {
+    vouchersState.data = [draftVoucher]
+    postMutate.mockResolvedValue({ id: 11, voucherNo: '记-202605-0001', status: 'posted', postedAt: '2026-05-19 10:00:00' })
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '过账' }))
+
+    await waitFor(() => expect(postMutate).toHaveBeenCalledWith(11))
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('已过账 记-202605-0001', 'success'))
+  })
+
+  test('过账失败：toast 后端 error 原文，不伪造成功', async () => {
+    vouchersState.data = [draftVoucher]
+    postMutate.mockRejectedValue(new Error('仅草稿凭证可过账'))
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '过账' }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('仅草稿凭证可过账', 'error'))
+  })
+
+  test('取消确认：不调用过账', async () => {
+    vouchersState.data = [draftVoucher]
+    confirmMock.mockResolvedValueOnce(false)
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '过账' }))
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
+    expect(postMutate).not.toHaveBeenCalled()
+  })
+
+  test('删除草稿：确认后调用 deleteVoucher 并 toast', async () => {
+    vouchersState.data = [draftVoucher]
+    deleteMutate.mockResolvedValue(11)
+    render(<VoucherListPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+
+    await waitFor(() => expect(deleteMutate).toHaveBeenCalledWith(11))
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('已删除 记-202605-0001', 'success'))
+  })
+
+  test('无 vouchers:approve / vouchers:delete 权限时隐藏按钮', () => {
+    permission.allowed = new Set(['vouchers:read'])
+    vouchersState.data = [draftVoucher]
+    render(<VoucherListPanel />)
+
+    expect(screen.queryByRole('button', { name: '过账' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '删除' })).toBeNull()
+  })
+
+  test('加载失败展示错误原文', () => {
+    vouchersState.data = []
+    vouchersState.error = new Error('数据库连接失败')
+    render(<VoucherListPanel />)
+
+    expect(screen.getByText(/获取凭证失败：数据库连接失败/)).toBeTruthy()
+  })
+})
