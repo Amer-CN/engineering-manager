@@ -14,6 +14,7 @@ import { usePermission } from '@/hooks/usePermission'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
 import { useDeleteVoucher, usePostVoucher, useVouchers } from '@/hooks/data/useVouchers'
+import { VoucherDetailDrawer } from './VoucherDetailDrawer'
 
 const STATUS_LABEL: Record<string, string> = {
   draft: '草稿',
@@ -40,6 +41,7 @@ export const VoucherListPanel: React.FC = () => {
   const showToast = useToastStore(s => s.showToast)
 
   const [period, setPeriod] = useState('')
+  const [detailVoucher, setDetailVoucher] = useState<Voucher | null>(null)
   const { data, isLoading, error } = useVouchers()
   const postVoucher = usePostVoucher()
   const deleteVoucher = useDeleteVoucher()
@@ -154,9 +156,12 @@ export const VoucherListPanel: React.FC = () => {
       key: 'actions',
       title: '操作',
       align: 'right',
-      width: '190px',
+      width: '250px',
       render: (v) => (
         <div className="flex items-center justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setDetailVoucher(v)}>
+            详情
+          </Button>
           {v.status === 'posted' ? (
             <span className="text-xs font-mono tabular-nums" style={{ color: 'var(--muted)' }}>
               {v.postedAt ?? ''}
@@ -210,6 +215,7 @@ export const VoucherListPanel: React.FC = () => {
       />
 
       {ConfirmDialog}
+      <VoucherDetailDrawer voucher={detailVoucher} onClose={() => setDetailVoucher(null)} />
     </div>
   )
 }
