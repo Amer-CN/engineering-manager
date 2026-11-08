@@ -20,6 +20,15 @@
 | 协议合同 | `agreement_contracts` | 项目协议合同 |
 | 发票 | `invoices` | 收票/开票记录 |
 | 支付记录 | `payment_records` | 收付款流水 |
+| 发票核销 | `invoice_allocations` | 付款记录与发票的核销分配（`amount_fen`） |
+| 凭证模板 | `voucher_templates` | 发票→凭证的借贷模板 |
+| 凭证模板分录 | `voucher_template_entries` | 模板的科目与借贷方向 |
+| 凭证科目映射 | `voucher_account_maps` | 来源类型→科目的映射 |
+| 记账凭证 | `vouchers` | 凭证头（`draft`/`posted`，含过账审计字段） |
+| 凭证分录 | `voucher_entries` | 分录（`dc` 1=借/-1=贷，`amount_fen`） |
+| 凭证编号序列 | `voucher_sequences` | 期间内 `记-YYYYMM-####` 编号分配 |
+| 期初余额 | `opening_balances` | 期间+科目期初（借贷 `_fen`，唯一约束） |
+| 期间锁定 | `period_locks` | 已锁定期间（admin 操作，审计留痕） |
 | 结算 | `settlements` | 项目结算办理 |
 | 工资 | `wages` | 工人工资记录 |
 | 考勤 | `attendances` | 人员考勤记录 |
@@ -509,6 +518,16 @@ stateDiagram-v2
     paid --> [*]
 ```
 
+### 凭证状态 (vouchers.status)
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft : 发票生成草稿
+    draft --> posted : 过账（vouchers:approve）
+    posted --> draft : 反过账（原因必填，审计 warning）
+    draft --> [*] : 删除草稿
+```
+
 ### 结算状态 (settlements.status)
 
 ```mermaid
@@ -558,6 +577,10 @@ stateDiagram-v2
 | agreement_contracts | amount |
 | invoices | amount, price_amount, tax_amount, received_amount |
 | payment_records | amount |
+| invoice_allocations | amount_fen |
+| vouchers | total_debit_fen, total_credit_fen |
+| voucher_entries | amount_fen（`dc` 标记借贷） |
+| opening_balances | debit_fen, credit_fen |
 | wages | daily_wage, bonus, deduction, actual_wage, paid_amount |
 | settlements | amount |
 | cost_ledger | amount |
@@ -570,6 +593,7 @@ stateDiagram-v2
 - **047_LedgerExcelBoundaryFields.sql（2026-09-02）**：attendances.manually_edited；project_workers 入库五项（contract_signer/contract_start/contract_end/safety_training/work_section）+ exit_date；workers.current_address + current_address_enc（PII 孪生列）；wages.paid_channel
 - **052_AddMissingIndexes.sql（2026-09-05，原编 050 让位已执行的并行线迁移防撞号）**：15 条 IF NOT EXISTS 索引——project_members(project_id)、audit_logs(created_at / user_id+created_at)、invoices(contract_id/seller_id/buyer_id)、payment_records(partner_id/contract_id)、settlements(partner_id/contract_id)、cost_ledger(batch_id/linked_invoice_id)、inventory_transactions(item_id)、attendances(member_id/project_worker_id)（审计 D-08/D-09/D-10）
 - **053_MoneyYuanToFen.sql（2026-09-06，原编 051 让位并行线迁移防撞号）**：金额分制贯彻——17 表 30 列历史元数据 ×100（ROUND 防丢分）；wages 带日薪 >5000 守卫（保护 v0.93+ ToFen 时代行）；app_meta 标记 money_unit=fen-053；JSON 块/税率/天数豁免；wage_history 不在列（休眠表）。此后全库金额列=分、API=元（契约见 MoneyUnit 与 CONVENTIONS 坑清单首条）
+- **054–075（2026-09-16 ～ 2026-11-08）**：STT 默认 MOSS（054）；社保列（055）；发票原票关联/质保金/不得抵扣/票种/抵扣/税率规则（056–064）；发票核销（065）；凭证模板/凭证/过账/反过账（066–069、071–073）；期初余额（074）；期间锁定（075）。新增金额列统一 `INTEGER` 分（部分用 `_fen` 命名），API 输出元。
 
 ### 审计字段
 

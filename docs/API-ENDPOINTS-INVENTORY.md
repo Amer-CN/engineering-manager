@@ -1,6 +1,6 @@
 # API 端点全量盘点（工程管家后端）
 
-> 最后增量同步：dbee34de · 2026-09-02（新增 2 端点：batch-import-resolve / issue-collection；batch-import 行为更新为三分冲突）
+> 最后增量同步：b3cb7244 · 2026-11-08（新增记账凭证/期初余额/期间锁定端点；2026-09-02 起未全量重扫，其余新增端点以代码为准）
 > 数据源：`EngineeringManager.Api/Endpoints/*.cs`（24 个文件，约 200+ 端点）
 > 本文档为只读扫描产物，不修改任何业务代码。
 
@@ -310,6 +310,27 @@ R9 系列改造引入的行级写权限裁决机制，用于处理「授权项�
 | 6 | POST | `/api/payment-records` | `invoices:create` | 新增收付款记录 |
 | 7 | PUT | `/api/payment-records` | `invoices:update` | 更新收付款记录（RowWriteGate） |
 | 8 | DELETE | `/api/payment-records/{id}` | `invoices:delete` | 软删收付款记录 |
+
+### 5.7.1 记账凭证 / 期初余额 / 期间锁定
+
+**文件**：`VoucherEndpoints.cs` / `OpeningBalanceEndpoints.cs` / `PeriodLockEndpoints.cs`
+
+| # | 方法 | 路由 | 权限 | 说明 |
+|---|------|------|------|------|
+| 1 | GET | `/api/vouchers` | `vouchers:read` | 凭证列表（`?period=YYYYMM`，与发票同口径可见性） |
+| 2 | GET | `/api/vouchers/{id}` | `vouchers:read` | 凭证详情 + 分录 |
+| 3 | POST | `/api/vouchers/from-invoice` | `vouchers:create` | 发票生成凭证草稿（同来源唯一，重复返回 400） |
+| 4 | POST | `/api/vouchers/{id}/post` | `vouchers:approve` | 过账 `draft→posted`（审计 + 触发器锁定） |
+| 5 | POST | `/api/vouchers/{id}/unpost` | `vouchers:approve` | 反过账 `posted→draft`（原因必填 ≤200，审计 warning） |
+| 6 | DELETE | `/api/vouchers/{id}` | `vouchers:delete` | 删除凭证草稿 |
+| 7 | GET | `/api/vouchers/summary` | `vouchers:read` | 期间汇总/试算平衡（张数/草稿/已过账/借贷合计） |
+| 8 | GET | `/api/opening-balances` | `vouchers:read` | 期初余额查询（`?period=YYYYMM`） |
+| 9 | PUT | `/api/opening-balances` | `vouchers:approve` | 期初余额整期保存（借贷必须平衡，审计） |
+| 10 | GET | `/api/period-locks` | `vouchers:read` | 已锁定期间列表 |
+| 11 | POST | `/api/period-locks/{period}/lock` | admin | 锁定期间（审计 warning） |
+| 12 | POST | `/api/period-locks/{period}/unlock` | admin | 解锁期间（审计 warning） |
+
+> 期间锁定的写操作拦截：新增凭证/过账/反过账/删除草稿/保存期初余额在锁定期间一律 400。
 
 ---
 

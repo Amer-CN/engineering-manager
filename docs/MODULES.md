@@ -106,6 +106,16 @@
 - 收票按销售方关联支出合同，开票按购买方关联收入合同
 - **C# 端点**：`EngineeringManager.Api/Endpoints/InvoiceEndpoints.cs`
 
+### 记账凭证与期间（2026-11-08 合入 master）
+- **链路**：发票 → 凭证预览/草稿（模板 `INV_REVENUE` 等）→ 过账；草稿可删，已过账只读
+- **过账**：`draft→posted`，需 `vouchers:approve`；同事务写审计，DB 触发器锁定凭证与分录
+- **反过账**：原因必填（≤200），`posted→draft`，分录保留；审计 `warning`；触发器仅放行该路径
+- **期初余额**：按期间+科目（`opening_balances`），借贷合计必须相等；整期替换+审计（`vouchers:approve`）
+- **期间锁定**：`period_locks`，仅 admin；锁定期间禁止新增凭证/过账/反过账/删除草稿/修改期初
+- **列表**：按期间筛选、凭证详情、期间汇总（试算平衡）、CSV 导出、打印
+- **边界**：不做完整结账/损益结转（法定账交专业软件/代账）
+- **C# 端点**：`VoucherEndpoints.cs` / `OpeningBalanceEndpoints.cs` / `PeriodLockEndpoints.cs`
+
 ### 合同管理
 - 收入合同 / 支出合同 / 其他协议（框架、合作、和解、赔偿、个人等 6 种子类型）
 - 协议合同金额可选，无付款方式/付款记录
