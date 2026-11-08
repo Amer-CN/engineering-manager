@@ -128,6 +128,7 @@ public static class Common
                     "settlement:create","settlement:read","settlement:update","settlement:delete","settlement:approve",
                     "inventory:create","inventory:read","inventory:update","inventory:delete",
                     "invoices:create","invoices:read","invoices:update","invoices:delete",
+                    "vouchers:create","vouchers:read","vouchers:delete","vouchers:approve",
                     "costLedger:create","costLedger:read","costLedger:update","costLedger:delete",
                     "drawings:create","drawings:read","drawings:update","drawings:delete",
                     "settings:read","settings:update","users:create","users:read","users:update","users:delete",
@@ -145,7 +146,9 @@ public static class Common
                       "writing:read","writing:create","writing:update","writing:delete"],
         "accountant" => ["dashboard:read","projects:read","contracts:read","contracts:export","members:read",
                          "wages:create","wages:read","wages:update","settlement:read","settlement:approve","invoices:create",
-                         "invoices:read","invoices:update","costLedger:create","costLedger:read",
+                         "invoices:read","invoices:update",
+                         "vouchers:create","vouchers:read","vouchers:delete","vouchers:approve",
+                         "costLedger:create","costLedger:read",
                          "costLedger:update","settings:read","audit_logs:read","audit_logs:export",
                          "reports:create","reports:read",
                          "labor:read"],
@@ -162,11 +165,20 @@ record PasswordResetDto(string UserId, string NewPassword);
 record ChangePasswordDto(string OldPassword, string NewPassword);
 record RoleUpdateDto(string RoleId, string Permissions);
 record ProjectDto(string Name, string? Description, string? Address, string? StartDate, string? EndDate, string? Status, double Budget, long? ProjectManagerId);
-record MemberDto(long? Id, string Name, string? Phone, string? Email, string? MemberType, string? Role, string? IdCard, string? Gender, string? Ethnicity, string? BirthDate, string? IdCardAddress, double? BaseSalary, double? DailyWage, string? EntryDate, string? Status, long? DepartmentId, string? Position);
+record MemberDto(long? Id, string Name, string? Phone, string? Email, string? MemberType, string? Role, string? IdCard, string? Gender, string? Ethnicity, string? BirthDate, string? IdCardAddress, double? BaseSalary, double? DailyWage, string? EntryDate, string? Status, long? DepartmentId, string? Position, double? SocialSecurityPersonal, double? SocialSecurityCompany, double? HousingFund, double? HousingFundPersonal, bool? CompanyCoversSocial);
 record WorkerDto(long? Id, string Name, string? IdCard, string? Gender, string? Phone, string? Address, string? BankAccount, string? BankName, string? WorkerType, double? DailyWage, string? CurrentAddress = null);
 
 record PartnerDto(long? Id, string Name, string? Category, string? Contact, string? Phone, string? Email, string? Address, string? BankAccount, string? BankName, string? TaxNumber, string? CreditCode, string? RegisteredAddress, string? BusinessScope, string? TaxType, string? ProjectIds);
-record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long? ContractId, long? SettlementId, string? Type, string? InvoiceKind, string? InvoiceNo, string? InvoiceCode, string? Name, double? Amount, double? PriceAmount, double? TaxRate, double? TaxAmount, double? ReceivedAmount, string? IssueDate, string? Status, string? Remarks, string? FileUrl, string? FileType);
+record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long? ContractId, long? SettlementId, string? Type, string? InvoiceKind, string? InvoiceNo, string? InvoiceCode, string? Name, double? Amount, double? PriceAmount, double? TaxRate, double? TaxAmount, double? ReceivedAmount, string? IssueDate, string? Status, string? Remarks, string? FileUrl, string? FileType, long? OriginalInvoiceId, string? NonDeductibleReason,
+    // P0-a' 阶段 1：票种两维（介质 + 票种细分类）；与 InvoiceKind 双向派生由端点单点负责
+    string? InvoiceMedium, string? InvoiceCategory,
+    // P0-b：进项抵扣四字段（DeductibleTax 为元；落库分由端点经 MoneyUnit 换算）
+    bool? IsDeducted, string? DeductDate, string? DeductPeriod, double? DeductibleTax,
+    // T3：税收分类编码（金蝶 FTAXCODE / PT IV_GTTAXCODE）与优惠政策标识（金蝶 FTAXPOLICY）；
+    // 均为可选，空白归一为 null，落库列 tax_code / tax_policy（064 迁移）
+    string? TaxCode, string? TaxPolicy,
+    // T8：收票字段骨架（校验码 / 销方税号 / 开票人 / 收款人 / 复核人）；空白归一为 null
+    string? VerifyCode, string? SellerTaxNo, string? Drawer, string? Payee, string? Reviewer);
 record PaymentRecordDto(long? Id, string? Type, double? Amount, string? RecordDate, long? ProjectId, long? PartnerId, long? ContractId, string? InvoiceDetails, string? Remarks, string? FileUrl, string? FileType);
 record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWorkerId, string YearMonth, double? WorkDays, int? DaysOff, bool? IsFullAttendance, string? DailyStatus, string? FileUrl, string? FileName);
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);

@@ -32,7 +32,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
   <input
   ref={inputRef}
   type="file"
-  accept="image/jpeg,image/png,image/webp,application/pdf"
+  accept="image/jpeg,image/png,image/webp,application/pdf,text/xml,application/xml,application/ofd,.xml,.ofd"
   onChange={e => { const f = e.target.files?.[0]; if (f) onFileSelect(f); e.target.value = '' }}
   className="hidden"
   />
@@ -45,7 +45,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
   </div>
   <div>
   <p className="text-sm font-medium text-[color:var(--fg-2)]">{fileLabel}</p>
-  <p className="text-xs text-[color:var(--muted)]">{fileType === 'pdf' ? 'PDF文件' : '图片文件'}</p>
+  <p className="text-xs text-[color:var(--muted)]">{fileType === 'pdf' ? 'PDF文件' : fileType === 'xml' ? 'XML文件' : fileType === 'ofd' ? 'OFD文件' : '图片文件'}</p>
   </div>
   </div>
   <div className="flex items-center gap-2">
@@ -70,7 +70,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
   <div className="text-[color:var(--muted)]">
   <div className="text-3xl mb-2"><Icon name={iconName} size={32} /></div>
   <p className="text-sm font-medium">点击上传 / 拖拽上传 / Ctrl+V 粘贴</p>
-  <p className="text-xs mt-1">支持 JPG、PNG、WebP、PDF 格式，最大 10MB</p>
+  <p className="text-xs mt-1">支持 JPG、PNG、WebP、PDF、XML、OFD 格式，最大 10MB</p>
   </div>
   </div>
   )}

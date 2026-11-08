@@ -58,11 +58,20 @@ export function useInvoicePageInvoiceActions(deps: UseInvoicePageInvoiceActionsD
       const submitData = { ...processed, sellerId: processed.sellerId || 0, buyerId: processed.buyerId || 0, projectId: processed.projectId || 0, contractId: processed.contractId || 0, status: 'issued' as InvoiceStatus }
 
       if (editingInvoice) {
-        await (await getAPI()).updateInvoice({ ...editingInvoice, ...submitData })
+        const updateResult = await (await getAPI()).updateInvoice({ ...editingInvoice, ...submitData })
+        if (!updateResult.success) {
+          // 服务端 400（如税收分类编码非法）必须回显并保留抽屉，不能谎报成功
+          showToast(updateResult.error || '保存失败', 'error')
+          return
+        }
         logUpdate('invoices', `发票: ${submitData.name}`, editingInvoice.id, { before: editingInvoice, after: submitData })
       } else {
         const result = await (await getAPI()).createInvoice(submitData)
-        if (result.success && result.data) logCreate('invoices', `发票: ${submitData.name}`, result.data.id, submitData)
+        if (!result.success || !result.data) {
+          showToast(result.error || '保存失败', 'error')
+          return
+        }
+        logCreate('invoices', `发票: ${submitData.name}`, result.data.id, submitData)
       }
       loadData(); setShowInvoiceModal(false); setEditingInvoice(null)
       refresh?.()

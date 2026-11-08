@@ -10,7 +10,7 @@ import { Card } from './ui/Card'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from './ui/Button'
 
-const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'costLedger', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
+const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'vouchers', 'costLedger', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
 const actionKeys: PermissionAction[] = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
 type RoleRow = { id: string; name: string; description: string; isSystem: boolean; permissions: string[] }

@@ -496,8 +496,8 @@ public class ReportGenerationService
         return sb.ToString();
     }
 
-    // 单位契约：库内分、出参元（与 WageEndpoints.ToYuan 同口径）
-    private static decimal ToYuan(long fen) => fen / 100m;
+    // 单位契约：库内分、出参元（与 WageEndpoints.ToYuan 同口径，委托 MoneyUnit 单点）
+    private static decimal ToYuan(long fen) => MoneyUnit.ToYuanDecimal(fen);
 
     private static string BuildUserPrompt(
         ReportRequest request, AuditAggregate audit, KpiAggregate kpi, string periodLabel)

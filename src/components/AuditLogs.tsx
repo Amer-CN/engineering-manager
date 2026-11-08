@@ -13,10 +13,23 @@ import { StatusBadge, AUDIT_LEVEL } from '@/constants/status'
 import { AuditStatsPanel } from './AuditStatsPanel'
 import { AuditFilterBar } from './AuditFilterBar'
 import { AuditDetailModal } from './AuditDetailModal'
+import { SwimlaneTimeline } from './features/audit/SwimlaneTimeline'
 import { Button } from './ui/Button'
 import { useHasFeature } from '@/store/editionStore'
 
 const PAGE_SIZE = 20
+/** 视图偏好记本机；键名沿用项目既有前缀习惯 */
+const VIEW_PREF_KEY = 'audit.viewMode'
+
+type AuditViewMode = 'table' | 'swimlane'
+
+function readViewPref(): AuditViewMode {
+  try {
+    return localStorage.getItem(VIEW_PREF_KEY) === 'swimlane' ? 'swimlane' : 'table'
+  } catch {
+    return 'table'
+  }
+}
 
 const actionConfig: Record<AuditAction, { label: string; color: string; bgColor: string }> = {
   create: { label: '创建', color: 'text-success-700', bgColor: 'bg-success-100' },
@@ -51,6 +64,12 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   const [pagedData, setPagedData] = useState({ logs: [] as AuditLog[], total: 0, totalPages: 1 })
   const [statsView, setStatsView] = useState<{ data: AuditStats | null; visible: boolean }>({ data: null, visible: false })
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
+  const [viewMode, setViewMode] = useState<AuditViewMode>(readViewPref)
+
+  const changeViewMode = useCallback((mode: AuditViewMode) => {
+    setViewMode(mode)
+    try { localStorage.setItem(VIEW_PREF_KEY, mode) } catch { /* 隐私模式忽略 */ }
+  }, [])
 
   const loadLogs = useCallback(async () => {
   const result = await queryAuditLogs({ ...f.filterParams, page: f.page, pageSize: PAGE_SIZE })
@@ -149,11 +168,40 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     },
   ]
 
+  // 分页条：表格视图与泳道视图共用（两种视图都只呈现当前页数据，缺了它就无法翻页）
+  const paginationBar = (
+  <div className="px-4 py-3 border-t border-[color:var(--border)] flex items-center justify-between">
+  <div className="text-sm text-[color:var(--muted)]">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
+  <div className="flex items-center gap-2">
+  <Button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">上一页</Button>
+  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+  const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
+  return <Button key={pageNum} onClick={() => f.setPage(pageNum)} variant={pageNum === page ? 'primary' : 'ghost'} size="sm" className={pageNum === page ? undefined : 'text-[color:var(--fg-2)]'}>{pageNum}</Button>
+  })}
+  <Button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">下一页</Button>
+  </div>
+  </div>
+  )
+
   return (
   <>
   {ConfirmDialog}
   {/* 审计工具栏（统计 / 导出 JSON / 清理旧日志） */}
   <div className="flex items-center justify-end gap-2 mb-4">
+  <div className="mr-auto flex items-center rounded-md border border-[color:var(--border)] p-0.5" role="group" aria-label="视图切换">
+  <button
+  type="button"
+  onClick={() => changeViewMode('table')}
+  aria-pressed={viewMode === 'table'}
+  className={`flex items-center gap-1 px-2.5 py-1 rounded text-caption transition-colors ${viewMode === 'table' ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'}`}
+  ><Icon name="List" size={13} /> 表格</button>
+  <button
+  type="button"
+  onClick={() => changeViewMode('swimlane')}
+  aria-pressed={viewMode === 'swimlane'}
+  className={`flex items-center gap-1 px-2.5 py-1 rounded text-caption transition-colors ${viewMode === 'swimlane' ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'}`}
+  ><Icon name="Activity" size={13} /> 泳道</button>
+  </div>
   <Button onClick={handleShowStats} variant="ghost" size="sm" className="flex items-center gap-1"><Icon name="BarChart3" size={14} /> 统计</Button>
   <Button onClick={handleExportJson} disabled={busy} variant="secondary" size="sm" className="flex items-center gap-1"><Icon name="Download" size={14} /> 导出 JSON</Button>
   <Button onClick={handleClearOld} disabled={busy} variant="ghost" size="sm" className="flex items-center gap-1 text-[color:var(--muted)]"><Icon name="Trash2" size={14} /> 清理旧日志</Button>
@@ -179,6 +227,17 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   <h3 className="text-lg font-medium text-[color:var(--fg)] mb-2">暂无操作日志</h3>
   <p className="text-[color:var(--muted)]">系统还未记录任何操作，或当前筛选条件下无数据</p>
   </Card>
+  ) : viewMode === 'swimlane' ? (
+  <>
+  <Card bordered={false} className="overflow-hidden p-5">
+  <SwimlaneTimeline
+    logs={logs}
+    laneLabels={resourceLabels}
+    onSelectBlock={block => setSelectedLog(block.logs[block.logs.length - 1] ?? null)}
+  />
+  </Card>
+  {paginationBar}
+  </>
   ) : (
   <>
   <DataTable
@@ -192,17 +251,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     emptyIcon="ClipboardList"
   />
 
-  <div className="px-4 py-3 border-t border-[color:var(--border)] flex items-center justify-between">
-  <div className="text-sm text-[color:var(--muted)]">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
-  <div className="flex items-center gap-2">
-  <Button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">上一页</Button>
-  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-  const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
-  return <Button key={pageNum} onClick={() => f.setPage(pageNum)} variant={pageNum === page ? 'primary' : 'ghost'} size="sm" className={pageNum === page ? undefined : 'text-[color:var(--fg-2)]'}>{pageNum}</Button>
-  })}
-  <Button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">下一页</Button>
-  </div>
-  </div>
+  {paginationBar}
   </>
   )}
 

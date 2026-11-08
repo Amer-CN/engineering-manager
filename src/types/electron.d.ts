@@ -536,6 +536,8 @@ export interface DashboardStats {
 export type SettlementStatus = 'draft' | 'pending' | 'completed' | 'archived'
 export type SettlementType = 'income' | 'expense'  // 收入结算/支出结算
 export type SettlementSubType = 'material' | 'subcontract' | 'labor' | 'machinery' | 'service' | 'other'
+// JS03 质保金状态机（业务口径）：NULL/缺省=无质保；到期派生放前端 util，released 显式写；不得复用 status 归档位
+export type RetentionStatus = 'in_warranty' | 'due_to_collect' | 'released'
 
 export interface Settlement {
   id: number
@@ -549,6 +551,9 @@ export interface Settlement {
   name: string                   // 结算名称
   amount: number                 // 结算金额
   settlementDate?: string       // 结算日期
+  retentionAmount?: number      // 质保金金额（元，前端契约；库内分，MoneyUnit 口径）
+  retentionDueDate?: string     // 质保到期日（YYYY-MM-DD）
+  retentionStatus?: RetentionStatus // 质保状态（缺省=NULL=无质保）
   periodStart?: string           // 结算周期开始（废弃，保留兼容）
   periodEnd?: string             // 结算周期结束（废弃，保留兼容）
   submittedBy: string           // 提交人
@@ -666,6 +671,154 @@ export type InvoiceStatus = 'issued' | 'partially_paid' | 'received' | 'cancelle
 export type InvoiceTaxRate = 0 | 0.01 | 0.03 | 0.06 | 0.09 | 0.13
 export type InvoiceKind = 'electronic_regular' | 'electronic_special' | 'paper_regular' | 'paper_special'  // 电子普票/电子专票/纸质普票/纸质专票
 
+// ============ 税率主数据 / 税率规则（P1 / T1） ============
+// 服务端真源：tax_rates / tax_rules（063 迁移）+ TaxEndpoints.cs。
+// 数值集合与 constants.ts taxRateOptions 一致（0/0.01/0.03/0.06/0.09/0.13），法律口径 FP07。
+export interface TaxRate {
+  id: number
+  code: string                 // 税目编码（如 VAT13），与 effectiveFrom 组成唯一键
+  name: string                 // 展示名（如 13%）
+  rate: number                 // 税率小数
+  category: string | null      // 税目分类（zero/levy/general…）
+  effectiveFrom: string        // 生效起 YYYY-MM-DD
+  effectiveTo: string | null   // 生效止 YYYY-MM-DD；null = 无失效日
+  isDefault: number            // 1 = 规则不命中时的全局兜底默认
+}
+
+/**
+ * 默认税率解析结果（GET /api/tax-rates/resolve）。
+ * 服务端真源：TaxEndpoints.cs —— 规则命中 → 默认兜底 → none（不猜值）。
+ * `matchedBy` 三值：rule=命中规则 / default=全局默认兜底 / none=无匹配（调用点不得改税率）。
+ */
+export interface TaxRateResolution {
+  rateId: number | null
+  code: string | null
+  rate: number | null
+  matchedBy: 'rule' | 'default' | 'none'
+}
+
+/** 凭证预览（T5b）：服务端纯计算返回，不落库、不生成凭证号。 */
+export interface VoucherPreviewLine {
+  lineNo: number
+  dc: number              // 1=借, -1=贷
+  accountCode: string
+  accountName: string
+  summary: string
+  amount: number          // 元
+}
+
+export interface VoucherPreview {
+  templateCode: string
+  invoiceId: number
+  lines: VoucherPreviewLine[]
+  totalDebit: number      // 元
+  totalCredit: number     // 元
+}
+
+/** 凭证分录（T6a 草稿）：金额为元，库内真源为分。 */
+export interface VoucherEntry {
+  lineNo: number
+  dc: number              // 1=借, -1=贷
+  accountCode: string
+  accountName: string
+  summary: string
+  amount: number          // 元
+}
+
+/** 凭证（T6a 草稿 / T6b 过账）：status 为 draft | posted；过账即终态、过账后只读。 */
+export interface Voucher {
+  id: number
+  voucherNo: string       // 记-YYYYMM-####
+  voucherDate: string
+  period: string          // YYYYMM
+  sourceType: string      // 'invoice'
+  sourceId: number
+  templateCode: string
+  status: string          // draft | posted
+  postedAt: string | null // 过账时间（草稿为 null）
+  postedBy: string | null // 过账人 user id（草稿为 null）
+  totalDebit: number      // 元
+  totalCredit: number     // 元
+  entries: VoucherEntry[]
+}
+
+/** 生成凭证草稿的响应（T6a）。 */
+export interface VoucherDraft {
+  id: number
+  voucherNo: string
+  totalDebit: number      // 元
+  totalCredit: number     // 元
+}
+
+/** 凭证过账的响应（T6b）：status 恒为 posted。 */
+export interface VoucherPostResult {
+  id: number
+  voucherNo: string
+  status: string
+  postedAt: string
+}
+
+/** 反过账响应（T7a）：status 回到 draft。 */
+export interface VoucherUnpostResult {
+  id: number
+  voucherNo: string
+  status: string
+}
+
+/** 凭证期间汇总（T6f，只读）：金额为元；balance 按分比较。 */
+export interface VoucherSummary {
+  period: string | null
+  totalCount: number
+  draftCount: number
+  postedCount: number
+  totalDebit: number
+  totalCredit: number
+  balanced: boolean
+}
+
+/** 期初余额行（T7b）：接口金额为元，库内为分。 */
+export interface OpeningBalanceRow {
+  accountCode: string
+  accountName: string
+  debit: number
+  credit: number
+}
+
+/** 期初余额汇总（T7b）。 */
+export interface OpeningBalanceSummary {
+  period: string
+  rows: OpeningBalanceRow[]
+  totalDebit: number
+  totalCredit: number
+  balanced: boolean
+}
+
+/** 期间锁定（T7c）。 */
+export interface PeriodLock {
+  period: string
+  lockedAt: string
+  lockedBy: string | null
+  reason: string | null
+}
+
+export interface TaxRule {
+  id: number
+  businessType: string | null      // 业务类型维度；null = 不限
+  partnerTaxType: string | null    // 对方纳税人类别维度；null = 不限
+  itemCategory: string | null      // 项目类别维度；null = 不限
+  taxRateId: number                // → TaxRate.id
+  priority: number                 // 同维度数下大者优先
+  enabled: number                  // 0/1
+}
+
+// 票种两维模型（P0-a' 阶段 1）：介质 + 票种细分类；服务端与 InvoiceKind 双向派生
+export type InvoiceMedium = 'electronic' | 'paper'  // 介质：电子/纸质
+// 票种细分类（对齐金蝶 FINVOICETYPE）：专票/普票/旅客运输/过路费/火车/飞机/定额/卷式
+export type InvoiceCategory = 'special' | 'regular' | 'passenger_transport' | 'toll' | 'train' | 'plane' | 'quota' | 'roll'
+
+// FP08 进项不得抵扣原因六值（口径：增值税法第22条；NULL=可抵扣）
+export type InvoiceNonDeductibleReason = 'simple_taxation' | 'exempt' | 'abnormal_loss' | 'welfare_personal' | 'catering_entertainment' | 'other'
+
 // 发票关联的收款明细
 export interface InvoicePaymentDetail {
   invoiceId: number       // 关联的发票ID
@@ -700,8 +853,30 @@ export interface Invoice {
   type: InvoiceType
   status: InvoiceStatus
   invoiceKind: InvoiceKind                        // 票种：电子发票/纸质发票
+  // 票种两维模型（P0-a' 阶段 1）：旧数据已由 061 迁移回填；新数据由服务端派生
+  invoiceMedium?: InvoiceMedium | null            // 介质：electronic/paper
+  invoiceCategory?: InvoiceCategory | null        // 票种细分类（八值）
+  // 进项不得抵扣原因（FP08）：六值可空枚举，null/缺省=可抵扣
+  // simple_taxation=简易计税 exempt=免税项目 abnormal_loss=非正常损失
+  // welfare_personal=福利/个人消费 catering_entertainment=餐饮娱乐 other=其他
+  nonDeductibleReason?: InvoiceNonDeductibleReason | null
+  // 进项抵扣登记（P0-b）：仅 type='invoice_in' 可登记；未登记/取消抵扣时三字段为空
+  isDeducted?: boolean | null    // 是否已抵扣
+  deductDate?: string | null     // 抵扣日期 YYYY-MM-DD（可空）
+  deductPeriod?: string | null   // 税款所属期 YYYY-MM（已抵扣时必填）
+  deductibleTax?: number         // 可抵扣税额（元；库内 INTEGER 分）
   invoiceNo: string              // 发票号码
   invoiceCode: string           // 发票代码
+  // T3 税收分类编码（金蝶 FTAXCODE / PT IV_GTTAXCODE 口径）：可选，≤32 位数字字母
+  taxCode?: string | null
+  // T3 优惠政策标识（金蝶 FTAXPOLICY 口径）：可选，≤64 位
+  taxPolicy?: string | null
+  // T8 收票字段骨架：校验码 / 销方税号 / 开票人 / 收款人 / 复核人（均可选）
+  verifyCode?: string | null
+  sellerTaxNo?: string | null
+  drawer?: string | null
+  payee?: string | null
+  reviewer?: string | null
   name: string                   // 发票名称/摘要
   amount: number                 // 价税合计（含税金额）
   taxAmount: number             // 税额
@@ -714,6 +889,7 @@ export interface Invoice {
   projectId: number | null      // 关联项目
   contractId: number | null     // 关联合同（可选）
   receivedAmount: number        // 已收款金额
+  allocatedAmount?: number      // 已核销金额（元；T4b 由 GET /api/invoices 的 allocated_amount 子查询列提供）
   fileUrl?: string              // 发票文件（Base64）
   fileType?: string             // 文件类型：image/pdf
   remarks: string
@@ -1039,6 +1215,37 @@ export interface ElectronAPI {
   // 图纸
   // 部门管理
   getDepartments: () => Promise<{ success: boolean; data?: Department[]; error?: string }>
+
+  // 税率主数据（P1 / T1）：GET 纯读端点。
+  getTaxRates: () => Promise<{ success: boolean; data?: TaxRate[]; error?: string }>
+  // 默认税率解析（P1 / T1b）：GET 纯读端点，显式由用户点击「按规则取默认」触发。
+  // undefined/null 维度由 api-client 自动过滤，不下发空 query。
+  resolveTaxRate: (params: { date?: string; businessType?: string; partnerTaxType?: string; itemCategory?: string }) =>
+    Promise<{ success: boolean; data?: TaxRateResolution; error?: string }>
+  // 凭证预览（T5b）：POST 只读计算端点，不落库、不生成凭证号。
+  previewVoucher: (code: string, invoiceId: number) =>
+    Promise<{ success: boolean; data?: VoucherPreview; error?: string }>
+  // 凭证草稿（T6a）：只落 draft，不过账；同一发票重复生成由服务端 400。
+  createVoucherDraft: (invoiceId: number, templateCode?: string) =>
+    Promise<{ success: boolean; data?: VoucherDraft; error?: string }>
+  getVouchers: (period?: string) =>
+    Promise<{ success: boolean; data?: Voucher[]; error?: string }>
+  deleteVoucher: (id: number) => Promise<{ success: boolean; error?: string }>
+  postVoucher: (id: number) =>
+    Promise<{ success: boolean; data?: VoucherPostResult; error?: string }>
+  unpostVoucher: (id: number, reason: string) =>
+    Promise<{ success: boolean; data?: VoucherUnpostResult; error?: string }>
+  getVoucherSummary: (period?: string) =>
+    Promise<{ success: boolean; data?: VoucherSummary; error?: string }>
+  getOpeningBalances: (period: string) =>
+    Promise<{ success: boolean; data?: OpeningBalanceSummary; error?: string }>
+  saveOpeningBalances: (period: string, rows: OpeningBalanceRow[]) =>
+    Promise<{ success: boolean; data?: OpeningBalanceSummary; error?: string }>
+  getPeriodLocks: () => Promise<{ success: boolean; data?: PeriodLock[]; error?: string }>
+  lockPeriod: (period: string, reason?: string) =>
+    Promise<{ success: boolean; data?: { period: string; locked: boolean }; error?: string }>
+  unlockPeriod: (period: string, reason?: string) =>
+    Promise<{ success: boolean; data?: { period: string; locked: boolean }; error?: string }>
   createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
   deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>
@@ -1145,8 +1352,8 @@ export interface ElectronAPI {
 
   // ============ 收款记录 ============
   getPaymentRecords: (type?: InvoiceType) => Promise<{ success: boolean; data?: PaymentRecord[]; error?: string }>
-  createPaymentRecord: (record: Partial<PaymentRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
-  updatePaymentRecord: (record: PaymentRecord) => Promise<{ success: boolean; error?: string }>
+  createPaymentRecord: (record: Partial<PaymentRecord>) => Promise<{ success: boolean; data?: number; error?: string }>
+  updatePaymentRecord: (id: number, updates: Partial<PaymentRecord>) => Promise<{ success: boolean; error?: string }>
   deletePaymentRecord: (id: number) => Promise<{ success: boolean; error?: string }>
 
   // ============ 考勤管理 ============
@@ -1218,7 +1425,7 @@ export interface ElectronAPI {
 
   // ============ OCR（百度在线识别，通过主进程 IPC 代理） ============
   ocrBaiduIdCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; idCard?: { number: string; name?: string; gender?: string; ethnicity?: string; birthDate?: string; address?: string; issueAuthority?: string; validDate?: string }; error?: string }>
-  ocrBaiduInvoice: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; invoice?: { invoiceNum: string; invoiceCode: string; invoiceDate: string; invoiceType: string; totalAmount: number; amountWithoutTax: number; totalTax: number; taxRate: number; sellerName: string; purchaserName: string; checkCode: string; itemName: string; remarks: string }; error?: string }>
+  ocrBaiduInvoice: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; invoice?: { invoiceNum: string; invoiceCode: string; invoiceDate: string; invoiceType: string; totalAmount: number; amountWithoutTax: number; totalTax: number; taxRate: number; sellerName: string; purchaserName: string; checkCode: string; verifyCode?: string; sellerTaxNo?: string; purchaserTaxNo?: string; drawer?: string; payee?: string; reviewer?: string; taxCode?: string; itemName: string; remarks: string }; error?: string }>
   ocrBaiduBankCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; bankCard?: { cardNumber: string; bankName: string; cardType: string; validDate: string }; error?: string }>
   ocrBaiduBusinessLicense: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; businessLicense?: { creditCode: string; companyName: string; legalPerson: string; registeredCapital: string; address: string; businessScope: string; establishDate: string; expireDate: string }; error?: string }>
   ocrBaiduBankReceipt: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; bankReceipt?: { transactionDate: string; transactionTime: string; amount: number; payerName: string; payerAccount: string; payeeName: string; payeeAccount: string; transactionNo: string; bankName: string; remarks: string }; error?: string }>

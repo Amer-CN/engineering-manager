@@ -7,6 +7,7 @@ import { Invoice } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
 import { Card } from '@/components/ui/Card'
+import { resolveInvoiceDimensions } from './invoiceConfig'
 
 interface InvoiceStatsProps {
   invoices: Invoice[]
@@ -16,21 +17,29 @@ interface InvoiceStatsProps {
 export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredInvoices }) => {
   const invoiceOut = filteredInvoices.filter(i => i.type === 'invoice_out')
   const invoiceIn = filteredInvoices.filter(i => i.type === 'invoice_in')
-  const isSpecial = (kind: string) => kind === 'paper_special' || kind === 'electronic_special'
-  const isRegular = (kind: string) => kind === 'paper_regular' || kind === 'electronic_regular'
+  // 专/普按两维票种口径汇总（缺失时从历史 invoiceKind 推导），不再用 kind 后缀
+  const isSpecial = (invoice: Invoice) => resolveInvoiceDimensions(invoice).category === 'special'
+  const isRegular = (invoice: Invoice) => resolveInvoiceDimensions(invoice).category === 'regular'
 
   const stats = {
   invoiceOutAmount: invoiceOut.reduce((sum, i) => sum + i.amount, 0),
   invoiceInAmount: invoiceIn.reduce((sum, i) => sum + i.amount, 0),
   totalCount: filteredInvoices.length,
   // 专票税额（可抵扣）
-  specialTax: filteredInvoices.filter(i => isSpecial(i.invoiceKind)).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
+  specialTax: filteredInvoices.filter(isSpecial).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
   // 普票税额
-  regularTax: filteredInvoices.filter(i => isRegular(i.invoiceKind)).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
+  regularTax: filteredInvoices.filter(isRegular).reduce((sum, i) => sum + (i.taxAmount || 0), 0),
+  // FP08 不得抵扣汇总（原因非空即不得抵扣）
+  nonDeductible: filteredInvoices.filter(i => (i.nonDeductibleReason ?? '') !== ''),
+  // 抵扣口径只作用于进项（invoice_in），销项永不参与
+  // 已抵扣税额：取可抵扣税额 deductibleTax
+  deductedTax: invoiceIn.filter(i => i.isDeducted === true).reduce((sum, i) => sum + (i.deductibleTax ?? 0), 0),
+  // 待抵扣税额：未抵扣行的 deductibleTax 恒为 0，故口径取进项税额 taxAmount
+  pendingDeductTax: invoiceIn.filter(i => !i.isDeducted).reduce((sum, i) => sum + (i.taxAmount ?? 0), 0),
   }
 
   return (
-  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="Upload" size={20} /></div>
@@ -78,6 +87,39 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   <div>
   <p className="text-xs" style={{ color: 'var(--muted)' }}>普票税额</p>
   <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.regularTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.regularTax)}</p>
+  </div>
+  </div>
+  </Card>
+  <Card bordered={false} className="p-4">
+  <div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}><Icon name="AlertTriangle" size={20} /></div>
+  <div>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>不得抵扣</p>
+  <p className="text-lg font-bold flex items-center gap-2 font-mono tabular-nums tracking-tight" style={{ color: stats.nonDeductible.length > 0 ? 'var(--fg)' : 'var(--muted)' }}>
+  {stats.nonDeductible.length} 张
+  <span className="text-xs font-normal leading-tight" style={{ color: 'var(--muted)' }}>
+  ¥{formatMoney(stats.nonDeductible.reduce((sum, i) => sum + i.amount, 0))}
+  </span>
+  </p>
+  </div>
+  </div>
+  </Card>
+  <Card bordered={false} className="p-4">
+  <div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}><Icon name="CheckCircle" size={20} /></div>
+  <div>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>已抵扣税额（进项）</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.deductedTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.deductedTax)}</p>
+  </div>
+  </div>
+  </Card>
+  <Card bordered={false} className="p-4">
+  <div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}><Icon name="Clock" size={20} /></div>
+  <div>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>待抵扣税额（进项）</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.pendingDeductTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.pendingDeductTax)}</p>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>未抵扣行 deductibleTax 恒为 0，按进项税额计</p>
   </div>
   </div>
   </Card>

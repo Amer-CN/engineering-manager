@@ -1,11 +1,14 @@
 import React from 'react'
-import type { InvoiceType, InvoiceKind, Partner, Project, IncomeContract, ExpenseContract } from '@/types/electron'
+import type { InvoiceType, InvoiceMedium, InvoiceCategory, Partner, Project, IncomeContract, ExpenseContract } from '@/types/electron'
 import type { InvoiceFormData } from './InvoiceForm'
 import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
 import { Input } from '../../ui/Input/Input'
+import { Button } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
-import { invoiceKindOptions, taxRateOptions } from './constants'
+import { categoryOptions, mediumOptions, nonDeductibleReasonOptions, resolveTaxRateSelectOptions } from './constants'
+import { deriveInvoiceKind } from './invoiceConfig'
+import { useTaxRates } from '@/hooks/data/useTaxRates'
 
 interface InvoiceFormFieldsProps {
   formData: InvoiceFormData
@@ -20,21 +23,39 @@ interface InvoiceFormFieldsProps {
   handleTaxAmountChange: (amount: number) => void
   duplicateInvoice: { id: number; invoiceNo: string } | null
   invoiceNoWarning: string | null
+  /** P1/T1b 默认税率解析：显式用户动作（点击按钮）才触发，不做任何自动调用 */
+  onResolveTaxRate: () => void
+  resolvePending: boolean
+  taxRateHint: string | null
 }
 
 export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
   formData, setFormData, partners, projects, contracts,
   handleInvoiceNoChange, handleTaxRateChange, handleTaxedAmountChange,
-  handleUntaxedAmountChange, handleTaxAmountChange, duplicateInvoice, invoiceNoWarning
+  handleUntaxedAmountChange, handleTaxAmountChange, duplicateInvoice, invoiceNoWarning,
+  onResolveTaxRate, resolvePending, taxRateHint
 }) => {
+  // P1/T1：税率下拉数据源 —— 服务端主数据优先，hook 失败/空/非标准档位时回落 constants 兜底。
+  // 发票仍存自己的税率快照，历史发票不受主数据变更影响。
+  const { data: taxRates } = useTaxRates()
+  const taxRateSelectOptions = resolveTaxRateSelectOptions(taxRates)
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="label">发票类型 *</label>
           <select
             value={formData.type}
-            onChange={e => setFormData({ ...formData, type: e.target.value as InvoiceType })}
+            onChange={e => {
+              const type = e.target.value as InvoiceType
+              setFormData({
+                ...formData,
+                type,
+                // 切到开票（销项）时清空抵扣登记：仅进项可登记，避免携带脏值提交被服务端 400
+                ...(type === 'invoice_in' ? {} : { isDeducted: false, deductDate: '', deductPeriod: '', deductibleTax: 0 })
+              })
+            }}
             className="input"
             required
           >
@@ -43,19 +64,105 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
           </select>
         </div>
         <div>
-          <label className="label">票种 *</label>
+          <label className="label">介质 *</label>
           <select
-            value={formData.invoiceKind}
-            onChange={e => setFormData({ ...formData, invoiceKind: e.target.value as InvoiceKind })}
+            value={formData.invoiceMedium}
+            onChange={e => {
+              const invoiceMedium = e.target.value as InvoiceMedium | ''
+              setFormData({
+                ...formData,
+                invoiceMedium,
+                invoiceKind: deriveInvoiceKind(invoiceMedium, formData.invoiceCategory)
+              })
+            }}
             className="input"
             required
           >
-            {invoiceKindOptions.map(opt => (
+            <option value="" disabled>请选择</option>
+            {mediumOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">票种 *</label>
+          <select
+            value={formData.invoiceCategory}
+            onChange={e => {
+              const invoiceCategory = e.target.value as InvoiceCategory | ''
+              setFormData({
+                ...formData,
+                invoiceCategory,
+                invoiceKind: deriveInvoiceKind(formData.invoiceMedium, invoiceCategory)
+              })
+            }}
+            className="input"
+            required
+          >
+            <option value="" disabled>请选择</option>
+            {categoryOptions.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
       </div>
+
+      {/* FP08 进项不得抵扣原因：仅收票（进项）可标记，开票时禁用 */}
+      <div>
+        <label className="label">进项抵扣</label>
+        <select
+          value={formData.nonDeductibleReason || ''}
+          onChange={e => setFormData({ ...formData, nonDeductibleReason: e.target.value })}
+          className="input"
+          disabled={formData.type !== 'invoice_in'}
+          title={formData.type !== 'invoice_in' ? '仅收票（进项）可标记不得抵扣原因' : '可抵扣（空）或六类不得抵扣原因'}
+        >
+          <option value="">可抵扣</option>
+          {nonDeductibleReasonOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* P0-b 抵扣登记：仅收票（进项）显示；未勾选时三字段随提交清空（服务端同口径） */}
+      {formData.type === 'invoice_in' && (
+        <div className="rounded-lg p-4 space-y-3" style={{ border: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={formData.isDeducted}
+                onChange={e => {
+                  const checked = e.target.checked
+                  setFormData({
+                    ...formData,
+                    isDeducted: checked,
+                    // 默认可抵扣税额等于税额（可改）；取消勾选时清零
+                    deductibleTax: checked
+                      ? (formData.deductibleTax || formData.taxAmount)
+                      : 0,
+                    ...(checked ? {} : { deductDate: '', deductPeriod: '' })
+                  })
+                }}
+                className="w-4 h-4 rounded accent-[color:var(--accent)]"
+              />
+              <span className="text-sm font-medium" style={{ color: 'var(--fg-2)' }}>已抵扣</span>
+            </label>
+            <span className="text-caption" style={{ color: 'var(--muted)' }}>仅进项发票可登记</span>
+          </div>
+          {formData.isDeducted && (
+            <div className="grid grid-cols-3 gap-4">
+              <Input label="抵扣日期" type="date" value={formData.deductDate}
+                onChange={e => setFormData({ ...formData, deductDate: e.target.value })} size="sm" />
+              <Input label="税款所属期" type="month" value={formData.deductPeriod}
+                onChange={e => setFormData({ ...formData, deductPeriod: e.target.value })} size="sm" required />
+              <Input label="可抵扣税额（元）" type="number" value={formData.deductibleTax || ''}
+                onChange={e => setFormData({ ...formData, deductibleTax: Number(e.target.value) || 0 })}
+                size="sm" min="0" step="0.01" />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -94,11 +201,54 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
         </div>
       </div>
 
-      {formData.invoiceKind.startsWith('paper') && (
+      {formData.invoiceMedium === 'paper' && (
         <div>
           <Input label="发票代码" type="text" value={formData.invoiceCode} onChange={e => setFormData({ ...formData, invoiceCode: e.target.value })} size="sm" className="font-mono" />
         </div>
       )}
+
+      {/* T3 税收分类编码 / 优惠政策：均非必填；空值由服务端归一为 null */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Input label="税收分类编码" type="text" value={formData.taxCode}
+            onChange={e => setFormData({ ...formData, taxCode: e.target.value })}
+            size="sm" className="font-mono" maxLength={32} />
+        </div>
+        <div>
+          <Input label="优惠政策" type="text" value={formData.taxPolicy}
+            onChange={e => setFormData({ ...formData, taxPolicy: e.target.value })}
+            size="sm" maxLength={64} />
+        </div>
+      </div>
+
+      {/* T8 收票字段骨架：校验码 / 销方税号 / 开票人 / 收款人 / 复核人（均非必填，空值归一为 null） */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Input label="校验码" type="text" value={formData.verifyCode}
+            onChange={e => setFormData({ ...formData, verifyCode: e.target.value })}
+            size="sm" className="font-mono" maxLength={32} />
+        </div>
+        <div>
+          <Input label="销方税号" type="text" value={formData.sellerTaxNo}
+            onChange={e => setFormData({ ...formData, sellerTaxNo: e.target.value })}
+            size="sm" className="font-mono" maxLength={32} />
+        </div>
+        <div>
+          <Input label="开票人" type="text" value={formData.drawer}
+            onChange={e => setFormData({ ...formData, drawer: e.target.value })}
+            size="sm" maxLength={32} />
+        </div>
+        <div>
+          <Input label="收款人" type="text" value={formData.payee}
+            onChange={e => setFormData({ ...formData, payee: e.target.value })}
+            size="sm" maxLength={32} />
+        </div>
+        <div>
+          <Input label="复核人" type="text" value={formData.reviewer}
+            onChange={e => setFormData({ ...formData, reviewer: e.target.value })}
+            size="sm" maxLength={32} />
+        </div>
+      </div>
 
       <div>
         <Input label="发票名称" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} size="sm" placeholder="如: 工程款、材料款" required />
@@ -169,10 +319,20 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
             className="input"
             required
           >
-            {taxRateOptions.map(opt => (
+            {taxRateSelectOptions.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {/* P1/T1b 默认税率解析：只读端点，必须由用户显式点击；点一次算一次，可重复点击重算 */}
+          <div className="mt-1">
+            <Button type="button" variant="secondary" size="sm" disabled={resolvePending} onClick={onResolveTaxRate}>
+              按规则取默认
+            </Button>
+            {taxRateHint && (
+              // F4：解析结论经屏幕阅读器播报（polite —— 不打断用户当前操作）
+              <p className="text-caption mt-1" role="status" aria-live="polite" style={{ color: 'var(--muted)' }}>{taxRateHint}</p>
+            )}
+          </div>
         </div>
         <div>
           <Input label="价税合计（含税价）" type="number" value={formData.amount || ''} onChange={e => handleTaxedAmountChange(Number(e.target.value) || 0)} size="sm" min="0" step="0.01" />

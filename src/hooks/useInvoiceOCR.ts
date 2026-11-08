@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { recognizeInvoice, type OCRResult } from '../services/ocr'
 import { useToastStore } from '../store/toastStore'
 import * as pdfjsLib from 'pdfjs-dist'
+import { mapInvoiceOcr, type InvoiceOcrFields } from '../services/ocr/invoiceMapping'
 
 // 设置 PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -9,23 +10,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString()
 
-interface InvoiceOCRData {
-  invoiceNo: string
-  invoiceCode: string
-  issueDate: string
-  invoiceType: string   // 发票类型
-  amount: number        // 价税合计
-  priceAmount: number   // 不含税金额
-  taxAmount: number     // 税额
-  taxRate: number       // 税率
-  sellerName: string
-  purchaserName: string
-  itemName: string      // 商品/服务名称
-  remarks: string       // 备注
-}
-
 interface UseInvoiceOCRReturn {
-  processInvoiceFile: (file: File) => Promise<InvoiceOCRData | null>
+  processInvoiceFile: (file: File) => Promise<InvoiceOcrFields | null>
   validateFile: (file: File) => string | null
 }
 
@@ -66,7 +52,7 @@ export function useInvoiceOCR(): UseInvoiceOCRReturn {
     return canvas.toDataURL('image/jpeg', 0.95)
   }, [])
 
-  const processInvoiceFile = useCallback(async (file: File): Promise<InvoiceOCRData | null> => {
+  const processInvoiceFile = useCallback(async (file: File): Promise<InvoiceOcrFields | null> => {
     // 验证文件
     const error = validateFile(file)
     if (error) {
@@ -103,21 +89,8 @@ export function useInvoiceOCR(): UseInvoiceOCRReturn {
 
       const inv = result.invoice
 
-      // 映射到表单数据
-      const data: InvoiceOCRData = {
-        invoiceNo: inv.invoiceNum || '',
-        invoiceCode: inv.invoiceCode || '',
-        issueDate: inv.invoiceDate || '',
-        invoiceType: inv.invoiceType || '',
-        amount: inv.totalAmount || 0,
-        priceAmount: inv.amountWithoutTax || 0,
-        taxAmount: inv.totalTax || 0,
-        taxRate: inv.taxRate || 0,
-        sellerName: inv.sellerName || '',
-        purchaserName: inv.purchaserName || '',
-        itemName: inv.itemName || '',
-        remarks: inv.remarks || ''
-      }
+      // 映射到表单数据（FP03：数电票缺失的校验码/收款人/复核人留空，不伪造）
+      const data = mapInvoiceOcr(inv)
 
       showToast('发票识别成功', 'success')
       return data

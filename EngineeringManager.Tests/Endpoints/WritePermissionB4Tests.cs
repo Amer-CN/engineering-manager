@@ -55,6 +55,7 @@ public class WritePermissionB4Tests : ApiTestBase
     private static object InvoiceBody(string no) => new
     {
         projectId = 1, name = "材料发票", type = "invoice_in", invoiceNo = no,
+        invoiceCode = "044032000111", // 旧版纸票代码：有码则跳过 FP02 二十位校验（Wave 1A 起必填合法票号）
         amount = 1000.0, issueDate = "2026-08-01",
     };
 

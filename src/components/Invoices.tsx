@@ -7,11 +7,13 @@ import { printInvoiceList, printPaymentList, exportInvoiceList, handlePrint, pri
 import { formatMoney } from '../utils/format'
 import {
   InvoiceStats, InvoiceFilters, InvoiceList, InvoiceForm,
-  PaymentList, PaymentForm, PaymentStats,
+  PaymentList, PaymentForm, PaymentStats, VoucherPreviewDrawer,
 } from './features/invoices'
+import type { Invoice } from '@/types/electron'
 import { getInvoiceFormData, getPaymentFormData } from './features/invoices/constants'
 import { FilePreviewModal } from './features/invoices/FilePreviewModal'
 import { useDuplicateInvoices } from './features/invoices/useDuplicateInvoices'
+import { VoucherListPanel } from './features/invoices/VoucherListPanel'
 import { usePermission } from '@/hooks/usePermission'
 import { Icon } from './ui/Icon'
 import { Button } from './ui/Button'
@@ -23,6 +25,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   const { can } = usePermission()
   const h = useInvoicePage(refresh)
   const [showDuplicates, setShowDuplicates] = useState(false)
+  const [voucherInvoice, setVoucherInvoice] = useState<Invoice | null>(null)
 
   const duplicateInvoices = useDuplicateInvoices(h.invoices)
 
@@ -69,36 +72,43 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   <button onClick={() => h.setActiveTab('payments')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97]" style={h.activeTab === 'payments' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   回款/付款记录
   </button>
+  <button onClick={() => h.setActiveTab('vouchers')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97]" style={h.activeTab === 'vouchers' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+  记账凭证
+  </button>
   </div>
 
   {h.activeTab === 'invoices' && <InvoiceStats invoices={h.invoices} filteredInvoices={h.filteredInvoices} />}
   {h.activeTab === 'payments' && <PaymentStats records={h.paymentRecords} filteredRecords={h.filteredPayments} invoices={h.invoices} />}
 
-  <InvoiceFilters
+  {h.activeTab !== 'vouchers' && (<InvoiceFilters
   filterType={h.filterType} filterStatus={h.filterStatus} filterProject={h.filterProject}
   filterPaymentType={h.filterPaymentType} filterPaymentProject={h.filterPaymentProject}
   filterDateStart={h.filterDateStart} filterDateEnd={h.filterDateEnd}
+  filterDeductStatus={h.filterDeductStatus} filterDeductPeriod={h.filterDeductPeriod}
   projects={h.projects} partners={h.partners}
-  onFilterTypeChange={h.setFilterType} onFilterStatusChange={h.setFilterStatus}
+  onFilterTypeChange={h.handleFilterTypeChange} onFilterStatusChange={h.setFilterStatus}
   onFilterProjectChange={h.setFilterProject} onFilterPaymentTypeChange={h.setFilterPaymentType}
   onFilterPaymentProjectChange={h.setFilterPaymentProject}
   onFilterDateStartChange={h.setFilterDateStart} onFilterDateEndChange={h.setFilterDateEnd}
+  onFilterDeductStatusChange={h.setFilterDeductStatus} onFilterDeductPeriodChange={h.setFilterDeductPeriod}
   onPrint={h.activeTab === 'invoices' ? () => printInvoiceList(h.filteredInvoices) : () => printPaymentRecordList(h.filteredPayments, showToast as (msg: string, type?: string, duration?: number) => void, formatMoney, handlePrint)}
   onExportExcel={h.activeTab === 'invoices' ? () => exportInvoiceList(h.filteredInvoices) : () => exportPaymentRecordList(h.filteredPayments, showToast as (msg: string) => void)}
   isPaymentFilter={h.activeTab === 'payments'}
-  />
+  />)}
   </div>
 
   <HoverScrollbar className="flex-1 min-h-0">
   <div className="px-6 pb-6 max-w-[1400px] mx-auto w-full">
   {h.activeTab === 'invoices' && (
   <InvoiceList invoices={h.filteredInvoices} onEdit={h.handleEditInvoice} onDelete={h.handleDeleteInvoice}
-  onStatusChange={h.handleStatusChange} onPrint={(inv) => printInvoiceList([inv])} onPreview={h.handlePreview} />
+  onStatusChange={h.handleStatusChange} onPrint={(inv) => printInvoiceList([inv])} onPreview={h.handlePreview}
+  onVoucherPreview={setVoucherInvoice} />
   )}
   {h.activeTab === 'payments' && (
   <PaymentList records={h.filteredPayments} onEdit={h.handleEditPayment} onDelete={h.handleDeletePayment}
   onPrint={(rec) => printPaymentList([rec])} onPreview={h.handlePreview} />
   )}
+  {h.activeTab === 'vouchers' && <VoucherListPanel />}
   </div>
   </HoverScrollbar>
 
@@ -114,6 +124,9 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   onCancel={() => { h.setShowPaymentModal(false); h.setEditingPayment(null) }} />
   )}
   {h.previewFile && <FilePreviewModal file={h.previewFile} onClose={() => h.setPreviewFile(null)} />}
+  {voucherInvoice && (
+  <VoucherPreviewDrawer invoice={voucherInvoice} onClose={() => setVoucherInvoice(null)} />
+  )}
 
   {/* 重复发票弹窗 */}
   {showDuplicates && (

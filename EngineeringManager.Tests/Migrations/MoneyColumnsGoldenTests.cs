@@ -59,9 +59,10 @@ public class MoneyColumnsGoldenTests : IDisposable
     /// <summary>
     /// 命中金额词但实为元数据/外键的列后缀（paid_date、paid_channel、*_at、*_by、*_id 等），非金额，排除。
     /// 真实金额列不以这些后缀结尾（paid_amount、daily_wage、unit_price……）。
+    /// _expr：凭证模板的取数表达式文本（voucher_template_entries.amount_expr），是元数据不是金额。
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex NonMoneySuffixPattern =
-        new("(_date|_channel|_at|_by|_id|_time|_status|_note)$",
+        new("(_date|_channel|_at|_by|_id|_time|_status|_note|_expr)$",
             System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     private static bool IsMoneyColumn(string columnName) =>

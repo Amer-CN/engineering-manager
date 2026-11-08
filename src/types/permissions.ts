@@ -35,6 +35,7 @@ export type PermissionResource =
   | 'settlement'
   | 'inventory'
   | 'invoices'
+  | 'vouchers'
   | 'costLedger'
   | 'drawings'
   | 'knowledge'
@@ -103,6 +104,7 @@ export const SYSTEM_ROLES: Role[] = [
       'settlement:create', 'settlement:read', 'settlement:update', 'settlement:delete', 'settlement:approve',
       'inventory:create', 'inventory:read', 'inventory:update', 'inventory:delete',
       'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete',
+      'vouchers:create', 'vouchers:read', 'vouchers:delete', 'vouchers:approve',
       'costLedger:create', 'costLedger:read', 'costLedger:update', 'costLedger:delete',
       'drawings:create', 'drawings:read', 'drawings:update', 'drawings:delete',
       'settings:read', 'settings:update',
@@ -152,6 +154,7 @@ export const SYSTEM_ROLES: Role[] = [
       'wages:create', 'wages:read', 'wages:update',
       'settlement:read', 'settlement:approve',
       'invoices:create', 'invoices:read', 'invoices:update',
+      'vouchers:create', 'vouchers:read', 'vouchers:delete', 'vouchers:approve',
       'costLedger:create', 'costLedger:read', 'costLedger:update',
       'settings:read',
       'audit_logs:read', 'audit_logs:export',
@@ -283,6 +286,7 @@ export const RESOURCE_LABELS: Record<PermissionResource, string> = {
   settlement: '结算办理',
   inventory: '仓库管理',
   invoices: '发票管理',
+  vouchers: '凭证管理',
   costLedger: '成本台账',
   drawings: '图纸管理',
   knowledge: '知识库',

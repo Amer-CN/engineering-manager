@@ -9,6 +9,8 @@ import { checkNetwork } from './utils'
 
 // ─── 类型 re-export ───
 export type { OCRProvider, OCRConfig, OCRResult } from './types'
+export type { InvoiceOcrFields } from './invoiceMapping'
+export { mapInvoiceOcr } from './invoiceMapping'
 
 // ─── 配置管理 re-export ───
 export {

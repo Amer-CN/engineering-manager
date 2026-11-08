@@ -44,7 +44,7 @@ public static class ProjectEndpoints
                         WHERE cl.direction = 'expense'
                         GROUP BY cl.category
                         ORDER BY amount DESC
-                    ").ToDictionary(r => (string)r.name, r => (double)r.amount / 100.0);
+                    ").ToDictionary(r => (string)r.name, r => MoneyUnit.ToYuanFromDb((object?)r.amount));
                 }
                 catch (Exception ex)
                 {
@@ -105,7 +105,7 @@ public static class ProjectEndpoints
             // projects.budget 库内为分（2026-09 契约），MoneyUnit 单点换算输出元（NULL 安全）
             var row = (IDictionary<string, object?>)p;
             if (row.TryGetValue("budget", out var budget) && budget is not null && budget is not DBNull)
-                row["budget"] = Convert.ToDouble(budget) / 100.0;
+                row["budget"] = MoneyUnit.ToYuanFromDb(budget);
             return Common.Ok(row);
         });
 

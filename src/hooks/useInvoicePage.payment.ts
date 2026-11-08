@@ -58,11 +58,21 @@ export function useInvoicePagePaymentActions(deps: UseInvoicePagePaymentActionsD
       const submitData = { ...processed, projectId: processed.projectId || 0, partnerId: processed.partnerId || 0, contractId: processed.contractId || 0, projectName: resolvedProjectName }
 
       if (editingPayment) {
-        await (await getAPI()).updatePaymentRecord({ ...editingPayment, ...submitData } as PaymentRecord)
+        // HTTP 桥接签名为 (id, updates)；只传对象会变成 {id:{...}} 导致后端 500
+        const updateResult = await (await getAPI()).updatePaymentRecord(editingPayment.id, { ...editingPayment, ...submitData } as PaymentRecord)
+        if (!updateResult.success) {
+          // 服务端 400（如核销合计超过付款金额）必须回显并保留抽屉，不能谎报成功
+          showToast(updateResult.error || '保存失败', 'error')
+          return
+        }
         logUpdate('invoices', `回款/付款记录: ${submitData.amount}元`, editingPayment.id, { before: editingPayment, after: submitData })
       } else {
         const result = await (await getAPI()).createPaymentRecord(submitData as PaymentRecord)
-        if (result.success && result.data) logCreate('invoices', `回款/付款记录: ${submitData.amount}元`, result.data.id, submitData)
+        if (!result.success || !result.data) {
+          showToast(result.error || '保存失败', 'error')
+          return
+        }
+        logCreate('invoices', `回款/付款记录: ${submitData.amount}元`, result.data, submitData)
       }
       loadData(); setShowPaymentModal(false); setEditingPayment(null)
       showToast(editingPayment ? '记录更新成功' : '记录创建成功', 'success')

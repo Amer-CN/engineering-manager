@@ -6,6 +6,7 @@ import React from 'react'
 import { InvoiceType, InvoiceStatus, Project, Partner } from '@/types/electron'
 import { Icon } from '../../ui/Icon'
 import { Card } from '@/components/ui/Card'
+import { Input } from '../../ui/Input/Input'
 
 interface InvoiceFiltersProps {
   filterType: InvoiceType | ''
@@ -15,6 +16,10 @@ interface InvoiceFiltersProps {
   filterPaymentProject: number | ''
   filterDateStart: string
   filterDateEnd: string
+  /** 抵扣状态：仅进项发票适用 */
+  filterDeductStatus?: '' | 'deducted' | 'undeducted'
+  /** 税款所属期 YYYY-MM：仅进项发票适用 */
+  filterDeductPeriod?: string
   projects: Project[]
   partners: Partner[]
   onFilterTypeChange: (value: InvoiceType | '') => void
@@ -24,6 +29,8 @@ interface InvoiceFiltersProps {
   onFilterPaymentProjectChange: (value: number | '') => void
   onFilterDateStartChange: (value: string) => void
   onFilterDateEndChange: (value: string) => void
+  onFilterDeductStatusChange?: (value: '' | 'deducted' | 'undeducted') => void
+  onFilterDeductPeriodChange?: (value: string) => void
   onPrint: () => void
   onExportExcel: () => void
   isPaymentFilter?: boolean
@@ -37,6 +44,8 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   filterPaymentProject,
   filterDateStart,
   filterDateEnd,
+  filterDeductStatus = '',
+  filterDeductPeriod = '',
   projects,
   partners,
   onFilterTypeChange,
@@ -46,6 +55,8 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   onFilterPaymentProjectChange,
   onFilterDateStartChange,
   onFilterDateEndChange,
+  onFilterDeductStatusChange,
+  onFilterDeductPeriodChange,
   onPrint,
   onExportExcel,
   isPaymentFilter = false
@@ -59,10 +70,16 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   onFilterPaymentProjectChange('')
   onFilterDateStartChange('')
   onFilterDateEndChange('')
+  onFilterDeductStatusChange?.('')
+  onFilterDeductPeriodChange?.('')
   }
 
-  // 发票模式：是否有激活的筛选
+  // 抵扣四字段口径只存在于进项（invoice_in）；开票筛选下必然为空，故不渲染
+  const showDeductFilters = !isPaymentFilter && filterType !== 'invoice_out'
+  // 发票模式：是否有激活的筛选（抵扣两项仅在控件渲染时计入；开票视图下由
+  // useInvoicePage.handleFilterTypeChange 负责清空，避免残留筛选导致列表恒空）
   const hasActiveFilter = filterType || filterStatus || filterProject || filterDateStart || filterDateEnd
+    || (showDeductFilters ? (filterDeductStatus || filterDeductPeriod) : '')
   // 收款模式：是否有激活的筛选
   const hasPaymentFilter = filterPaymentType || filterPaymentProject || filterDateStart || filterDateEnd
   const hasFilter = isPaymentFilter ? hasPaymentFilter : hasActiveFilter
@@ -147,6 +164,34 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   ))}
   </select>
   </div>
+  {/* 抵扣状态 / 税款所属期：仅进项发票适用（销项不参与抵扣，见 useInvoicePage.filteredInvoices） */}
+  {showDeductFilters && (
+  <>
+  <div className="flex items-center gap-2">
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">抵扣状态:</label>
+  <select
+  value={filterDeductStatus}
+  onChange={e => onFilterDeductStatusChange?.(e.target.value as '' | 'deducted' | 'undeducted')}
+  className="select text-sm py-1.5"
+  >
+  <option value="">全部</option>
+  <option value="deducted">已抵扣</option>
+  <option value="undeducted">未抵扣</option>
+  </select>
+  </div>
+  <div className="flex items-center gap-2">
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">税款所属期:</label>
+  <Input
+  type="month"
+  size="sm"
+  value={filterDeductPeriod}
+  onChange={e => onFilterDeductPeriodChange?.(e.target.value)}
+  className="w-36"
+  containerClassName="w-auto"
+  />
+  </div>
+  </>
+  )}
   </>
   )}
   

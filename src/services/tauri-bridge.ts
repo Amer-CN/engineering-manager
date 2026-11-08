@@ -23,6 +23,9 @@ import type {
   SqliteStatus,
   ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair, ParsedBankReceipt,
   StoredAuth,
+  TaxRate, TaxRateResolution,
+  VoucherPreview, Voucher, VoucherDraft, VoucherPostResult, VoucherUnpostResult, VoucherSummary,
+  OpeningBalanceRow, OpeningBalanceSummary, PeriodLock,
 } from '../types/electron';
 
 // ============ 导出的 API ============
@@ -350,6 +353,17 @@ export const tauriAPI = {
   batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string; paidChannel?: string }[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { id: number }[] }>('/api/wages/batch-payment', records),
 
+  // ────────── 个税试算（Wave-T2：calc-tax 纯读试算 / confirm-tax 落库 / 两读端点） ──────────
+  // 金额一律元（与后端 WageTaxRequest 契约一致：ContributionBase/GrossMonthly/7分项/Bonus 均为元）
+  calcTax: (body: { memberId?: number; projectWorkerId?: number; yearMonth: string; cityCode: string; contributionBase?: number; grossMonthly?: number; childEdu?: number; contEdu?: number; medical?: number; mortgage?: number; rent?: number; elderly?: number; infant?: number; bonus?: number; bonusMode?: string; housingRate?: number }) =>
+    apiClient.post('/api/wages/calc-tax', body),
+  confirmTax: (body: { memberId?: number; projectWorkerId?: number; yearMonth: string; cityCode: string; contributionBase?: number; grossMonthly?: number; childEdu?: number; contEdu?: number; medical?: number; mortgage?: number; rent?: number; elderly?: number; infant?: number; bonus?: number; bonusMode?: string; housingRate?: number }) =>
+    apiClient.post<{ ledgerId: number }>('/api/wages/confirm-tax', body),
+  getTaxCities: () =>
+    apiClient.get<{ cityCode: string; cityName: string; effectiveYear: string; status: string }[]>('/api/wages/tax-cities'),
+  getTaxLedger: (params: { memberId?: number; projectWorkerId?: number; year?: string }) =>
+    apiClient.get<{ yearMonth: string; paidTaxYuan: number; cumTaxYuan: number; cumTaxableYuan: number; bonusMode: string; cityCode: string }[]>('/api/wages/tax-ledger', params),
+
   // ────────── 薪资历史 ──────────
   getWageHistory: (projectWorkerId: number) =>
     apiClient.get<{ id: number; projectWorkerId: number; yearMonth: string; dailyWage: number; note?: string; createdAt: string }[]>(`/api/wage-history/${projectWorkerId}`),
@@ -392,6 +406,46 @@ export const tauriAPI = {
     apiClient.put<void>('/api/departments', { id, ...updates }),
   deleteDepartment: (id: number) =>
     apiClient.del<void>(`/api/departments/${id}`),
+
+  // ────────── 税率主数据（P1 / T1） ──────────
+  // GET /api/tax-rates/resolve（默认税率解析）：纯读端点，返回值可能是 none
+  // （无匹配 → 调用点不得改税率）。undefined/null 维度由 api-client 自动过滤。
+  getTaxRates: () => apiClient.get<TaxRate[]>('/api/tax-rates'),
+  resolveTaxRate: (params: { date?: string; businessType?: string; partnerTaxType?: string; itemCategory?: string }) =>
+    apiClient.get<TaxRateResolution>('/api/tax-rates/resolve', params),
+
+  // POST /api/voucher-templates/{code}/generate-preview（T5b）：只读计算，不落库。
+  previewVoucher: (code: string, invoiceId: number) =>
+    apiClient.post<VoucherPreview>(`/api/voucher-templates/${code}/generate-preview`, { invoiceId }),
+
+  // ────────── 凭证草稿（T6a） ──────────
+  // 只落 draft，不过账；同一发票重复生成由服务端返回 400「该发票已生成凭证草稿」。
+  createVoucherDraft: (invoiceId: number, templateCode?: string) =>
+    apiClient.post<VoucherDraft>('/api/vouchers/from-invoice', { invoiceId, templateCode }),
+  getVouchers: (period?: string) =>
+    apiClient.get<Voucher[]>('/api/vouchers', { period }),
+  deleteVoucher: (id: number) =>
+    apiClient.del<void>(`/api/vouchers/${id}`),
+  // POST /api/vouchers/{id}/post（T6b）：draft → posted；过账即终态，失败返回 400。
+  postVoucher: (id: number) =>
+    apiClient.post<VoucherPostResult>(`/api/vouchers/${id}/post`, {}),
+  // POST /api/vouchers/{id}/unpost（T7a）：posted → draft；原因必填并落审计。
+  unpostVoucher: (id: number, reason: string) =>
+    apiClient.post<VoucherUnpostResult>(`/api/vouchers/${id}/unpost`, { reason }),
+  // GET /api/vouchers/summary（T6f）：期间汇总/试算平衡（只读，与列表同口径可见性）。
+  getVoucherSummary: (period?: string) =>
+    apiClient.get<VoucherSummary>('/api/vouchers/summary', { period }),
+  // GET/PUT /api/opening-balances（T7b）：期初余额整期保存（借贷必须平衡）。
+  getOpeningBalances: (period: string) =>
+    apiClient.get<OpeningBalanceSummary>('/api/opening-balances', { period }),
+  saveOpeningBalances: (period: string, rows: OpeningBalanceRow[]) =>
+    apiClient.put<OpeningBalanceSummary>(`/api/opening-balances?period=${encodeURIComponent(period)}`, { rows }),
+  // GET/POST /api/period-locks（T7c）：admin 锁定/解锁期间；锁定期间写操作由后端拦截。
+  getPeriodLocks: () => apiClient.get<PeriodLock[]>('/api/period-locks'),
+  lockPeriod: (period: string, reason?: string) =>
+    apiClient.post<{ period: string; locked: boolean }>(`/api/period-locks/${period}/lock`, { reason }),
+  unlockPeriod: (period: string, reason?: string) =>
+    apiClient.post<{ period: string; locked: boolean }>(`/api/period-locks/${period}/unlock`, { reason }),
 
   // ────────── 模板 ──────────
   getTemplates: () => apiClient.get<Template[]>('/api/templates'),
@@ -446,7 +500,7 @@ export const tauriAPI = {
   getPaymentRecords: (paymentType?: string, projectId?: number) =>
     apiClient.get<PaymentRecord[]>('/api/payment-records', { paymentType, projectId }),
   createPaymentRecord: (record: Partial<PaymentRecord>) =>
-    apiClient.post<{ id: number }>('/api/payment-records', record),
+    apiClient.post<number>('/api/payment-records', record),
   updatePaymentRecord: (id: number, updates: Partial<PaymentRecord>) =>
     apiClient.put<void>('/api/payment-records', { id, ...updates }),
   deletePaymentRecord: (id: number) =>
@@ -556,7 +610,7 @@ export const tauriAPI = {
   ocrBaiduIdCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>
     apiClient.post<{ text?: string; idCard?: { number: string; name?: string; gender?: string; ethnicity?: string; birthDate?: string; address?: string; issueAuthority?: string; validDate?: string } }>('/api/ocr/id-card', { imageBase64, config }),
   ocrBaiduInvoice: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>
-    apiClient.post<{ text?: string; invoice?: { invoiceNum: string; invoiceCode: string; invoiceDate: string; invoiceType: string; totalAmount: number; amountWithoutTax: number; totalTax: number; taxRate: number; sellerName: string; purchaserName: string; checkCode: string; itemName: string; remarks: string } }>('/api/ocr/invoice', { imageBase64, config }),
+    apiClient.post<{ text?: string; invoice?: { invoiceNum: string; invoiceCode: string; invoiceDate: string; invoiceType: string; totalAmount: number; amountWithoutTax: number; totalTax: number; taxRate: number; sellerName: string; purchaserName: string; checkCode: string; verifyCode?: string; sellerTaxNo?: string; purchaserTaxNo?: string; drawer?: string; payee?: string; reviewer?: string; taxCode?: string; itemName: string; remarks: string } }>('/api/ocr/invoice', { imageBase64, config }),
   ocrBaiduBankCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>
     apiClient.post<{ text?: string; bankCard?: { cardNumber: string; bankName: string; cardType: string; validDate: string } }>('/api/ocr/bank-card', { imageBase64, config }),
   ocrBaiduBusinessLicense: (imageBase64: string, config: { apiKey: string; secretKey: string }) =>

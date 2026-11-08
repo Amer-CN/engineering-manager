@@ -411,4 +411,183 @@ describe('InvoiceFilters', () => {
 
     expect(onFilterPaymentTypeChange).toHaveBeenCalledWith('invoice_out')
   })
+
+  it('抵扣筛选：发票模式（全部类型）渲染抵扣状态与税款所属期控件', async () => {
+    const { InvoiceFilters } = await importModule()
+
+    render(
+      <InvoiceFilters
+        filterType=""
+        filterStatus=""
+        filterProject=""
+        filterPaymentType=""
+        filterPaymentProject=""
+        filterDateStart=""
+        filterDateEnd=""
+        projects={[mockProject] as any}
+        partners={[mockPartner] as any}
+        onFilterTypeChange={vi.fn()}
+        onFilterStatusChange={vi.fn()}
+        onFilterProjectChange={vi.fn()}
+        onFilterPaymentTypeChange={vi.fn()}
+        onFilterPaymentProjectChange={vi.fn()}
+        onFilterDateStartChange={vi.fn()}
+        onFilterDateEndChange={vi.fn()}
+        onFilterDeductStatusChange={vi.fn()}
+        onFilterDeductPeriodChange={vi.fn()}
+        onPrint={vi.fn()}
+        onExportExcel={vi.fn()}
+        isPaymentFilter={false}
+      />
+    )
+
+    expect(screen.getByText('抵扣状态:')).toBeInTheDocument()
+    expect(screen.getByText('税款所属期:')).toBeInTheDocument()
+    const monthInput = document.querySelector('input[type="month"]')
+    expect(monthInput).not.toBeNull()
+  })
+
+  it('抵扣筛选：filterType=invoice_out 时两个控件均不渲染', async () => {
+    const { InvoiceFilters } = await importModule()
+
+    render(
+      <InvoiceFilters
+        filterType="invoice_out"
+        filterStatus=""
+        filterProject=""
+        filterPaymentType=""
+        filterPaymentProject=""
+        filterDateStart=""
+        filterDateEnd=""
+        projects={[mockProject] as any}
+        partners={[mockPartner] as any}
+        onFilterTypeChange={vi.fn()}
+        onFilterStatusChange={vi.fn()}
+        onFilterProjectChange={vi.fn()}
+        onFilterPaymentTypeChange={vi.fn()}
+        onFilterPaymentProjectChange={vi.fn()}
+        onFilterDateStartChange={vi.fn()}
+        onFilterDateEndChange={vi.fn()}
+        onFilterDeductStatusChange={vi.fn()}
+        onFilterDeductPeriodChange={vi.fn()}
+        onPrint={vi.fn()}
+        onExportExcel={vi.fn()}
+        isPaymentFilter={false}
+      />
+    )
+
+    expect(screen.queryByText('抵扣状态:')).not.toBeInTheDocument()
+    expect(screen.queryByText('税款所属期:')).not.toBeInTheDocument()
+    expect(document.querySelector('input[type="month"]')).toBeNull()
+  })
+
+  it('重置按钮：仅抵扣筛选激活时出现，点击后两个抵扣回调被调用', async () => {
+    const { InvoiceFilters } = await importModule()
+    const onFilterDeductStatusChange = vi.fn()
+    const onFilterDeductPeriodChange = vi.fn()
+
+    render(
+      <InvoiceFilters
+        filterType=""
+        filterStatus=""
+        filterProject=""
+        filterPaymentType=""
+        filterPaymentProject=""
+        filterDateStart=""
+        filterDateEnd=""
+        filterDeductStatus="deducted"
+        filterDeductPeriod="2024-03"
+        projects={[mockProject] as any}
+        partners={[mockPartner] as any}
+        onFilterTypeChange={vi.fn()}
+        onFilterStatusChange={vi.fn()}
+        onFilterProjectChange={vi.fn()}
+        onFilterPaymentTypeChange={vi.fn()}
+        onFilterPaymentProjectChange={vi.fn()}
+        onFilterDateStartChange={vi.fn()}
+        onFilterDateEndChange={vi.fn()}
+        onFilterDeductStatusChange={onFilterDeductStatusChange}
+        onFilterDeductPeriodChange={onFilterDeductPeriodChange}
+        onPrint={vi.fn()}
+        onExportExcel={vi.fn()}
+        isPaymentFilter={false}
+      />
+    )
+
+    // 其它筛选项均为空，仅抵扣两项激活 → 重置按钮仍应出现
+    const resetButton = screen.getByText('重置筛选')
+    expect(resetButton).toBeInTheDocument()
+
+    fireEvent.click(resetButton)
+
+    expect(onFilterDeductStatusChange).toHaveBeenCalledWith('')
+    expect(onFilterDeductPeriodChange).toHaveBeenCalledWith('')
+  })
+
+  it('切到 invoice_out 后抵扣控件不再渲染，且抵扣入参不再影响重置按钮的出现', async () => {
+    const { InvoiceFilters } = await importModule()
+
+    const { rerender } = render(
+      <InvoiceFilters
+        filterType="invoice_out"
+        filterStatus=""
+        filterProject=""
+        filterPaymentType=""
+        filterPaymentProject=""
+        filterDateStart=""
+        filterDateEnd=""
+        filterDeductStatus=""
+        filterDeductPeriod=""
+        projects={[mockProject] as any}
+        partners={[mockPartner] as any}
+        onFilterTypeChange={vi.fn()}
+        onFilterStatusChange={vi.fn()}
+        onFilterProjectChange={vi.fn()}
+        onFilterPaymentTypeChange={vi.fn()}
+        onFilterPaymentProjectChange={vi.fn()}
+        onFilterDateStartChange={vi.fn()}
+        onFilterDateEndChange={vi.fn()}
+        onFilterDeductStatusChange={vi.fn()}
+        onFilterDeductPeriodChange={vi.fn()}
+        onPrint={vi.fn()}
+        onExportExcel={vi.fn()}
+        isPaymentFilter={false}
+      />
+    )
+
+    expect(screen.queryByText('抵扣状态:')).not.toBeInTheDocument()
+    expect(screen.queryByText('税款所属期:')).not.toBeInTheDocument()
+
+    // 抵扣 props 从有值改为空，重置按钮的存在性不应变化（filterType 本身已是激活筛选）。
+    const before = !!screen.queryByText('重置筛选')
+    expect(before).toBe(true)
+    rerender(
+      <InvoiceFilters
+        filterType="invoice_out"
+        filterStatus=""
+        filterProject=""
+        filterPaymentType=""
+        filterPaymentProject=""
+        filterDateStart=""
+        filterDateEnd=""
+        filterDeductStatus="deducted"
+        filterDeductPeriod="2024-03"
+        projects={[mockProject] as any}
+        partners={[mockPartner] as any}
+        onFilterTypeChange={vi.fn()}
+        onFilterStatusChange={vi.fn()}
+        onFilterProjectChange={vi.fn()}
+        onFilterPaymentTypeChange={vi.fn()}
+        onFilterPaymentProjectChange={vi.fn()}
+        onFilterDateStartChange={vi.fn()}
+        onFilterDateEndChange={vi.fn()}
+        onFilterDeductStatusChange={vi.fn()}
+        onFilterDeductPeriodChange={vi.fn()}
+        onPrint={vi.fn()}
+        onExportExcel={vi.fn()}
+        isPaymentFilter={false}
+      />
+    )
+    expect(!!screen.queryByText('重置筛选')).toBe(before)
+  })
 })
