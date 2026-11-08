@@ -90,8 +90,9 @@ public static class VoucherEndpoints
             {
                 body = JsonSerializer.Deserialize<JsonElement>(bodyText);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                Console.Error.WriteLine($"[Voucher] 请求体 JSON 解析失败: {ex.Message}");
                 return Common.Fail("请求体不是合法 JSON", 400);
             }
             if (body.ValueKind != JsonValueKind.Object)
@@ -141,8 +142,9 @@ public static class VoucherEndpoints
             {
                 body = JsonSerializer.Deserialize<JsonElement>(bodyText);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                Console.Error.WriteLine($"[Voucher] 请求体 JSON 解析失败: {ex.Message}");
                 return Common.Fail("请求体不是合法 JSON", 400);
             }
             if (body.ValueKind != JsonValueKind.Object)
@@ -222,8 +224,9 @@ public static class VoucherEndpoints
             {
                 body = JsonSerializer.Deserialize<JsonElement>(bodyText);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                Console.Error.WriteLine($"[Voucher] 请求体 JSON 解析失败: {ex.Message}");
                 return Common.Fail("请求体不是合法 JSON", 400);
             }
             if (body.ValueKind != JsonValueKind.Object)
@@ -449,6 +452,7 @@ public static class VoucherEndpoints
             }
             catch (InvalidOperationException ex)
             {
+                Console.Error.WriteLine($"[VoucherPost] 业务校验失败: {ex.Message}");
                 tx.Rollback();
                 return Common.Fail(Common.Sanitize(ex.Message), 400);
             }

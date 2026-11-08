@@ -22,7 +22,7 @@ public static class ProjectSummaryEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             // 与 GET /api/projects 同口径：projects 主键是 id，project_authorizations.project_id 引用它
             var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "p.[id]", "p.[created_by]");
-            var idClause = projectId.HasValue ? " AND p.[id]=@ProjectId" : "";
+            
 
             var rows = db.Query($@"
                 SELECT p.[id] AS ProjectId, p.[name] AS ProjectName,
@@ -41,9 +41,9 @@ public static class ProjectSummaryEndpoints
                         WHERE i.[project_id]=p.[id] AND i.[deleted_at] IS NULL
                           AND i.[status] NOT IN ('cancelled','red_flushed')) AS InvoiceCount
                 FROM [projects] p
-                WHERE {filter}{idClause}
+                WHERE {filter} AND (@ProjectId IS NULL OR p.[id]=@ProjectId)
                 ORDER BY p.[id]",
-                new { Uid = uid, ProjectId = projectId ?? 0 }).ToList();
+                new { Uid = uid, ProjectId = projectId }).ToList();
 
             if (projectId.HasValue && rows.Count == 0)
                 return Common.NotFound("项目不存在或无权访问");

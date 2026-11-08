@@ -456,16 +456,20 @@ public static class InvoiceEndpoints
             // 汇总按“全部未软删除付款”计算（财务口径不随查看者变化）；
             // 明细再套用与 GET /api/payment-records 同款 user-dim，防越权读他人付款备注/金额。
             var scope = CurrentUser.GetDataScope(ctx);
-            var visibleFilter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "pr.[project_id]", "pr.[created_by]");
+            var scopeAll = scope == CurrentUser.DataScope.All ? 1 : 0;
             var rows = (await db.QueryAsync(
-                $@"SELECT a.[payment_id] AS payment_id, pr.[record_date] AS record_date, pr.[type] AS type,
+                @"SELECT a.[payment_id] AS payment_id, pr.[record_date] AS record_date, pr.[type] AS type,
                           a.[amount_fen] AS amount_fen, pr.[remarks] AS remarks,
-                          CASE WHEN {visibleFilter} THEN 1 ELSE 0 END AS is_visible
+                          CASE WHEN @ScopeAll = 1 THEN 1
+                               WHEN pr.[created_by] = @Uid THEN 1
+                               WHEN EXISTS(SELECT 1 FROM project_authorizations pa_authz
+                                           WHERE pa_authz.project_id = pr.[project_id] AND pa_authz.user_id = @Uid) THEN 1
+                               ELSE 0 END AS is_visible
                    FROM [invoice_allocations] a
                    JOIN [payment_records] pr ON pr.[id]=a.[payment_id]
                    WHERE a.[invoice_id]=@InvoiceId AND pr.[deleted_at] IS NULL
                    ORDER BY pr.[record_date], pr.[id]",
-                new { InvoiceId = id, Uid = uid, IsAdmin = isAdmin })).ToList();
+                new { InvoiceId = id, Uid = uid, IsAdmin = isAdmin, ScopeAll = scopeAll })).ToList();
 
             long amountFen = ToFenFromDb(invoice.amount);
             long allocatedFen = 0;
@@ -556,8 +560,9 @@ public static class InvoiceEndpoints
                 result[invoiceId] = result.GetValueOrDefault(invoiceId) + amountFen;
             }
         }
-        catch (System.Text.Json.JsonException)
+        catch (System.Text.Json.JsonException ex)
         {
+            Console.Error.WriteLine($"[InvoiceAllocations] JSON 解析失败: {ex.Message}");
             return new Dictionary<long, long>();
         }
         return result;
@@ -572,15 +577,17 @@ public static class InvoiceEndpoints
         var allocations = ParseInvoiceAllocations(invoiceDetailsJson);
         if (allocations.Count == 0) return null;
         var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-        var scope = CurrentUser.GetDataScope(ctx);
         // 与 GET /api/invoices 同口径：不可见的发票既不能挂核销，也不能通过错误信息泄露余额
-        var visibility = CurrentUser.UserFilterWithAuthorizedProjects(scope, "i.[project_id]", "i.[created_by]");
+        var modeAll = CurrentUser.GetDataScope(ctx) == CurrentUser.DataScope.All ? 1 : 0;
         foreach (var pair in allocations)
         {
             var invoice = db.QueryFirstOrDefault(
                 $@"SELECT i.[amount] FROM [invoices] i
-                   WHERE i.[id]=@Id AND i.[deleted_at] IS NULL AND {visibility}",
-                new { Id = pair.Key, Uid = uid }, tx);
+                   WHERE i.[id]=@Id AND i.[deleted_at] IS NULL
+                     AND (@ModeAll = 1 OR i.[created_by] = @Uid
+                          OR EXISTS(SELECT 1 FROM project_authorizations pa_authz
+                                    WHERE pa_authz.project_id = i.[project_id] AND pa_authz.user_id = @Uid))",
+                new { Id = pair.Key, Uid = uid, ModeAll = modeAll }, tx);
             if (invoice == null) return $"发票 #{pair.Key} 不存在或无权访问";
             var invoiceAmountFen = ToFenFromDb(invoice.amount);
             // 排除本付款记录；已软删除付款记录的残留行不占额度

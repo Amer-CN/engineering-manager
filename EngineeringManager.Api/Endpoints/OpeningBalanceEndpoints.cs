@@ -59,8 +59,9 @@ public static class OpeningBalanceEndpoints
             {
                 request = JsonSerializer.Deserialize<OpeningBalanceSaveRequest>(bodyText, JsonOpts);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                Console.Error.WriteLine($"[OpeningBalances] 请求体 JSON 解析失败: {ex.Message}");
                 return Common.Fail("请求体不是合法 JSON", 400);
             }
             if (request == null) return Common.Fail("请求体必须是 JSON 对象", 400);

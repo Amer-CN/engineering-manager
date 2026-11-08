@@ -139,8 +139,9 @@ public static class PeriodLockEndpoints
             var reason = (el.GetString() ?? "").Trim();
             return reason.Length == 0 ? null : reason;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Console.Error.WriteLine($"[PeriodLock] reason JSON 解析失败: {ex.Message}");
             return null;
         }
     }
