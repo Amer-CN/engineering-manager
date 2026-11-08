@@ -159,7 +159,7 @@ const SttCapabilityCard: React.FC<SttCapabilityCardProps> = ({ capLoading, canTr
             <div>
               <p className="text-sm font-medium text-warning-800">语音转写当前不可用</p>
               <p className="text-xs text-warning-700 mt-1">
-                {capability?.unavailableReason || '需要独立显卡和 ASR 模型'}
+                {capability?.unavailableReason || '无可用引擎：MOSS/Paraformer 模型缺失，可在下载中心获取'}
               </p>
               <p className="text-xs text-warning-600 mt-1">云端转写尚未启用</p>
             </div>

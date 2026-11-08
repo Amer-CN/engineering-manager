@@ -93,18 +93,19 @@ public class DiarizationServiceTests
     }
 
     [Fact]
-    public void IsAsrModelAvailable_ResultConsistentWithModelFiles()
+    public void IsAsrModelAvailable_ResultConsistentWithDiskEngines()
     {
-        // IsAsrModelAvailable = transcribe.exe + 全部 ASR 模型文件存在，断言与磁盘一致
+        // IsAsrModelAvailable = 任一现役引擎（MOSS / Paraformer）模型文件齐备，
+        // 断言与磁盘一致（防"探针不崩"式空过）；两种形态都必须与真实文件状态相符
         var result = SttModelManager.IsAsrModelAvailable();
         Assert.IsType<bool>(result);
-        // 实现只做文件存在性判断，不抛异常即返回确定 bool；反向一致性：
-        // 若返回 true，则 transcribe.exe 必然存在
-        if (result)
-        {
-            Assert.True(File.Exists(SttModelManager.GetTranscribeExePath()),
-                "IsAsrModelAvailable=true 但 transcribe.exe 不存在");
-        }
+        var dir = SttModelManager.GetEngineDir();
+        var mossReady = File.Exists(Path.Combine(dir, "moss", "moss-transcribe.exe"))
+            && File.Exists(Path.Combine(dir, "moss", "moss-transcribe-q8_0.gguf"));
+        var paraReady = File.Exists(Path.Combine(dir, "paraformer", "model.int8.onnx"))
+            && File.Exists(Path.Combine(dir, "paraformer", "tokens.txt"));
+        Assert.True(result == (mossReady || paraReady),
+            $"IsAsrModelAvailable={result} 与磁盘不符 (mossReady={mossReady}, paraReady={paraReady})");
     }
 
     /// <summary>
@@ -339,7 +340,7 @@ public class SttEndpointsTests : ApiTestBase
             });
             var body = await resp.Content.ReadAsStringAsync();
 
-            // 无 GPU 的机器上端点前置门禁返回 503，回退分支不可达
+            // 两个现役引擎模型都未部署的机器上，端点前置门禁返回 503，回退分支不可达
             if (resp.StatusCode == HttpStatusCode.ServiceUnavailable) return;
 
             // MOSS 模型未部署的机器：只有回退到 MOSS 才会出现这条引擎专属提示（回退到 Qwen 不会有）
@@ -366,7 +367,7 @@ public class SttEndpointsTests : ApiTestBase
     }
 
     [Fact]
-    public async Task Transcribe_QwenEngine_StillWhitelisted()
+    public async Task Transcribe_QwenEngine_RejectedByWhitelist()
     {
         var token = await LoginAdminAsync();
         SetAuth(token);
@@ -378,8 +379,8 @@ public class SttEndpointsTests : ApiTestBase
         File.WriteAllBytes(filePath, new byte[] { 0x52, 0x49, 0x46, 0x46 });
         try
         {
-            // Qwen 退役的是模型文件，不是白名单：指名它必须仍被放行（任务创建成功），
-            // 缺模型的表现由 worker 侧给出（"ASR 模型文件缺失，请检查 asr-engine/model/ 目录"）
+            // 2026-09-16 Qwen3-ASR 彻底退役：引擎白名单不再含 qwen3-asr-1.7b-gguf，
+            // 指名它必须被拒（400 + "不支持的转写引擎"），而不是放行后缺模型
             var resp = await Client.PostAsJsonAsync("/api/stt/transcribe", new
             {
                 filePath = $"stt/1/{fileName}",
@@ -388,10 +389,10 @@ public class SttEndpointsTests : ApiTestBase
             });
             var body = await resp.Content.ReadAsStringAsync();
 
-            if (resp.StatusCode == HttpStatusCode.ServiceUnavailable) return; // 无 GPU：前置门禁
+            if (resp.StatusCode == HttpStatusCode.ServiceUnavailable) return; // 无引擎模型：前置门禁
 
-            Assert.DoesNotContain("不支持的转写引擎", body);
-            Assert.True(resp.IsSuccessStatusCode, body);
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            Assert.Contains("不支持的转写引擎", body);
         }
         finally
         {

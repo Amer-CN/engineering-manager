@@ -9,12 +9,12 @@ namespace EngineeringManager.Api.Services.Stt;
 /// 与 MOSS（一步成段）不同：该 int8 模型导出时裁掉了时间戳输出头，
 /// 本体只出文字。时间戳与说话人全部来自分离管线
 ///（DiarizationService.DiarizeAsync → SplitAudioBySpeakersAsync），
-/// 本引擎只负责逐段出文字——与 Qwen 多人路径完全同款。
+/// 本引擎只负责逐段出文字（两段式管线的转写端）。
 ///
 /// 运行形态：asr-engine/paraformer/model.int8.onnx（227MB）+ tokens.txt，
 /// sherpa-onnx OfflineRecognizer（CPU，greedy_search），模型只加载一次并缓存
 /// （N 段 N 次加载 2.7s 是性能灾难）。单实例纪律与现役引擎一致：
-/// 与 LlamaCppGgufEngine / MossTranscribeEngine 共用同一 OS Mutex。
+/// 与 MossTranscribeEngine 共用同一 OS Mutex。
 ///
 /// 热词：本轮不支持（context 参数忽略，sherpa 热词另议）。
 /// </summary>
@@ -52,7 +52,7 @@ public class ParaformerEngine : ISttEngine
     /// <summary>
     /// 单文件转写（单人任务整段直转用）。context/热词本轮不支持，直接忽略。
     /// Segments 只占位（Speaker=0），SttWorker 单人分支会统一归为 Speaker=1
-    /// 并按时长修正 End——与 LlamaCppGgufEngine 单人口径一致。
+    /// 并按时长修正 End（单人任务口径）。
     /// </summary>
     public async Task<SttResult> TranscribeAsync(
         string wavPath,
@@ -88,7 +88,7 @@ public class ParaformerEngine : ISttEngine
 
     /// <summary>
     /// 批量转写：一个 recognizer 实例顺序处理全部段（模型只加载一次）。
-    /// 签名与 LlamaCppGgufEngine.TranscribeBatchAsync 一致，供 SttWorker 多人分支直接替换。
+    /// 签名与 SttWorker 多人分支的批量转写调用一致，可直接替换。
     /// context/热词本轮不支持，直接忽略。
     /// </summary>
     public async Task<List<string>> TranscribeBatchAsync(

@@ -9,14 +9,14 @@ namespace EngineeringManager.Api.Services.Stt;
 /// <summary>
 /// MOSS-Transcribe-Diarize 0.9B 引擎（OpenMOSS，Apache-2.0，社区 ggml 移植 moss-transcribe.cpp）。
 ///
-/// 与 LlamaCppGgufEngine（Qwen3-ASR）的本质差异：一步成段——单个模型在一次推理中
+/// 与逐段转写引擎的本质差异：一步成段——单个模型在一次推理中
 /// 同时输出文本、说话人标签（[S01]…，1 基）与时间戳，因此**跳过 sherpa 分离阶段**，
 /// 也不存在两段式管线的重叠巨段缺陷（2026-09-09 实测 #24 重叠率 35.8%）。
 ///
 /// 运行形态：asr-engine/moss/moss-transcribe.exe（CPU 基线）+ moss-transcribe-q8_0.gguf（941MB，
 /// 官方参考实现逐字节一致）；目录下若另有 moss-transcribe-vk.exe（Vulkan 后端，RX 580 实测
 /// 1.44×）则优先使用，Vulkan 失败自动回退 CPU。安全机制沿用现役引擎纪律：
-/// - 单实例：与 LlamaCppGgufEngine 共享同一 OS Mutex，整机同时只跑一个重推理
+/// - 单实例：与 ParaformerEngine 共享同一 OS Mutex，整机同时只跑一个重推理
 /// - PreJob 资源门：启动子进程前实时检查 RAM/Commit/可用内存
 /// - 运行时保险丝：进程 RSS ≥8GB 或系统可用内存低于 SttSafetyChecker 运行时阈值 → 杀进程树
 /// - 取消/异常路径一律杀进程树（任务 23 僵尸进程事故教训）
@@ -114,7 +114,7 @@ public class MossTranscribeEngine : ISttEngine
     /// <summary>运行时进程 RSS 保险丝（字节）。q8_0 大上下文实测峰值 5.6GB（600s 块时代），8GB 熔断留余量。</summary>
     private const long ProcessRssFuseBytes = 8L * 1024 * 1024 * 1024;
 
-    private const string MutexName = "Global\\EngineeringManagerSttEngine"; // 与 LlamaCppGgufEngine 共用：整机单重推理
+    private const string MutexName = "Global\\EngineeringManagerSttEngine"; // 与 ParaformerEngine 共用：整机单重推理
     private static readonly Mutex _osMutex = new(false, MutexName);
     private static readonly object _instanceLock = new();
     /// <summary>本次 RunSingleAsync 是否触发过运行时保险丝（供回退过滤器排除熔断重试）</summary>

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -17,14 +18,11 @@ public class SttModelManager
     // 防止并发重复下载
     private static readonly SemaphoreSlim EmbeddingDownloadLock = new(1, 1);
 
-    // 现役两引擎的模型文件名（引擎目录相对 asr-engine/；与各引擎 IsAvailableAsync 同口径）——
-    // 可用性检查与下载清单共用同一组字面量，避免两处漂移
-    private const string MossDir = "moss";
-    private const string MossExeFileName = "moss-transcribe.exe";
-    private const string MossGgufFileName = "moss-transcribe-q8_0.gguf";
-    private const string ParaformerDir = "paraformer";
-    private const string ParaformerModelFileName = "model.int8.onnx";
-    private const string ParaformerTokensFileName = "tokens.txt";
+    // 现役引擎文件名的唯一真源（清单 RelPath 的相对部分 + 引擎目录哨兵共用）
+    private const string MossCpuExeName = "moss-transcribe.exe";
+    private const string MossGgufName = "moss-transcribe-q8_0.gguf";
+    private const string ParaformerModelName = "model.int8.onnx";
+    private const string ParaformerTokensName = "tokens.txt";
 
     // 说话人分离模型
     public const string SegmentationModelDir = "diarization/sherpa-onnx-pyannote-segmentation-3-0";
@@ -45,53 +43,6 @@ public class SttModelManager
     /// <summary>注入下载器 delegate（仅测试用）</summary>
     public static void SetDownloadDelegate(Func<string, string, CancellationToken, Task>? downloader) => _downloadDelegate = downloader;
 
-    /// <summary>
-    /// 现役引擎的必需文件（相对 asr-engine/）：MOSS（exe + gguf）、Paraformer（onnx + tokens）。
-    /// 全部为纯 CPU 引擎，不需要独显 / Vulkan / 显存。
-    /// </summary>
-    private static readonly string[][] EngineRequiredFiles = new[]
-    {
-        new[] { $"{MossDir}/{MossExeFileName}", $"{MossDir}/{MossGgufFileName}" },
-        new[] { $"{ParaformerDir}/{ParaformerModelFileName}", $"{ParaformerDir}/{ParaformerTokensFileName}" },
-    };
-
-    /// <summary>
-    /// 候选引擎根目录（asr-engine/）：与 GetEngineDir 同查找顺序（项目根目录向上查找 → 数据存储路径），
-    /// 但不以 transcribe.exe 作为有效性标记（Qwen 已退役，该文件不再存在）——只看目录是否存在。
-    /// </summary>
-    private static IEnumerable<string> GetEngineDirCandidates()
-    {
-        if (_engineDirProvider != null)
-        {
-            yield return _engineDirProvider();
-            yield break;
-        }
-
-        var dir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        for (var i = 0; i < 8 && dir != null; i++)
-        {
-            var candidate = Path.Combine(dir, "asr-engine");
-            if (Directory.Exists(candidate)) yield return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        var dataCandidate = Path.Combine(ApiConfig.ResolveDataPath(), "asr-engine");
-        if (Directory.Exists(dataCandidate)) yield return dataCandidate;
-    }
-
-    /// <summary>某引擎的必需文件是否齐备（在所有候选根目录里找，同步文件存在性判断）。</summary>
-    private static bool EngineFilesPresent(int engineIndex) =>
-        GetEngineDirCandidates().Any(dir => EngineRequiredFiles[engineIndex].All(
-            f => File.Exists(Path.Combine(dir, f.Replace('/', Path.DirectorySeparatorChar)))));
-
-    /// <summary>任一引擎的模型文件齐备（同步文件存在性判断，供 CanUseLocalStt 使用）。</summary>
-    public static bool AnyEngineModelAvailable() =>
-        Enumerable.Range(0, EngineRequiredFiles.Length).Any(EngineFilesPresent);
-
-    /// <summary>各引擎的模型文件就绪状态（只陈述事实，供状态接口展示）。</summary>
-    public static (bool mossReady, bool paraformerReady) GetEngineModelReadiness()
-        => (EngineFilesPresent(0), EngineFilesPresent(1)); // 0 = MOSS，1 = Paraformer（见 EngineRequiredFiles 顺序）
-
     // 下载计数器（测试用：验证并发只下载 1 次）
     private static int _downloadCount;
     /// <summary>下载调用次数（测试用）</summary>
@@ -107,6 +58,9 @@ public class SttModelManager
     /// <summary>
     /// 获取 ASR 引擎根目录（asr-engine/）
     /// 查找顺序：项目根目录 → 数据存储路径
+    /// 哨兵（2026-09-16 起）：认「任一现役引擎齐备」（MOSS 或 Paraformer）或分离模型目录，
+    /// 不再以已被删除的 Qwen 运行时为哨兵——否则该文件一删，
+    /// 分离模型与文本嵌入模型的路径解析会全部落空。
     /// </summary>
     public static string GetEngineDir()
     {
@@ -116,7 +70,7 @@ public class SttModelManager
         for (int i = 0; i < 8; i++)
         {
             var candidate = Path.Combine(dir, "asr-engine");
-            if (Directory.Exists(candidate) && IsEngineContentPresent(candidate))
+            if (Directory.Exists(candidate) && IsEngineRoot(candidate))
             {
                 return candidate;
             }
@@ -128,7 +82,7 @@ public class SttModelManager
         // 2. 数据存储路径（生产环境 - 首次启动下载后存放位置）
         var dataPath = ApiConfig.ResolveDataPath();
         var dataCandidate = Path.Combine(dataPath, "asr-engine");
-        if (Directory.Exists(dataCandidate) && IsEngineContentPresent(dataCandidate))
+        if (Directory.Exists(dataCandidate) && IsEngineRoot(dataCandidate))
         {
             return dataCandidate;
         }
@@ -138,21 +92,39 @@ public class SttModelManager
     }
 
     /// <summary>
-    /// 引擎目录内容探针：任一现役引擎内容（moss/、paraformer/、diarization/ 任一子目录存在）
-    /// 即认定，不再以已删除的 transcribe.exe 为唯一哨兵——否则该文件一删，
-    /// 状态查询与分离模型路径解析会一起落空（2026-09-17 实测：模型全在但全报缺失）。
-    /// transcribe.exe 保留在认可之列以兼容旧布局。
+    /// 引擎根目录哨兵：任一现役引擎（MOSS：exe+gguf / Paraformer：onnx+tokens）齐备，
+    /// 或分离模型目录已存在（仅分离能力可用时仍需能解析出路径）。
     /// </summary>
-    private static bool IsEngineContentPresent(string candidate) =>
-        File.Exists(Path.Combine(candidate, "transcribe.exe"))
-        || Directory.Exists(Path.Combine(candidate, "moss"))
-        || Directory.Exists(Path.Combine(candidate, "paraformer"))
-        || Directory.Exists(Path.Combine(candidate, "diarization"));
+    private static bool IsEngineRoot(string engineRoot) =>
+        MossEngineReady(engineRoot)
+        || ParaformerEngineReady(engineRoot)
+        || Directory.Exists(Path.Combine(engineRoot, "diarization"));
+
+    private static bool MossEngineReady(string engineRoot)
+    {
+        var mossDir = Path.Combine(engineRoot, "moss");
+        return Directory.Exists(mossDir)
+            && File.Exists(Path.Combine(mossDir, MossCpuExeName))
+            && File.Exists(Path.Combine(mossDir, MossGgufName));
+    }
+
+    private static bool ParaformerEngineReady(string engineRoot)
+    {
+        var paraDir = Path.Combine(engineRoot, "paraformer");
+        return Directory.Exists(paraDir)
+            && File.Exists(Path.Combine(paraDir, ParaformerModelName))
+            && File.Exists(Path.Combine(paraDir, ParaformerTokensName));
+    }
 
     /// <summary>
-    /// STT 可用的模型文件是否就绪：现役引擎（MOSS / Paraformer，均纯 CPU）任一齐备即真。
+    /// ASR 模型是否完备（任一现役引擎齐备即真）。
+    /// **不变式**：两个引擎的 IsAvailableAsync 都是纯文件存在性检查的
+    /// Task.FromResult 包装（无 IO、无子进程、无等待），故此处可安全同步取结果；
+    /// 若今后引擎把可用性判断改成真异步（探活/握手），必须改回 async 链。
     /// </summary>
-    public static bool IsAsrModelAvailable() => SttEngineSelector.AnyEngineReady();
+    public static bool IsAsrModelAvailable() =>
+        new MossTranscribeEngine().IsAvailableAsync().GetAwaiter().GetResult()
+        || new ParaformerEngine().IsAvailableAsync().GetAwaiter().GetResult();
 
     /// <summary>说话人分离模型是否齐全</summary>
     public static bool IsDiarizationModelAvailable()
@@ -451,8 +423,10 @@ public class SttModelManager
         public required long Bytes { get; init; }
         /// <summary>直下候选地址（按顺序尝试，国内镜像在前）；空 = 手动放置。</summary>
         public IReadOnlyList<string> Urls { get; init; } = Array.Empty<string>();
+        /// <summary>非空 = 该文件在上述归档包内，需先下包再解压此项（值为包内条目名）。</summary>
+        public string? ZipEntry { get; init; }
         /// <summary>是否有一键下载地址。</summary>
-        public bool Downloadable => Urls.Count > 0;
+        public bool Downloadable => Urls.Count > 0 || ZipEntry != null;
     }
 
     /// <summary>清单里的一个引擎（引擎 ID、展示名、所需文件）。</summary>
@@ -461,10 +435,15 @@ public class SttModelManager
         public required string EngineId { get; init; }
         public required string DisplayName { get; init; }
         public required IReadOnlyList<SttModelFileSpec> Files { get; init; }
+        /// <summary>归档包地址（含 ZipEntry 的文件共用；无则为 null）。</summary>
+        public string? ArchiveUrl { get; init; }
+        /// <summary>归档包字节数（用于断点续下与进度分母）。</summary>
+        public long ArchiveBytes { get; init; }
+        /// <summary>归档包文件名（落盘用）。</summary>
+        public string? ArchiveName { get; init; }
     }
 
     // ── 已验证地址（2026-09-15 真实 GET/HEAD 验证：状态码 + 字节数 + 首尾字节比对）──
-
     // MOSS gguf：魔搭优先（国内直连），HF 直链 fallback；两者首 16 字节与本地逐字节一致
     private const string MossGgufModelScopeUrl =
         "https://www.modelscope.cn/models/mudler/moss-transcribe.cpp-gguf/resolve/master/moss-transcribe-q8_0.gguf";
@@ -490,7 +469,7 @@ public class SttModelManager
             {
                 new SttModelFileSpec
                 {
-                    RelPath = $"{MossDir}/{MossGgufFileName}",
+                    RelPath = $"moss/{MossGgufName}",
                     Bytes = 986881024L,
                     Urls = new[] { MossGgufModelScopeUrl, MossGgufHfUrl },
                 },
@@ -504,15 +483,15 @@ public class SttModelManager
             {
                 new SttModelFileSpec
                 {
-                    RelPath = $"{ParaformerDir}/{ParaformerModelFileName}",
+                    RelPath = $"paraformer/{ParaformerModelName}",
                     Bytes = 238429929L,
-                    Urls = new[] { $"{ParaformerHfBase}/{ParaformerModelFileName}" },
+                    Urls = new[] { $"{ParaformerHfBase}/model.int8.onnx" },
                 },
                 new SttModelFileSpec
                 {
-                    RelPath = $"{ParaformerDir}/{ParaformerTokensFileName}",
+                    RelPath = $"paraformer/{ParaformerTokensName}",
                     Bytes = 75756L,
-                    Urls = new[] { $"{ParaformerHfBase}/{ParaformerTokensFileName}" },
+                    Urls = new[] { $"{ParaformerHfBase}/tokens.txt" },
                 },
             },
         },
@@ -633,7 +612,7 @@ public class SttModelManager
         return true;
     }
 
-    /// <summary>逐个下载该引擎缺失文件（逐个原子改名落盘）。</summary>
+    /// <summary>逐个下载该引擎缺失文件；包内文件先下包再解压，最后原子改名。</summary>
     private static async Task DownloadEngineModelsAsync(
         SttEngineModelSpec spec, SttDownloadProgress progress, CancellationToken ct)
     {
@@ -650,8 +629,17 @@ public class SttModelManager
             return;
         }
 
-        // 进度分母 = 本次要下的字节
-        var total = missing.Where(f => f.Urls.Count > 0).Sum(f => f.Bytes);
+        // 进度分母 = 本次要下的字节（包内文件按包大小只计一次）
+        var total = 0L;
+        var archiveCounted = false;
+        foreach (var f in missing)
+        {
+            if (f.ZipEntry != null)
+            {
+                if (!archiveCounted) { total += spec.ArchiveBytes; archiveCounted = true; }
+            }
+            else if (f.Urls.Count > 0) total += f.Bytes;
+        }
         progress.TotalBytes = total;
         progress.BytesReceived = 0;
         progress.Phase = "downloading";
@@ -662,8 +650,36 @@ public class SttModelManager
             progress.BytesReceived = done + currentFileBytes;
         }
 
-        // 逐个直链文件：原子下载（老文件不删错：先落 .tmp，校验后 rename 覆盖）
-        foreach (var f in missing)
+        // 1. 包内文件（清单里带 ZipEntry 的文件）：下包一次 → 解压各项 → 删包
+        var zipFiles = missing.Where(f => f.ZipEntry != null).ToList();
+        if (zipFiles.Count > 0)
+        {
+            if (string.IsNullOrEmpty(spec.ArchiveUrl) || string.IsNullOrEmpty(spec.ArchiveName))
+                throw new InvalidOperationException($"{spec.DisplayName} 清单缺少归档包地址");
+
+            var cacheDir = Path.Combine(dir, ".download-cache");
+            var archiveTmp = Path.Combine(cacheDir, spec.ArchiveName + ".tmp");
+            try
+            {
+                progress.File = spec.ArchiveName;
+                await DownloadToTmpResumableAsync(
+                    new[] { spec.ArchiveUrl }, archiveTmp, spec.ArchiveBytes, Report, ct);
+
+                progress.Phase = "extracting";
+                ExtractZipEntries(archiveTmp, dir, zipFiles, progress);
+                done += spec.ArchiveBytes;
+                Report(0);
+            }
+            finally
+            {
+                TryDelete(archiveTmp);
+                TryDeleteDir(cacheDir);
+            }
+            progress.Phase = "downloading";
+        }
+
+        // 2. 直链文件：逐个原子下载（老文件不删错：先落 .tmp，校验后 rename 覆盖）
+        foreach (var f in missing.Where(f => f.ZipEntry == null))
         {
             if (f.Urls.Count == 0)
             {
@@ -803,9 +819,42 @@ public class SttModelManager
             throw new InvalidOperationException($"下载字节数不符：实际 {actual}，期望 {expectedBytes}（{Path.GetFileName(tmpPath)}）");
     }
 
+    /// <summary>把归档包内条目解压到引擎目录（先 .tmp 再原子改名，逐项校验字节数）。</summary>
+    internal static void ExtractZipEntries(
+        string archivePath, string engineDir, List<SttModelFileSpec> files, SttDownloadProgress progress)
+    {
+        using var zip = ZipFile.OpenRead(archivePath);
+        foreach (var f in files)
+        {
+            var entry = zip.GetEntry(f.ZipEntry!)
+                ?? throw new InvalidOperationException($"归档包内缺少 {f.ZipEntry}");
+            var destPath = Path.Combine(engineDir, f.RelPath.Replace('/', Path.DirectorySeparatorChar));
+            var tmpPath = destPath + ".tmp";
+            progress.File = f.RelPath;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                using (var src = entry.Open())
+                using (var fs = File.Create(tmpPath))
+                {
+                    src.CopyTo(fs);
+                }
+                VerifySize(tmpPath, f.Bytes);
+                if (File.Exists(destPath)) File.Delete(destPath);
+                File.Move(tmpPath, destPath);
+            }
+            finally { TryDelete(tmpPath); }
+        }
+    }
+
     private static void TryDelete(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); } catch (Exception ex) { Console.Error.WriteLine($"[SttModelManager] 临时文件清理失败（不致命）: {Common.Sanitize(ex.Message)}"); }
+    }
+
+    private static void TryDeleteDir(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch (Exception ex) { Console.Error.WriteLine($"[SttModelManager] 临时目录清理失败（不致命）: {Common.Sanitize(ex.Message)}"); }
     }
 
     private static string ShortUrl(string url) => url.Length > 90 ? url[..90] + "..." : url;

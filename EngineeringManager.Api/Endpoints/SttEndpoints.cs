@@ -24,9 +24,9 @@ public static class SttEndpoints
     private const long MaxAudioSize = 500 * 1024 * 1024;
 
     // 转写引擎白名单（engine 列落库前校验；空值回退现役引擎）
+    // 2026-09-16 Qwen3-ASR-1.7B 退役：白名单只剩纯 CPU 的两个现役引擎（MOSS / Paraformer）
     private static readonly HashSet<string> AllowedEngines = new(StringComparer.OrdinalIgnoreCase)
     {
-        "qwen3-asr-1.7b-gguf",
         MossTranscribeEngine.EngineId,
         ParaformerEngine.EngineId,
     };
@@ -386,13 +386,16 @@ public static class SttEndpoints
                 var gpu = SttEngineSelector.Detect();
                 var asrReady = SttModelManager.IsAsrModelAvailable();
                 var diarizationReady = SttModelManager.IsDiarizationModelAvailable();
+                // 门槛语义（2026-09-16）：本地 STT 可用 = 任一现役引擎（MOSS / Paraformer）模型齐备，
+                // 不再要求独显 / Vulkan / 显存。gpu 字段保留仅为诊断展示，不参与判定。
+                var canTranscribe = SttEngineSelector.CanUseLocalStt();
 
                 return Results.Ok(new
                 {
                     success = true,
                     data = new
                     {
-                        canTranscribe = SttEngineSelector.CanUseLocalStt() && asrReady,
+                        canTranscribe,
                         canDiarize = diarizationReady,
                         gpu = new
                         {
@@ -404,7 +407,9 @@ public static class SttEndpoints
                         },
                         asrModelReady = asrReady,
                         diarizationModelReady = diarizationReady,
-                        unavailableReason = SttEngineSelector.CanUseLocalStt() ? "" : SttEngineSelector.GetUnavailableReason(),
+                        unavailableReason = canTranscribe
+                            ? ""
+                            : SttEngineSelector.GetUnavailableReason(),
                     }
                 });
             }

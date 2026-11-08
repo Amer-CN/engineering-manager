@@ -217,7 +217,7 @@ if (chenJob == null)
              is_multi_speaker, num_speakers, hotwords,
              created_at, updated_at, created_by)
         VALUES
-            (@SourceFile, @SourcePath, 'audio', 'qwen3-asr-1.7b-gguf', 'pending', 0,
+            (@SourceFile, @SourcePath, 'audio', 'paraformer-zh-int8', 'pending', 0,
              1, NULL, @Hotwords,
              @Now, @Now, '1');
         SELECT last_insert_rowid();",
@@ -571,9 +571,10 @@ async Task RunSttJobAsync(IDbConnection db, long jobId)
         if (!SttEngineSelector.CanUseLocalStt())
             throw new InvalidOperationException($"本地转写不可用: {SttEngineSelector.GetUnavailableReason()}");
 
-        var engine = new LlamaCppGgufEngine();
+        // Qwen 已退役：两段式批量改走 Paraformer（同签名 TranscribeBatchAsync；hotwords 本轮仅 MOSS 支持，此处传入会被忽略）
+        var engine = new ParaformerEngine();
         if (!await engine.IsAvailableAsync())
-            throw new InvalidOperationException("ASR 模型文件缺失，请检查 asr-engine/model/ 目录");
+            throw new InvalidOperationException("Paraformer 模型文件缺失，请检查 asr-engine/paraformer/ 目录");
 
         // 1. 音频预处理
         Console.WriteLine("[E2E] 预处理音频...");

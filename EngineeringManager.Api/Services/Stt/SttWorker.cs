@@ -140,19 +140,12 @@ public class SttWorker : IHostedService, IDisposable
             if (!SttEngineSelector.CanUseLocalStt())
                 throw new InvalidOperationException($"本地转写不可用: {SttEngineSelector.GetUnavailableReason()}");
 
-            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；Paraformer 与 Qwen3 同走两段式管线
-            //（分离定时间与说话人，引擎只逐段出文字），区别仅在于转写引擎实例。
+            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；其余（Paraformer）走两段式管线
+            //（分离定时间与说话人，引擎只逐段出文字）。
             var useMoss = string.Equals(job.Engine, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase);
-            var usePara = string.Equals(job.Engine, ParaformerEngine.EngineId, StringComparison.OrdinalIgnoreCase);
-            var engine = new LlamaCppGgufEngine();
             var paraEngine = new ParaformerEngine();
-            if (usePara)
-            {
-                if (!await paraEngine.IsAvailableAsync())
-                    throw new InvalidOperationException("Paraformer 模型文件缺失，请检查 asr-engine/paraformer/ 目录");
-            }
-            else if (!useMoss && !await engine.IsAvailableAsync())
-                throw new InvalidOperationException("ASR 模型文件缺失，请检查 asr-engine/model/ 目录");
+            if (!useMoss && !await paraEngine.IsAvailableAsync())
+                throw new InvalidOperationException("Paraformer 模型文件缺失，请检查 asr-engine/paraformer/ 目录");
 
             // 1. 音频预处理
             UpdateProgress(db, job.Id, 5, "预处理音频...");
@@ -178,10 +171,10 @@ public class SttWorker : IHostedService, IDisposable
             {
                 // ═══ MOSS：文本与时间戳由 MOSS 一步产出；多人任务的说话人改由现役分离管线提供 ═══
                 // MOSS 块内 [S01] 编号跨块不可信（#28 实测 63 块首段编号全同），多人任务先用
-                // DiarizationService 分离定说话人（与 Qwen 多人分支同款、用 job.Num_Speakers），
+                // DiarizationService 分离定说话人（现役两段式管线、用 job.Num_Speakers），
                 // 转写完成后按时间重叠回填。先分离后转写：分离失败能尽早暴露，不必先花 25 分钟转写。
                 // 单人任务（Is_Multi_Speaker != 1）不跑分离：MOSS 仍会给出块内假说话人，
-                // 由下方统一归为说话人 1（与 Qwen 单人分支口径一致）。
+                // 由下方统一归为说话人 1（单人任务口径）。
                 List<SttSegment>? diaSegs = null;
                 if (job.Is_Multi_Speaker == 1)
                 {
@@ -223,7 +216,7 @@ public class SttWorker : IHostedService, IDisposable
                 else if (job.Is_Multi_Speaker != 1)
                 {
                     // 单人任务：MOSS 仍会按块内顺序给出 S01/S02… 的假说话人（#28 实测一块内可分出 4 个），
-                    // 用户已声明单人，一律归为说话人 1 —— 与 Qwen 单人分支的 Speaker = 1 口径一致。
+                    // 用户已声明单人，一律归为说话人 1（单人任务 Speaker = 1 口径）。
                     foreach (var seg in result.Segments) seg.Speaker = 1;
                 }
 
@@ -255,15 +248,12 @@ public class SttWorker : IHostedService, IDisposable
                 // 按说话人段切分音频
                 var splitFiles = await diarization.SplitAudioBySpeakersAsync(processedWav, segments);
 
-                // 批量转写：一次 transcribe.exe 调用处理所有段
-                // 模型只加载一次，避免 N 段 N 次重载 1.7B 模型的性能灾难
+                // 批量转写：一个 recognizer 实例顺序处理所有段，模型只加载一次
                 UpdateProgress(db, job.Id, 30, $"批量转写 {splitFiles.Count} 段（模型只加载一次）...");
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 var wavPaths = splitFiles.Select(s => s.wavPath).ToList();
-                var texts = usePara
-                    ? await paraEngine.TranscribeBatchAsync(wavPaths, job.Hotwords, ct)
-                    : await engine.TranscribeBatchAsync(wavPaths, job.Hotwords, ct);
+                var texts = await paraEngine.TranscribeBatchAsync(wavPaths, job.Hotwords, ct);
 
                 sw.Stop();
                 Console.WriteLine($"[SttWorker] 批量转写 {splitFiles.Count} 段完成，耗时 {sw.Elapsed.TotalSeconds:F1}s");
@@ -295,16 +285,14 @@ public class SttWorker : IHostedService, IDisposable
                     Segments = allSegments,
                     DurationSec = duration,
                     ElapsedSec = allSegments.Sum(s => 0), // 各段累加复杂，暂不精确
-                    Engine = usePara ? paraEngine.Name : engine.Name,
+                    Engine = paraEngine.Name,
                 };
             }
             else
             {
                 // 单人：直接转写，跳过分离
                 UpdateProgress(db, job.Id, 10, "转写中...");
-                result = usePara
-                    ? await paraEngine.TranscribeAsync(processedWav, job.Hotwords, null, ct)
-                    : await engine.TranscribeAsync(processedWav, job.Hotwords, null, ct);
+                result = await paraEngine.TranscribeAsync(processedWav, job.Hotwords, null, ct);
                 result.DurationSec = duration;
 
                 // 单人：segments 只有一段，Speaker = 1（归一化后 1-based）
